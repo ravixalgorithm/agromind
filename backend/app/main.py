@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .model_service import CATEGORICAL, NUMERIC, CropModelService
+from .data_loader import NUMERIC, SOURCE_FILES, SOURCE_LABELS
+from .model_service import CATEGORICAL, CropModelService
 from .schemas import CropRequest, CropResponse
 
 model_service = CropModelService()
@@ -16,9 +17,9 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="NILAM Crop Recommendation API",
-    version="3.0.0",
-    description="Generalized crop recommendations for Indian fields (16 states) from soil, climate, season and location.",
+    title="AgroMind Crop Recommendation API",
+    version="3.1.0",
+    description="Generalized crop recommendations for Indian fields from soil, climate, season and location.",
     lifespan=lifespan,
 )
 
@@ -49,19 +50,23 @@ def metadata() -> dict:
 
 @app.get("/model-info")
 def model_info() -> dict[str, object]:
+    meta = model_service.metadata
     return {
         "model": "RandomForestClassifier (one-hot soil/season/state)",
         "features": NUMERIC + CATEGORICAL,
-        "crops": len(model_service.metadata.get("crops", {})),
-        "training_rows": model_service.metadata.get("rows"),
-        "states": len(model_service.metadata.get("options", {}).get("state", [])),
+        "crops": len(meta.get("crops", {})),
+        "training_rows": meta.get("rows"),
+        "states": len(meta.get("options", {}).get("state", [])),
         "metrics": model_service.metrics,
-        "dataset": "Multi-state India crop recommendation set (16 states, synthetic from Indian agro references)",
-        "coverage": model_service.metadata.get("coverage"),
+        "dataset": "Combined Indian crop dataset",
+        "sources": [
+            {"name": SOURCE_LABELS[key], "rows": rows, "file": f"data/{SOURCE_FILES[key].name}"}
+            for key, rows in (meta.get("coverage") or {}).items()
+        ],
     }
 
 
 @app.get("/dataset")
 def dataset(limit: int = 80, offset: int = 0, crop: str | None = None) -> dict:
-    """Paginated sample of the India multi-state training rows for the raw-data viewer."""
+    """Paginated sample of the merged training rows for the raw-data viewer."""
     return model_service.sample_dataset(limit=limit, offset=offset, crop=crop or None)

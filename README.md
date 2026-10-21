@@ -1,24 +1,24 @@
-# NILAM
+# AgroMind
 
 **Generalized crop recommendation for Indian fields** — pick a state, enter soil and climate readings, get ranked crop fits with confidence, calendars, and growing profiles.
 
 <p align="center">
-  <img src="docs/dashboard.png" alt="NILAM dashboard — crop analysis with confidence, ranking, and field readings" width="100%" />
+  <img src="docs/dashboard.png" alt="AgroMind dashboard — crop analysis with confidence, ranking, and field readings" width="100%" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/ravixalgorithm/nilam"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-ravixalgorithm%2Fnilam-0e0e10?style=flat-square" /></a>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" />
   <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" />
-  <img alt="Coverage" src="https://img.shields.io/badge/Coverage-16%20Indian%20states-2e7d32?style=flat-square" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=flat-square&logo=fastapi&logoColor=white" />
+  <img alt="Rows" src="https://img.shields.io/badge/Training%20rows-67%2C200-2e7d32?style=flat-square" />
+  <img alt="Crops" src="https://img.shields.io/badge/Crops-74-2e7d32?style=flat-square" />
 </p>
 
 ---
 
 ## Overview
 
-NILAM is a full-stack advisor for matching field conditions to crops **across India**. A Random Forest model trained on a **multi-state** dataset (16 states · 25 crops · 8,000 rows) ranks candidates from NPK, pH, temperature, humidity, rainfall, soil type, season, and **state**.
+AgroMind is a full-stack advisor for matching field conditions to crops **across India**. A Random Forest model trained on a **merged three-source dataset** (67,200 rows · 74 crops · 16 states) ranks candidates from NPK, pH, temperature, humidity, rainfall, soil type, season, and **state**.
 
 The UI is a floated desktop-style app: dark sidebar, Chrome-style tabs, hatch-framed metric shells, live rankings, and a raw dataset viewer.
 
@@ -28,10 +28,10 @@ The UI is a floated desktop-style app: dark sidebar, Chrome-style tabs, hatch-fr
 |-------|--------|
 | Frontend | React 18, Vite, Iconsax, Plus Jakarta Sans |
 | Backend | FastAPI, scikit-learn, pandas, joblib |
-| Model | RandomForest (200 trees), one-hot soil / season / state |
-| Data | Multi-state India crop set (synthetic from Indian agro references) |
+| Model | RandomForest (300 trees), one-hot soil / season / state |
+| Data | Merged `india_crops` + `tamilnadu_crops` + `Crop_recommendation` CSVs |
 
-> **Note:** Training rows are synthetic (generated from state-wise soil/climate/crop suitability ranges). Metrics are for demo / coursework — not farm-validated agronomy advice.
+> **Note:** Training rows come from public / synthetic agro reference sets. Metrics are for demo / coursework — not farm-validated agronomy advice.
 
 **States covered:** Andhra Pradesh, Assam, Bihar, Gujarat, Haryana, Karnataka, Kerala, Madhya Pradesh, Maharashtra, Odisha, Punjab, Rajasthan, Tamil Nadu, Telangana, Uttar Pradesh, West Bengal.
 
@@ -39,14 +39,14 @@ The UI is a floated desktop-style app: dark sidebar, Chrome-style tabs, hatch-fr
 
 ## Features
 
-- **State-aware recommendations** — location is a model feature, not just a label  
-- **Live results** — update as soon as every reading is set  
-- **Confidence & fit** — top pick with %, reading marks, soil match, sow/harvest window  
-- **Crop ranking** — model pick plus same-season alternatives by in-range fit  
-- **Growing calendar** — sow / grow / harvest months per crop  
-- **Field panel** — state, season, soil chips, craft sliders  
-- **Saved analyses** — sidebar history (`localStorage`)  
-- **Raw data viewer** — browse training rows from the sidebar footer  
+- **State-aware recommendations** — location is a model feature, not just a label
+- **Live results** — update as soon as every reading is set
+- **Confidence & fit** — top pick with %, reading marks, soil match, sow/harvest window
+- **Crop ranking** — model pick plus same-season alternatives by in-range fit
+- **Growing calendar** — sow / grow / harvest months per crop
+- **Field panel** — state, season, soil chips, craft sliders
+- **Saved analyses** — sidebar history (`localStorage`)
+- **Raw data viewer** — browse merged training rows, filterable by crop, with the source set shown per row
 
 ---
 
@@ -54,44 +54,51 @@ The UI is a floated desktop-style app: dark sidebar, Chrome-style tabs, hatch-fr
 
 ### Prerequisites
 
-- Python **3.10+**
-- Node.js **18+** and npm
+- Python **3.10+** (verified on 3.15)
+- Node.js **18+** and npm (verified on 22)
 
-### Clone
+### Windows — one click
 
-```bash
-git clone https://github.com/ravixalgorithm/nilam.git
-cd nilam
+```bat
+start_all.bat
 ```
 
-### Backend
+This opens the backend and frontend in separate terminals. First run creates `backend/.venv`,
+installs dependencies and trains the model (a minute or two); later runs start instantly.
+
+Then open **http://127.0.0.1:5173**
+
+### Manual
 
 ```bash
+# backend
 cd backend
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+py -m venv .venv
+.venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
 
-First boot trains (or loads) `backend/models/crop_model_india_v1.joblib`.
-
-| URL | Purpose |
-|-----|---------|
-| http://127.0.0.1:8000/docs | Swagger |
-| http://127.0.0.1:8000/metadata | Fields, states, crop profiles |
-| http://127.0.0.1:8000/model-info | Metrics |
-| http://127.0.0.1:8000/dataset | Paginated training rows |
-
-### Frontend
-
-```bash
+# frontend (second terminal)
 cd frontend
 npm install
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**
+First boot trains (or loads) `backend/models/crop_model_v2.joblib`.
+
+| URL | Purpose |
+|-----|---------|
+| http://127.0.0.1:8000/docs | Swagger |
+| http://127.0.0.1:8000/metadata | Fields, states, crop profiles |
+| http://127.0.0.1:8000/model-info | Metrics and per-source row counts |
+| http://127.0.0.1:8000/dataset | Paginated training rows |
+
+To retrain from scratch:
+
+```bash
+cd backend
+.venv\Scripts\python train_model.py --force
+```
 
 ---
 
@@ -121,30 +128,63 @@ Open **http://127.0.0.1:5173**
 
 | Item | Detail |
 |------|--------|
-| File | `backend/data/india_crops.csv` |
-| Scale | ~8,000 rows · 25 crops · 16 states |
+| Artifact | `backend/models/crop_model_v2.joblib` |
+| Scale | 67,200 rows · 74 crops · 16 states · 10 soil classes |
 | Features | N, P, K, pH, temp, RH, rainfall, soil, season, **state** |
-| Held-out | See live `GET /model-info` (top-3 typically ≫ single-label accuracy) |
+| Target | crop slug (`rice`, `mango`, …) |
+| Held-out | See live `GET /model-info` |
 
-Source construction: multi-state synthetic samples aligned to Indian state agro references (soil ranges, climate bands, major crops). The earlier Tamil Nadu Mendeley CSV remains under `backend/data/tamilnadu_crops.csv` for reference only.
+### Sources
+
+`backend/app/data_loader.py` normalises all three CSVs into one schema
+(`N, P, K, temperature, humidity, ph, rainfall, soil, season, state, crop, water_source`)
+before training, so the model learns from every row:
+
+| File | Rows | Contributes |
+|------|------|-------------|
+| `data/india_crops.csv` | 8,000 | state, soil, season, climate |
+| `data/tamilnadu_crops.csv` | 57,000 | free-text soil, month-level sow/harvest, durations |
+| `data/Crop_recommendation.csv` | 2,200 | the Kaggle agronomy readings (22 crops) |
+
+Normalisation rules:
+
+- **Soil** — 34 free-text strings from the Tamil Nadu set are folded into 10 canonical buckets
+  (see `SOIL_TYPES` in `backend/app/india_ref.py`).
+- **Crop names** — spelling variants are aliased (`bengalgram` → chickpea, `Pearl millet` → bajra,
+  `gingely` → sesame, `redgram` → pigeon pea, `small onion` → onion) so 100+ raw labels collapse to 74 crops.
+- **Season** — taken from the row when present, otherwise from the crop's dominant season, otherwise
+  from the curated calendar.
+- **State** — rows that carry no location (the Kaggle set) use an `Unspecified` bucket which the API
+  never offers, so it cannot be selected from the UI.
+- **Sow / harvest / duration** — curated where the data has no calendar columns, otherwise read off
+  the Tamil Nadu records (`SOWN`, `HARVESTED`, `CROPDURATION`).
 
 ---
 
 ## Repository layout
 
 ```text
-nilam/
+agromind/
 ├── backend/
-│   ├── app/           # FastAPI + India model service
-│   ├── data/          # india_crops.csv (+ archived TN CSV)
-│   └── models/        # crop_model_india_v1.joblib (generated)
+│   ├── app/
+│   │   ├── main.py           # FastAPI routes
+│   │   ├── model_service.py  # training, metrics, prediction, metadata
+│   │   ├── data_loader.py    # merges the three CSVs
+│   │   ├── india_ref.py      # states, soils, crop catalog, calendars
+│   │   └── schemas.py        # request/response models + field bounds
+│   ├── data/                 # the three training CSVs
+│   ├── models/               # crop_model_v2.joblib (generated)
+│   └── train_model.py
 ├── frontend/
-│   ├── src/
+│   ├── src/                  # App.jsx, Slider.jsx, styles.css
 │   └── DESIGN.md
 ├── docs/
 │   ├── dashboard.png
 │   └── PROJECT.md
-└── README.md
+├── notebooks/                # original Kaggle exploration
+├── start_all.bat
+├── start_backend.bat
+└── start_frontend.bat
 ```
 
 ---
@@ -153,4 +193,4 @@ nilam/
 
 Application code is for education and demonstration.
 
-Training data is a synthetic multi-state India crop set derived from public agro reference patterns; treat outputs as illustrative.
+Training data combines public agro reference patterns and the Kaggle crop recommendation set; treat outputs as illustrative.

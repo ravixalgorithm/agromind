@@ -1,6 +1,6 @@
-# NILAM — Interface Design System
+# AgroMind — Interface Design System
 
-Use this doc when building or extending UI for NILAM (crop / field analysis). Match the craft in `src/styles.css` and `src/App.jsx`; do not invent a second visual language.
+Use this doc when building or extending UI for AgroMind (crop / field analysis). Match the craft in `src/styles.css` and `src/App.jsx`; do not invent a second visual language.
 
 ---
 
@@ -70,7 +70,7 @@ Copy from `:root` in `styles.css`. Hue **95** = warm paper; hue **145** = leaf g
 - **Tab bar**: active tab glider matches `--canvas` so the tab *becomes* the workspace. Inactive tabs are quiet. `+` sits tight to the last tab (~4px).
 - **Workspace**: `border-top-left-radius` meets the active tab; panes use `--pane-inset` (12px).
 
-Sidebar brand: **NILAM** uppercase wordmark + furrow-contour mark (stroke only, no tile background).
+Sidebar brand: **AgroMind** uppercase wordmark + furrow-contour mark (stroke only, no tile background).
 
 ---
 
