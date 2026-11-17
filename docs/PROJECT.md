@@ -1,6 +1,6 @@
-# NILAM — Project documentation
+# AgroMind — Project documentation
 
-Detailed technical reference for the NILAM **India-wide** crop recommendation system. UI craft: [`frontend/DESIGN.md`](../frontend/DESIGN.md).
+Detailed technical reference for the AgroMind **India-wide** crop recommendation system. UI craft: [`frontend/DESIGN.md`](../frontend/DESIGN.md).
 
 ---
 
@@ -15,8 +15,13 @@ Match a field’s conditions (including **Indian state**) to suitable crops with
 ```text
 React UI  ←→  FastAPI  →  RandomForest (soil + season + state one-hot)
                 │
-                └─ india_crops.csv (16 states, ~8k rows)
+                ├─ india_crops.csv         (16 states, 8,000 rows)
+                ├─ tamilnadu_crops.csv     (Tamil Nadu field records, 57,000 rows)
+                └─ Crop_recommendation.csv (Kaggle agronomy set, 2,200 rows)
 ```
+
+The three CSVs are folded into one schema by `backend/app/data_loader.py` before training,
+so the model learns from every row (67,200 in total).
 
 ---
 
@@ -24,13 +29,23 @@ React UI  ←→  FastAPI  →  RandomForest (soil + season + state one-hot)
 
 | Property | Value |
 |----------|--------|
-| File | `backend/data/india_crops.csv` |
-| Coverage | 16 states |
-| Crops | 25 (rice, wheat, millets, plantation, spices, …) |
-| Columns | N, P, K, temperature, humidity, ph, rainfall, soil_type, state, season, crop |
-| Nature | Synthetic samples from state soil/climate/crop suitability ranges |
+| Files | `backend/data/india_crops.csv`, `backend/data/tamilnadu_crops.csv`, `backend/data/Crop_recommendation.csv` |
+| Merged rows | 67,200 |
+| Coverage | 16 states (+ `Unspecified` for Kaggle rows without a location) |
+| Crops | 74 (after alias folding) |
+| Soil classes | 10 (Alluvial, Black, Clay, Laterite, Loamy, Red, Sandy, Saline, Silty, Other) |
+| Columns | N, P, K, temperature, humidity, ph, rainfall, soil, season, state, crop, water_source |
 
-Archived TN set: `backend/data/tamilnadu_crops.csv` (not used by the live model).
+### Normalisation (`backend/app/data_loader.py`)
+
+| Rule | Detail |
+|------|--------|
+| Soil | 34 free-text TN strings folded to 10 canonical buckets (`soil_bucket`) |
+| Crop names | Spelling variants aliased to slugs (`bengalgram` → chickpea, `Pearl millet` → bajra, `gingely` → sesame, `redgram` → pigeon pea, `small onion` → onion) |
+| Season | Row value, else the crop’s dominant season, else the curated calendar |
+| State | Kaggle rows (no location) use `Unspecified`, which the API never offers in `options.state` |
+| Water source | TN column when present; india set derived from rainfall (`≥ 900 mm` → rainfed); Kaggle left unknown |
+| Sow / harvest / duration | Curated calendar wins, else read off TN `SOWN` / `HARVESTED` / `CROPDURATION` |
 
 ---
 
@@ -38,35 +53,44 @@ Archived TN set: `backend/data/tamilnadu_crops.csv` (not used by the live model)
 
 | Item | Detail |
 |------|--------|
-| Path | `backend/models/crop_model_india_v1.joblib` |
-| Features | numerics + `soil`, `season`, `state` |
+| Path | `backend/models/crop_model_v2.joblib` |
+| Estimator | `RandomForestClassifier` (300 trees, `min_samples_leaf=2`) |
+| Features | numerics (`N, P, K, ph, temperature, humidity, rainfall`) + `soil`, `season`, `state` (one-hot, `handle_unknown="ignore"`) |
 | Target | crop slug (`rice`, `wheat`, …) |
-| UI-only | `water_source` (derived for display / soft checks) |
+| Split | stratified 80 / 20 — 53,760 train / 13,440 test |
+| Held-out accuracy | **0.9453** (top-3 **0.992**) |
+| UI-only | `water_source` (used for display / soft checks, not a model input) |
 
+The cache is invalidated automatically when the merged row count or crop count changes.
 Confirm live metrics with `GET /model-info`.
 
 ---
 
 ## 5. API
 
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | Liveness probe |
+| `GET /metadata` | Input fields, allowed options, per-crop profiles, source coverage |
+| `GET /model-info` | Live metrics, feature list, per-source row counts |
+| `POST /predict` | Ranked crop recommendations (`best_crop` + `top_recommendations`) |
+| `GET /dataset` | Paginated merged training rows (filterable by `crop`) |
+
 `POST /predict` body includes `state` plus soil/season/water_source and numeric fields (`water` maps to rainfall mm).
-
-`GET /metadata` exposes `options.state` and per-crop `states` lists.
-
-`GET /dataset` returns multi-state rows for the raw-data modal.
 
 ---
 
 ## 6. Frontend
 
-- Required inputs: state, season, soil, water source, all numeric bars  
-- Samples: rice, wheat, cotton, maize, sugarcane, groundnut  
-- Storage keys: `nilam.saved-analyses.v2` / `nilam.active-analysis.v2`  
+- Required inputs: state, season, soil, water source, all numeric bars
+- Samples: rice, wheat, cotton, maize, sugarcane, groundnut
+- Raw data viewer reads `GET /dataset` and shows the source set per row
+- Storage keys: `agromind.saved-analyses.v2` / `agromind.active-analysis.v2`
 
 ---
 
 ## 7. Honesty checklist
 
-- [ ] Say the training set is **synthetic multi-state**, not ICAR farm surveys  
-- [ ] Quote metrics from live `/model-info`  
-- [ ] Credit that recommendations are demos for education  
+- [ ] Say the training set **merges public / synthetic agro sets** (multi-state + Tamil Nadu field records + the Kaggle agronomy set), not ICAR farm surveys
+- [ ] Quote metrics from live `/model-info` (currently 94.5% hold-out accuracy, 99.2% top-3)
+- [ ] Credit that recommendations are demos for education

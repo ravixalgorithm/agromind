@@ -4,8 +4,8 @@ import { Add, Award, Calendar as CalendarIcon, Chart, ClipboardText, CloseCircle
 import Slider from './Slider';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-const STORAGE_KEY = 'nilam.saved-analyses.v2';
-const ACTIVE_KEY = 'nilam.active-analysis.v2';
+const STORAGE_KEY = 'agromind.saved-analyses.v2';
+const ACTIVE_KEY = 'agromind.active-analysis.v2';
 
 const NUTRIENTS = ['N', 'P', 'K', 'ph'];
 const SAMPLES = ['rice', 'wheat', 'cotton', 'maize', 'sugarcane', 'groundnut'];
@@ -18,7 +18,8 @@ const SEASONS = {
 // Approximate field colour of each soil, so the picker reads like a soil chart.
 const SOIL_COLORS = {
   Alluvial: '#a3906f', Black: '#3b3531', Clay: '#8c5b3e', Laterite: '#a2452b',
-  Red: '#b4513a', Sandy: '#d9c49b', Saline: '#c4b89a', Other: null,
+  Loamy: '#8a6a45', Red: '#b4513a', Sandy: '#d9c49b', Saline: '#c4b89a',
+  Silty: '#b8a888', Other: null,
 };
 const SHORT = { N: 'N', P: 'P', K: 'K', ph: 'pH', temperature: '°C', humidity: 'RH', water: 'H₂O' };
 const MAX_ROWS = 8;
@@ -414,7 +415,7 @@ function Dashboard({ meta }) {
                   />
                 </svg>
               </span>
-              <span className="brand-name">NILAM</span>
+              <span className="brand-name">AgroMind</span>
             </div>
           </header>
 
@@ -1240,6 +1241,7 @@ const DATA_PAGE = 80;
 
 const DATA_HEADERS = {
   crop: 'Crop',
+  source: 'Set',
   state: 'State',
   soil: 'Soil',
   season: 'Season',
@@ -1320,7 +1322,10 @@ function DatasetModal({ meta, onClose }) {
             <h2 id="data-modal-title" ref={titleRef} tabIndex={-1}>
               Raw data
             </h2>
-            <p className="crop-modal-sub">India multi-state training set · {meta.rows.toLocaleString()} rows · 16 states</p>
+            <p className="crop-modal-sub">
+              Merged training set · {meta.rows.toLocaleString()} rows · {Object.keys(meta.crops).length} crops
+              {meta.sources?.length ? ` · ${meta.sources.join(' + ')}` : ''}
+            </p>
           </div>
           <button type="button" className="crop-modal-close" onClick={onClose} aria-label="Close raw data">
             <CloseCircle size={22} variant="Bold" color="currentColor" />

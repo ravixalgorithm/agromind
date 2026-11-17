@@ -6,78 +6,90 @@ import joblib
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import top_k_accuracy_score
+from sklearn.metrics import accuracy_score, top_k_accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from .india_ref import CROP_META, MONTHS, crop_slug, month_span
-from .schemas import NUMERIC_FIELDS, SEASONS, SOIL_TYPES, STATE_NAMES, WATER_SOURCES
+from .data_loader import NUMERIC, SOURCE_LABELS, calendar_for, load_dataset
+from .india_ref import UNSPECIFIED_STATE, crop_name, month_span
+from .schemas import NUMERIC_FIELDS
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-DATA_PATH = BASE_DIR / "data" / "india_crops.csv"
 MODELS_DIR = BASE_DIR / "models"
-MODEL_PATH = MODELS_DIR / "crop_model_india_v1.joblib"
+MODEL_PATH = MODELS_DIR / "crop_model_v2.joblib"
 
-NUMERIC = [col for col, *_ in NUMERIC_FIELDS.values()]
 CATEGORICAL = ["soil", "season", "state"]
 TARGET = "crop"
 
 
-def load_dataset() -> pd.DataFrame:
-    df = pd.read_csv(DATA_PATH)
-    df["soil"] = df["soil_type"].astype(str).str.strip()
-    df.loc[~df["soil"].isin(SOIL_TYPES), "soil"] = "Other"
-    df["season"] = df["season"].astype(str).str.strip().str.lower()
-    df["state"] = df["state"].astype(str).str.strip()
-    df["crop"] = df["crop"].map(crop_slug)
-    # Soft label for UI / raw viewer (not a model feature)
-    df["water_source"] = df["rainfall"].map(lambda r: "rainfed" if float(r) >= 900 else "irrigated")
-    return df
-
-
 def build_metadata(df: pd.DataFrame) -> dict:
-    crops = {}
-    for crop, g in df.groupby(TARGET):
-        meta = CROP_META.get(crop, {})
-        name = meta.get("name") or crop[:1].upper() + crop[1:]
-        sow = meta.get("sow") or [5, 6]
-        harvest = meta.get("harvest") or [8, 9]
-        soils = g["soil"].value_counts(normalize=True).loc[lambda s: s >= 0.08].index.tolist()
-        crops[crop] = {
-            "name": name,
-            "type": meta.get("type", "Crop"),
-            "season": meta.get("season") or g["season"].mode().iloc[0],
-            "duration_days": int(meta.get("days") or 120),
-            "sown": month_span(sow),
-            "harvested": month_span(harvest),
-            "sow_months": list(sow),
-            "harvest_months": list(harvest),
-            "soils": soils or ["Alluvial"],
-            "water_source": g["water_source"].mode().iloc[0],
-            "states": g["state"].value_counts().head(8).index.tolist(),
-            "profile": {
-                key: [round(float(g[col].quantile(q)), 1) for q in (0.1, 0.5, 0.9)]
-                for key, (col, *_) in NUMERIC_FIELDS.items()
-            },
-        }
-
     fields = [
         {"key": key, "label": label, "unit": unit, "min": lo, "max": hi, "step": step}
         for key, (_, label, unit, lo, hi, step) in NUMERIC_FIELDS.items()
     ]
+
+    # one pass for every crop/field quantile instead of one pass per crop
+    quantiles = df.groupby(TARGET)[NUMERIC].quantile([0.1, 0.5, 0.9])
+
+    crops = {}
+    for crop, g in df.groupby(TARGET):
+        q = quantiles.loc[crop]
+        calendar = calendar_for(df, crop)
+        soils = g["soil"].value_counts(normalize=True)
+        soils = soils.loc[soils >= 0.08].index.tolist()
+        watered = g["water_source"].dropna()
+        states = g.loc[g["state"] != UNSPECIFIED_STATE, "state"].value_counts().head(8)
+        sources = g["source"].value_counts()
+        count = int(len(g))
+
+        crops[crop] = {
+            "name": crop_name(crop),
+            "type": _type_for(crop),
+            "season": calendar["season"],
+            "duration_days": calendar["duration_days"],
+            "sown": month_span(calendar["sow_months"]),
+            "harvested": month_span(calendar["harvest_months"]),
+            "sow_months": calendar["sow_months"],
+            "harvest_months": calendar["harvest_months"],
+            "soils": soils or ["Other"],
+            "water_source": watered.mode().iloc[0] if not watered.empty else "irrigated",
+            "states": states.index.tolist(),
+            "rows": count,
+            "sources": [SOURCE_LABELS.get(s, s) for s in sources.index.tolist()],
+            "profile": {key: [round(float(q.loc[p, col]), 1) for p in (0.1, 0.5, 0.9)] for key, (col, *_) in NUMERIC_FIELDS.items()},
+        }
+
+    coverage = {
+        name: int((df["source"] == name).sum()) for name in SOURCE_LABELS if (df["source"] == name).any()
+    }
+
     return {
         "fields": fields,
         "options": {
-            "soil": list(SOIL_TYPES),
-            "season": list(SEASONS),
-            "water_source": list(WATER_SOURCES),
-            "state": list(STATE_NAMES),
+            "soil": list(_soil_options(df)),
+            "season": sorted(df["season"].unique().tolist()),
+            "water_source": ["irrigated", "rainfed"],
+            "state": sorted(df.loc[df["state"] != UNSPECIFIED_STATE, "state"].unique().tolist()),
         },
         "crops": crops,
-        "rows": len(df),
-        "coverage": "16 Indian states · multi-state synthetic training set",
+        "rows": int(len(df)),
+        "coverage": coverage,
+        "sources": [SOURCE_LABELS[name] for name in SOURCE_LABELS if (df["source"] == name).any()],
     }
+
+
+def _type_for(crop: str) -> str:
+    from .india_ref import CROP_META
+
+    return CROP_META.get(crop, {}).get("type", "Crop")
+
+
+def _soil_options(df: pd.DataFrame) -> list[str]:
+    from .india_ref import SOIL_TYPES
+
+    present = set(df["soil"].unique())
+    return [s for s in SOIL_TYPES if s in present]
 
 
 class CropModelService:
@@ -89,8 +101,6 @@ class CropModelService:
 
     def load_or_train(self) -> None:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
-        if not DATA_PATH.exists():
-            raise FileNotFoundError(f"Dataset not found at {DATA_PATH}.")
 
         df = load_dataset()
         self.df = df
@@ -98,8 +108,16 @@ class CropModelService:
 
         if MODEL_PATH.exists():
             bundle = joblib.load(MODEL_PATH)
-            self.model, self.metrics = bundle["model"], bundle["metrics"]
-            return
+            # a cached model is only valid for the dataset that produced it
+            if bundle.get("rows") == len(df) and bundle.get("crops") == len(self.metadata["crops"]):
+                self.model, self.metrics = bundle["model"], bundle["metrics"]
+                return
+
+        self.train()
+
+    def train(self) -> dict[str, float]:
+        df = self.df if self.df is not None else load_dataset()
+        self.df = df
 
         x = df[NUMERIC + CATEGORICAL]
         y = df[TARGET]
@@ -107,19 +125,29 @@ class CropModelService:
 
         model = make_pipeline(
             ColumnTransformer([("cat", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL)], remainder="passthrough"),
-            RandomForestClassifier(n_estimators=200, min_samples_leaf=2, random_state=42, n_jobs=-1),
+            RandomForestClassifier(n_estimators=300, min_samples_leaf=2, random_state=42, n_jobs=-1),
         )
         model.fit(x_train, y_train)
+
+        probabilities = model.predict_proba(x_test)
         self.metrics = {
-            "accuracy": round(float(model.score(x_test, y_test)), 4),
+            "accuracy": round(float(accuracy_score(y_test, model.predict(x_test))), 4),
             "top3_accuracy": round(
-                float(top_k_accuracy_score(y_test, model.predict_proba(x_test), k=3, labels=model.classes_)),
-                4,
+                float(top_k_accuracy_score(y_test, probabilities, k=3, labels=model.classes_)), 4
             ),
-            "test_rows": len(x_test),
+            "test_rows": int(len(x_test)),
+            "train_rows": int(len(x_train)),
+            "crops": int(y.nunique()),
         }
-        joblib.dump({"model": model, "metrics": self.metrics}, MODEL_PATH, compress=3)
+        joblib.dump(
+            {"model": model, "metrics": self.metrics, "rows": len(df), "crops": len(self.metadata["crops"])},
+            MODEL_PATH,
+            compress=3,
+        )
         self.model = model
+        return self.metrics
+
+    # ── read APIs ────────────────────────────────────────────────────────
 
     def sample_dataset(self, *, limit: int = 80, offset: int = 0, crop: str | None = None) -> dict:
         if self.df is None:
@@ -127,6 +155,8 @@ class CropModelService:
 
         view = self.df
         if crop:
+            from .india_ref import crop_slug
+
             view = view[view[TARGET] == crop_slug(crop)]
 
         total = len(view)
@@ -136,6 +166,7 @@ class CropModelService:
 
         columns = [
             ("crop", "crop"),
+            ("source", "source"),
             ("state", "state"),
             ("soil", "soil"),
             ("season", "season"),
@@ -150,12 +181,16 @@ class CropModelService:
         ]
 
         rows = []
-        for _, r in page.iterrows():
+        for _, record in page.iterrows():
             item = {}
             for col, key in columns:
-                val = r[col]
+                val = record[col]
                 if key == "crop":
-                    item[key] = CROP_META.get(str(val), {}).get("name", str(val))
+                    item[key] = crop_name(str(val))
+                elif key == "source":
+                    item[key] = SOURCE_LABELS.get(str(val), str(val))
+                elif key == "water":
+                    item[key] = str(val) if isinstance(val, str) else "—"
                 elif isinstance(val, (int, float)) and not isinstance(val, bool):
                     item[key] = round(float(val), 1)
                 else:
@@ -178,8 +213,7 @@ class CropModelService:
         row = {col: [payload[key]] for key, (col, *_) in NUMERIC_FIELDS.items()}
         row.update({c: [payload[c]] for c in CATEGORICAL})
         probabilities = self.model.predict_proba(pd.DataFrame(row))[0]
-        classes = self.model.classes_
 
-        top = sorted(zip(classes, probabilities), key=lambda p: p[1], reverse=True)[:k]
+        top = sorted(zip(self.model.classes_, probabilities), key=lambda pair: pair[1], reverse=True)[:k]
         results = [{"crop": str(c), "confidence": round(float(p), 4)} for c, p in top]
         return results[0]["crop"], results

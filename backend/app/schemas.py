@@ -2,22 +2,20 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .india_ref import STATES
+from .india_ref import SEASONS, SOIL_TYPES, STATES, WATER_SOURCES
 
-SOIL_TYPES = ("Alluvial", "Black", "Clay", "Laterite", "Red", "Sandy", "Saline", "Other")
-SEASONS = ("kharif", "rabi", "zaid")
-WATER_SOURCES = ("irrigated", "rainfed")
 STATE_NAMES = STATES
 
 # key -> (dataset column, label, unit, min, max, step)
+# Bounds span the union of all three training sources so any slider position is a legal request.
 NUMERIC_FIELDS = {
     "N": ("N", "Nitrogen", "", 0, 450, 1),
-    "P": ("P", "Phosphorus", "", 0, 80, 1),
+    "P": ("P", "Phosphorus", "", 0, 150, 1),
     "K": ("K", "Potassium", "", 0, 450, 1),
-    "ph": ("ph", "Soil pH", "", 4, 9.5, 0.1),
+    "ph": ("ph", "Soil pH", "", 3, 10, 0.1),
     "temperature": ("temperature", "Temperature", "°C", 0, 50, 0.5),
     "humidity": ("humidity", "Humidity", "%", 0, 100, 1),
-    "water": ("rainfall", "Seasonal rainfall", "mm", 100, 4000, 10),
+    "water": ("rainfall", "Seasonal rainfall", "mm", 0, 4000, 10),
 }
 
 
