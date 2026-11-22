@@ -80,7 +80,7 @@ def pair_features(df, crops, hist):
 
 
 # ---------------------------------------------------------------- models
-def fit_rank(df, tr, crops, hist, objective, target="yield"):
+def fit_rank(df, tr, crops, hist, objective, target="yield", **override):
     """objective: lambdarank | regression | xendcg | xgb_rank. target: yield (yield_pct) or share
     (current area share, i.e. 'what farmers grow most': the no-yield-target ablation)."""
     d = df.loc[tr]
@@ -90,8 +90,13 @@ def fit_rank(df, tr, crops, hist, objective, target="yield"):
     group = d.groupby("qid", sort=False).size().values
     params = dict(n_estimators=400, learning_rate=0.05, num_leaves=63, min_child_samples=40,
                   subsample=0.8, subsample_freq=1, colsample_bytree=0.8, random_state=SEED, verbose=-1)
+    gain = override.pop("label_gain", list(range(10)))
+    trunc = override.pop("lambdarank_truncation_level", 10)
+    params |= override
+    return_model = override.pop("return_model", False)
+    params |= override
     if objective in ("lambdarank", "xendcg"):
-        extra = dict(label_gain=list(range(10)), lambdarank_truncation_level=10) if objective == "lambdarank" else {}
+        extra = dict(label_gain=gain, lambdarank_truncation_level=trunc) if objective == "lambdarank" else {}
         m = lgb.LGBMRanker(objective="lambdarank" if objective == "lambdarank" else "rank_xendcg", **extra, **params)
         m.fit(X, rel, group=group)
     elif objective == "xgb_rank":
@@ -102,7 +107,47 @@ def fit_rank(df, tr, crops, hist, objective, target="yield"):
     else:
         m = lgb.LGBMRegressor(objective="regression", **params)
         m.fit(X, y)
+    if return_model:
+        return m
     return lambda idx: m.predict(pair_features(df.loc[idx], crops, hist))
+
+
+# ---------------------------------------------------------------- final v4 model (chosen by select_final.py on validation)
+FINAL = dict(
+    name="YieldRank v4 (final)",
+    description="z-score blend, per district-season, of a listwise ranker (XGBoost rank:ndcg) and a pointwise yield-percentile "
+                "regressor (LightGBM) on (district-season, crop) pairs, plus 0.25 x last-year persistence",
+    members=[("xgb_rank", {}), ("regression", {})],
+    persist_w=0.25,
+    selected_by="best mean validation Hit@1 over the 3 protocols; validation = held-out training groups (select_final.py)")
+
+
+def _z(v, qid):
+    s = pd.Series(v)
+    g = s.groupby(np.asarray(qid))
+    return ((s - g.transform("mean")) / (g.transform("std").fillna(0) + 1e-9)).values
+
+
+def final_scores(model, X, rows):
+    """Blend score for candidate rows (any grouping by rows.qid)."""
+    q = rows.qid.values
+    s = sum(_z(m.predict(X), q) for m in model["members"])
+    if model["w"]:
+        pri, glob = model["prior"]
+        p = pd.Series(list(zip(rows.crop_slug, rows.season_app))).map(pri).values.astype(float)
+        p = np.where(np.isnan(p), rows.crop_slug.map(glob).fillna(0.5).values, p)
+        s = s + model["w"] * _z(np.where(rows.lag1_pct.isna(), p, rows.lag1_pct.values), q)
+    return s
+
+
+def fit_final(df, tr, crops, hist=True, return_model=False):
+    d = df.loc[tr]
+    model = dict(members=[fit_rank(df, tr, crops, hist, obj, return_model=True, **dict(ov)) for obj, ov in FINAL["members"]],
+                 prior=(d.groupby(["crop_slug", "season_app"]).yield_pct.mean(), d.groupby("crop_slug").yield_pct.mean()),
+                 w=FINAL["persist_w"] if hist else 0.0, hist=hist)
+    if return_model:
+        return model
+    return lambda idx: final_scores(model, pair_features(df.loc[idx], crops, hist), df.loc[idx])
 
 
 def make_clf(name):
@@ -234,7 +279,7 @@ def folds(df, protocol):
     if protocol == "random":
         groups = q.index.values
     elif protocol == "leave-states-out":
-        groups = q.state.values
+        groups = (q.state_group if "state_group" in q else q.state).values  # state_group merges re-organised UTs (CC4)
     else:  # leave-years-out: 5 contiguous blocks of years
         yrs = np.sort(q.year.unique())
         block = {y: i for i, b in enumerate(np.array_split(yrs, 5)) for y in b}
@@ -251,7 +296,8 @@ MODELS = {
     "XGBoost [11,22]": lambda df, tr, c, h, QX, Qy: fit_clf("XGB", df, tr, c, h, QX, Qy),
     "MLP [13]": lambda df, tr, c, h, QX, Qy: fit_clf("MLP", df, tr, c, h, QX, Qy),
     "LGBM pointwise": lambda df, tr, c, h, QX, Qy: fit_rank(df, tr, c, h, "regression"),
-    "YieldRank (ours)": lambda df, tr, c, h, QX, Qy: fit_rank(df, tr, c, h, "lambdarank"),
+    "LambdaMART (v4 listwise)": lambda df, tr, c, h, QX, Qy: fit_rank(df, tr, c, h, "lambdarank"),
+    "YieldRank (ours)": lambda df, tr, c, h, QX, Qy: fit_final(df, tr, c, h),
 }
 
 

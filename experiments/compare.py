@@ -162,6 +162,11 @@ def _paper_methods():
     }
 
 
+def _no_persist(df, tr, crops):
+    m = run.fit_final(df, tr, crops, return_model=True) | {"w": 0.0}
+    return lambda idx: run.final_scores(m, run.pair_features(df.loc[idx], crops, True), df.loc[idx])
+
+
 # name: (family, source, interpretable, note, maker). source = "ours" | "baseline" | bib key of the reimplemented paper.
 METHODS = {
     "Crop prior": ("naive", "baseline", "lookup table", "mean training yield percentile of each crop",
@@ -176,9 +181,14 @@ METHODS = {
     "LightGBM pointwise": ("pair model", "ours", TREE, "same pairs/features as YieldRank, squared-error loss on yield percentile", rank("regression")),
     "LightGBM XE-NDCG ranker": ("pair ranker", "ours", TREE, "same pairs, cross-entropy NDCG loss", rank("xendcg")),
     "XGBoost LambdaMART": ("pair ranker", "ours", TREE, "same pairs, XGBoost rank:ndcg", rank("xgb_rank")),
-    "YieldRank (ours)": ("pair ranker", "ours", TREE, "LightGBM LambdaMART on (district-season, crop) pairs, relevance = yield percentile", rank("lambdarank")),
-    "YieldRank - history": ("ablation", "ours", TREE, "no district-history features", rank("lambdarank", hist=False)),
-    "YieldRank - yield target (area share)": ("ablation", "ours", TREE, "relevance = area share instead of yield", rank("lambdarank", target="share")),
+    "LambdaMART (v4 listwise)": ("pair ranker", "ours", TREE, "the earlier v4 model: LightGBM LambdaMART alone", rank("lambdarank")),
+    "YieldRank (ours)": ("pair ranker", "ours", TREE, run.FINAL["description"],
+                         lambda df, tr, c, QX, Qy: run.fit_final(df, tr, c)),
+    "YieldRank - history": ("ablation", "ours", TREE, "no district-history features and no persistence term",
+                            lambda df, tr, c, QX, Qy: run.fit_final(df, tr, c, hist=False)),
+    "YieldRank - yield target (area share)": ("ablation", "ours", TREE, "relevance = area share instead of yield (LambdaMART)", rank("lambdarank", target="share")),
+    "YieldRank - persistence term": ("ablation", "ours", TREE, "listwise + pointwise blend without the 0.25 x persistence term",
+                                     lambda df, tr, c, QX, Qy: _no_persist(df, tr, c)),
 }
 OURS = "YieldRank (ours)"
 

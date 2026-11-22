@@ -19,6 +19,6 @@ the linked page before submitting.
 ## Before submitting
 
 - The 6-page IEEEtran layout in `main.tex` matches both IEEE conferences' usual limit. Check each CFP for the exact page cap and whether extra pages are paid.
-- Replace the `[Student Names]`, `[Guide Name]` and `[College Name]` placeholders, and remove any self-identifying text if the review is double-blind.
+- Author block is filled (HBTU Kanpur team; corresponding author 230104047@hbtu.ac.in). If a venue is double-blind, anonymise it and the repository links before submitting.
 - DES data: its copyright policy asks for permission (by e-mail) before reproduction. Send that request before publishing or redistributing the derived dataset (see `docs/research/DATA_PROVENANCE.md`, S1).
 - Numbers are final for the CC4 final dataset (soil 99.8% real points). If the data changes, follow `experiments/README.md`: tables, macros and results.json regenerate themselves.
