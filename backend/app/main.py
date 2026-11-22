@@ -38,7 +38,7 @@ def health() -> dict[str, str]:
 
 @app.post("/predict", response_model=CropResponse)
 def predict_crop(payload: CropRequest) -> CropResponse:
-    best_crop, top_recommendations = model_service.predict_top_k(payload.model_dump(), k=3)
+    best_crop, top_recommendations = model_service.predict_top_k(payload.model_dump(), k=None)  # all crops, sorted
     return CropResponse(best_crop=best_crop, top_recommendations=top_recommendations)
 
 
