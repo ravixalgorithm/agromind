@@ -290,9 +290,11 @@ at \MedianStateCovIID\%, but \StatesBelowIID{} of \StatesN{} states fall below 8
 scores from rankers that never saw the state) keeps marginal coverage at \CCLACCovLSO\% but
 leaves \CCWorstState{} at \CCWorstCov\%. A Mondrian threshold per number of candidate crops,
 which is known before predicting, lifts the worst state to \MNWorstCov\% (\CCWorstState{}
-\MNAtCCWorst\%) and leaves \MNStatesBelow{} states below 85\%. The cost is larger sets
-(\CCMNSizeLSO{} vs \CCLACSizeLSO{} crops). Region-wise Mondrian helps less (worst
-\MRWorstCov\%). State-conditional coverage remains open.
+\MNAtCCWorst\%) at the cost of larger sets (\CCMNSizeLSO{} vs \CCLACSizeLSO{} crops). It does
+not reduce the number of states below 85\% (\MNStatesBelow{} vs \CCStatesBelow{} for pooled
+calibration). Region-wise Mondrian gives a lower worst-state coverage (\MRWorstCov\%) and
+\MRStatesBelow{} such states. No scheme we tried gives state-conditional coverage, which remains
+open.
 
 
 \begin{table}[t]
