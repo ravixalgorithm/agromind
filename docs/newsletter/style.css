@@ -101,3 +101,6 @@
   .limits ul.cols { column-count: 2; column-gap: 7mm; padding-left: 4mm; }
   .limits li { break-inside: avoid; }
   table.kr th:first-child { width: 15%; }
+  ul.cols, ul.fw, .limits ul.cols { column-rule: none; }
+  sup { line-height: 0; }
+  .note sup { color: inherit; font-size: 75%; }

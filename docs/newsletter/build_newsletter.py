@@ -333,10 +333,10 @@ BODY = f"""
       <li><b>Yield is not profit.</b> Percentiles measure comparative advantage, not income, price, water or risk.</li>
       <li><b>Only crops already grown are ranked.</b> The data cannot score a crop a district has never tried.</li>
       <li><b>Coarse inputs.</b> Weather and soil come from one point per district, and the weather is the season that
-        actually happened, not a forecast. Adding soil did not help ({V3['soil_no']}% vs {V3['soil_yes']}% hit@1 on
-        {V3['soil_d']} districts in v3).</li>
-      <li><b>Shortlist guarantees are on average.</b> Coverage falls below 90% in {V('StatesBelowIID')} of
-        {V('StatesN')} audited states.</li>
+        actually happened, not a forecast. Adding soil did not help (v3 hit@1 {V3['soil_no']}% without soil, {V3['soil_yes']}% with it, on
+        {V3['soil_d']} districts).</li>
+      <li><b>Shortlist guarantees are on average.</b> The 90% target holds overall, but coverage falls below 85% in
+        {V('StatesBelowIID')} of {V('StatesN')} audited states (Fig. 2).</li>
       <li><b>One country, past seasons.</b> Results describe Indian districts from {V('YearA')} to {V('YearB')}; no field
         trial has been run.</li>
     </ul>
