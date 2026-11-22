@@ -1,0 +1,46 @@
+{
+  "apy_rows_raw": 345405,
+  "apy_rows_clean": 344540,
+  "rows": 344540,
+  "states": 36,
+  "districts_apy": 792,
+  "districts_matched": 792,
+  "geo_points": 711,
+  "crops_raw": 55,
+  "crops_labelled": 49,
+  "years": "1997-98..2020-21",
+  "n_years": 24,
+  "seasons": {
+    "Kharif": 138137,
+    "Rabi": 100763,
+    "Whole Year": 68301,
+    "Summer": 22101,
+    "Winter": 8249,
+    "Autumn": 6989
+  },
+  "match_methods": {
+    "exact": 685,
+    "exact_other_state": 57,
+    "fuzzy": 36,
+    "prefix": 10,
+    "fuzzy_other_state": 4
+  },
+  "row_coverage_pct": {
+    "centroid": 100.0,
+    "climate": 100.0,
+    "soil_any": 7.0,
+    "soil_soilgrids": 0.82,
+    "soil_state_median": 6.18,
+    "wrb_class": 0.82
+  },
+  "soil_points_cached": 8,
+  "soil_points_with_data": 8,
+  "recommend_rows": 84253,
+  "train_rows": 5790,
+  "train_crops": 36,
+  "train_soil_classes": {
+    "Loamy": 5355,
+    "Red": 285,
+    "Black": 150
+  }
+}
