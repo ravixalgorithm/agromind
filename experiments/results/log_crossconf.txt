@@ -1,3 +1,16 @@
-random            f0 hit@1=0.5952 ndcg@3=0.9338 LAC90 cov=0.906 size=2.74 APS90 cov=0.913 | Mondrian ncand 0.901/2.99 region 0.903/2.77
-random            f1 hit@1=0.5921 ndcg@3=0.9354 LAC90 cov=0.902 size=2.70 APS90 cov=0.913 | Mondrian ncand 0.898/2.96 region 0.900/2.73
-random            f2 hit@1=0.5797 ndcg@3=0.9346 LAC90 cov=0.899 size=2.69 APS90 cov=0.912 | Mondrian ncand 0.900/2.98 region 0.900/2.73
+random            f0 hit@1=0.6089 ndcg@3=0.9397 LAC90 cov=0.906 size=2.60 APS90 cov=0.919 | Mondrian ncand 0.904/2.84 region 0.905/2.63
+random            f1 hit@1=0.6013 ndcg@3=0.9396 LAC90 cov=0.899 size=2.59 APS90 cov=0.912 | Mondrian ncand 0.898/2.81 region 0.899/2.62
+random            f2 hit@1=0.5961 ndcg@3=0.9385 LAC90 cov=0.899 size=2.59 APS90 cov=0.917 | Mondrian ncand 0.898/2.84 region 0.899/2.63
+random            f3 hit@1=0.6067 ndcg@3=0.9403 LAC90 cov=0.906 size=2.59 APS90 cov=0.920 | Mondrian ncand 0.911/2.86 region 0.907/2.63
+random            f4 hit@1=0.6044 ndcg@3=0.9401 LAC90 cov=0.896 size=2.55 APS90 cov=0.915 | Mondrian ncand 0.895/2.77 region 0.895/2.58
+leave-states-out  f0 hit@1=0.5334 ndcg@3=0.9257 LAC90 cov=0.882 size=3.15 APS90 cov=0.933 | Mondrian ncand 0.908/3.71 region 0.898/3.39
+leave-states-out  f1 hit@1=0.5466 ndcg@3=0.9249 LAC90 cov=0.911 size=3.06 APS90 cov=0.895 | Mondrian ncand 0.900/3.25 region 0.898/2.91
+leave-states-out  f2 hit@1=0.5600 ndcg@3=0.9138 LAC90 cov=0.931 size=2.99 APS90 cov=0.890 | Mondrian ncand 0.910/3.10 region 0.913/2.76
+leave-states-out  f3 hit@1=0.5299 ndcg@3=0.9052 LAC90 cov=0.881 size=2.92 APS90 cov=0.906 | Mondrian ncand 0.900/3.45 region 0.913/3.53
+leave-states-out  f4 hit@1=0.5815 ndcg@3=0.9271 LAC90 cov=0.906 size=2.78 APS90 cov=0.905 | Mondrian ncand 0.896/2.93 region 0.914/2.87
+leave-years-out   f0 hit@1=0.5784 ndcg@3=0.9298 LAC90 cov=0.881 size=2.56 APS90 cov=0.901 | Mondrian ncand 0.879/2.78 region 0.881/2.59
+leave-years-out   f1 hit@1=0.5978 ndcg@3=0.9429 LAC90 cov=0.916 size=2.71 APS90 cov=0.931 | Mondrian ncand 0.917/2.99 region 0.915/2.74
+leave-years-out   f2 hit@1=0.6065 ndcg@3=0.9407 LAC90 cov=0.914 size=2.70 APS90 cov=0.923 | Mondrian ncand 0.905/2.88 region 0.913/2.74
+leave-years-out   f3 hit@1=0.5371 ndcg@3=0.9088 LAC90 cov=0.895 size=2.90 APS90 cov=0.894 | Mondrian ncand 0.900/3.28 region 0.895/2.95
+leave-years-out   f4 hit@1=0.5800 ndcg@3=0.9330 LAC90 cov=0.901 size=2.69 APS90 cov=0.908 | Mondrian ncand 0.902/3.00 region 0.906/2.77
+wrote /Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/results/crossconf_main.json

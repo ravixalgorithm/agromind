@@ -1,0 +1,13 @@
+rows 227451 queries 38068 crops 49 states 35 hist=True
+random            f0 Crop prior             ndcg@3=0.7940 hit@1=0.2809 cov90 iid=0.894 grp=0.897 (1s)
+random            f0 Persistence            ndcg@3=0.9103 hit@1=0.5381 cov90 iid=0.896 grp=0.899 (1s)
+random            f0 GaussianNB [6,12]      ndcg@3=0.8130 hit@1=0.3198 cov90 iid=0.901 grp=0.899 (1s)
+random            f0 RandomForest [8,21]    ndcg@3=0.9080 hit@1=0.5588 cov90 iid=0.903 grp=0.901 (4s)
+random            f0 XGBoost [11,22]        ndcg@3=0.9050 hit@1=0.5565 cov90 iid=0.901 grp=0.908 (63s)
+random            f0 MLP [13]               ndcg@3=0.8915 hit@1=0.5198 cov90 iid=0.903 grp=0.899 (4s)
+random            f0 LGBM pointwise         ndcg@3=0.9308 hit@1=0.5862 cov90 iid=0.902 grp=0.900 (10s)
+random            f0 YieldRank (ours)       ndcg@3=0.9325 hit@1=0.5914 cov90 iid=0.905 grp=0.900 (12s)
+random            f1 Crop prior             ndcg@3=0.7959 hit@1=0.2871 cov90 iid=0.902 grp=0.900 (1s)
+random            f1 Persistence            ndcg@3=0.9124 hit@1=0.5474 cov90 iid=0.893 grp=0.894 (1s)
+random            f1 GaussianNB [6,12]      ndcg@3=0.8126 hit@1=0.3130 cov90 iid=0.905 grp=0.904 (1s)
+random            f1 RandomForest [8,21]    ndcg@3=0.9087 hit@1=0.5545 cov90 iid=0.895 grp=0.896 (3s)

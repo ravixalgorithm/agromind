@@ -34,6 +34,14 @@ def kaggle_reference():
             for n, m in [("RandomForest", RandomForestClassifier(300, random_state=0)), ("GaussianNB", GaussianNB())]}
 
 
+def fp(p):
+    """p-value as LaTeX math relation, e.g. '=3.1\\times10^{-5}' or '<10^{-300}'."""
+    if p == 0:
+        return "<10^{-300}"
+    m, e = f"{p:.1e}".split("e")
+    return f"={m}\\times10^{{{int(e)}}}"
+
+
 def pm(rec, k, pct=False):
     f = 100 if pct else 1
     m, s = rec["mean"][k] * f, rec["std"][k] * f
@@ -156,7 +164,7 @@ def main():
                 f"BaseName{ab}": best_base[p].split(" [")[0],
                 f"GainHit{ab}": f"{100*(o['hit@1']-b['hit@1']):.1f}", f"GainNDCG{ab}": f"{o['ndcg@3']-b['ndcg@3']:.3f}",
                 f"PersNDCG{ab}": f"{pe.get('ndcg@3', float('nan')):.3f}", f"PersHit{ab}": f"{100*pe.get('hit@1', float('nan')):.1f}",
-                f"PHit{ab}": f"{w['hit@1']['p']:.1e}" if w['hit@1'] else "--", f"NPaired{ab}": f"{w['hit@1']['n']:,}" if w['hit@1'] else "--",
+                f"PHit{ab}": fp(w['hit@1']['p']) if w['hit@1'] else "--", f"NPaired{ab}": f"{w['hit@1']['n']:,}" if w['hit@1'] else "--",
                 f"CovIID{ab}": f"{100*c['conformal_iid_cal']['LAC@0.9']['coverage']:.1f}", f"CovGRP{ab}": f"{100*c['conformal_group_cal']['LAC@0.9']['coverage']:.1f}",
                 f"SizeIID{ab}": f"{c['conformal_iid_cal']['LAC@0.9']['size']:.2f}", f"SizeGRP{ab}": f"{c['conformal_group_cal']['LAC@0.9']['size']:.2f}",
                 f"APSCovGRP{ab}": f"{100*c['conformal_group_cal']['APS@0.9']['coverage']:.1f}", f"APSSizeGRP{ab}": f"{c['conformal_group_cal']['APS@0.9']['size']:.2f}"}
@@ -173,6 +181,13 @@ def main():
                 f"OursHitCold{ab}": f"{100*h.loc[OURS, True]:.1f}", f"OursHitWarm{ab}": f"{100*h.loc[OURS, False]:.1f}",
                 f"BaseHitCold{ab}": f"{100*h.loc[best_base[p], True]:.1f}"}
         if "Persistence" in h.index:
+            o = pp[pp.model == OURS].set_index(["fold", "qid"])
+            pe_ = pp[pp.model == "Persistence"].set_index(["fold", "qid"]).reindex(o.index)
+            from scipy.stats import wilcoxon
+            for flag, nm in ((True, "Cold"), (False, "Warm")):
+                dd = (o["hit@1"] - pe_["hit@1"])[o.cold == flag]
+                mac[f"PersP{nm}{ab}"] = fp(wilcoxon(dd).pvalue)
+            mac[f"PersP{ab}"] = fp(met[p]["Persistence"]["wilcoxon_vs_ours_hit@1"]["p"])
             mac |= {f"PersHitCold{ab}": f"{100*h.loc['Persistence', True]:.1f}", f"PersHitWarm{ab}": f"{100*h.loc['Persistence', False]:.1f}"}
         S[p]["hit1_cold_warm"] = h.to_dict()
     rf = met["leave-states-out"]["RandomForest [8,21]"]["folds"]
@@ -181,12 +196,17 @@ def main():
         mac |= {f"RFCov{ab}Mean": f"{np.mean(v):.1f}", f"RFCov{ab}Min": f"{min(v):.1f}", f"RFCov{ab}Max": f"{max(v):.1f}"}
     pw = met["leave-states-out"]["LGBM pointwise"]
     mac |= {"PointHitLSO": f"{100*pw['mean']['hit@1']:.1f}", "PointNDCGLSO": f"{pw['mean']['ndcg@3']:.3f}",
-            "PointPLSO": f"{pw['wilcoxon_vs_ours_hit@1']['p']:.2f}",
+            "PointPLSO": fp(pw['wilcoxon_vs_ours_hit@1']['p']),
             "WorstState": st.iid.idxmin(), "WorstIID": f"{100*st.iid.min():.1f}", "WorstGRP": f"{100*st.grp.loc[st.iid.idxmin()]:.1f}",
             "MedianStateCovIID": f"{100*st.iid.median():.1f}"}
     for p, ab in zip(PROTO, ("R", "LSO", "LYO")):
         for m, k in (("RandomForest [8,21]", "RF"), ("MLP [13]", "MLP"), ("GaussianNB [6,12]", "NB"), ("XGBoost [11,22]", "XGB")):
             mac[f"{k}Hit{ab}"] = f"{100*met[p][m]['mean']['hit@1']:.1f}"
+    for p, ab in zip(PROTO, ("R", "LSO", "LYO")):
+        mac[f"PriorHit{ab}"] = f"{100*met[p]['Crop prior']['mean']['hit@1']:.1f}"
+    clf = [m for m in models if "[" in m]
+    mac["ClfDropMax"] = f"{max(100*(met['random'][m]['mean']['hit@1'] - met['leave-states-out'][m]['mean']['hit@1']) for m in clf):.1f}"
+    mac["OursDrop"] = f"{100*(met['random'][OURS]['mean']['hit@1'] - met['leave-states-out'][OURS]['mean']['hit@1']):.1f}"
     nh = RES / "metrics_nohist.json"
     if nh.exists():
         N = json.load(open(nh))["metrics"]
@@ -203,11 +223,27 @@ def main():
                 mac[f"CC{meth}Cov{ab}"] = f"{100*np.mean([f['conformal_crossgroup'][meth+'@0.9']['coverage'] for f in X[p]]):.1f}"
                 mac[f"CC{meth}Size{ab}"] = f"{np.mean([f['conformal_crossgroup'][meth+'@0.9']['size'] for f in X[p]]):.2f}"
             mac[f"CCHit{ab}"] = f"{100*np.mean([f['hit@1'] for f in X[p]]):.1f}"
+            for mk_, nm in (("mondrian_ncand", "MN"), ("mondrian_region", "MR")):
+                mac[f"CC{nm}Cov{ab}"] = f"{100*np.mean([f[mk_]['coverage'] for f in X[p]]):.1f}"
+                mac[f"CC{nm}Size{ab}"] = f"{np.mean([f[mk_]['size'] for f in X[p]]):.2f}"
         Cq = pd.read_parquet(RES / "crossconf_query_main.parquet")
-        cst = Cq[Cq.protocol == "leave-states-out"].groupby("state").cov_LAC.agg(["mean", "size"])
-        cst = cst[cst["size"] >= 30]
-        mac |= {"CCStatesBelow": int((cst["mean"] < 0.85).sum()), "CCWorstCov": f"{100*cst['mean'].min():.1f}", "CCWorstState": cst["mean"].idxmin()}
+        lso = Cq[Cq.protocol == "leave-states-out"]
+        cst = lso.groupby("state")[["cov_LAC", "cov_Mncand", "cov_Mregion", "size_LAC", "size_Mncand"]].mean()
+        cst["n"] = lso.groupby("state").size()
+        cst = cst[cst.n >= 30]
+        for col, nm in (("cov_LAC", "CC"), ("cov_Mncand", "MN"), ("cov_Mregion", "MR")):
+            mac |= {f"{nm}StatesBelow": int((cst[col] < 0.85).sum()), f"{nm}WorstCov": f"{100*cst[col].min():.1f}",
+                    f"{nm}WorstState": cst[col].idxmin(), f"{nm}TelanganaCov": f"{100*cst[col].get('Telangana', float('nan')):.1f}"}
         cst.to_csv(RES / "crossconf_coverage_by_state_main.csv")
+        cs_ = S["leave-states-out"]["conformal"]
+        rows_ = [("LAC, i.i.d.\\ calibration", 100 * cs_["conformal_iid_cal"]["LAC@0.9"]["coverage"], cs_["conformal_iid_cal"]["LAC@0.9"]["size"], (st.iid < .85).sum(), 100 * st.iid.min()),
+                 ("LAC, 20\\% held-out states", 100 * cs_["conformal_group_cal"]["LAC@0.9"]["coverage"], cs_["conformal_group_cal"]["LAC@0.9"]["size"], (st.grp < .85).sum(), 100 * st.grp.min()),
+                 ("LAC, cross-group (all states)", float(mac["CCLACCovLSO"]), float(mac["CCLACSizeLSO"]), mac["CCStatesBelow"], float(mac["CCWorstCov"])),
+                 ("Mondrian by \\#candidates", float(mac["CCMNCovLSO"]), float(mac["CCMNSizeLSO"]), mac["MNStatesBelow"], float(mac["MNWorstCov"])),
+                 ("Mondrian by region", float(mac["CCMRCovLSO"]), float(mac["CCMRSizeLSO"]), mac["MRStatesBelow"], float(mac["MRWorstCov"]))]
+        (PAPER / "tables/conformal_lso.tex").write_text("\n".join([r"\begin{tabular}{lcccc}", r"\toprule",
+            r"Calibration & Cov.\% & Size & States $<$85\% & Worst state \\", r"\midrule",
+            *[f"{a} & {b:.1f} & {c:.2f} & {d}/{len(cst)} & {e:.1f} \\\\" for a, b, c, d, e in rows_], r"\bottomrule", r"\end{tabular}"]) + "\n")
     json.dump(S, open(RES / f"summary_{TAG}.json", "w"), indent=1, default=str)
     (PAPER / "tables/numbers.tex").write_text("% generated by experiments/report.py -- do not edit\n" +
         "".join(f"\\newcommand{{\\{k}}}{{{v}}}\n" for k, v in mac.items()))
