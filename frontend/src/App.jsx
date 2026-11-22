@@ -362,15 +362,13 @@ const SOIL_ROWS = [
 ];
 const SOIL_SOURCE = { soilgrids_centroid: 'SoilGrids point at the district centre', state_median: 'State median (no SoilGrids point for this district yet)' };
 const EXAMPLES = [
-  ['Punjab', 'LUDHIANA', 'rabi'],
-  ['Tamil Nadu', 'THANJAVUR', 'kharif'],
-  ['Maharashtra', 'NASHIK', 'kharif'],
-  ['Uttar Pradesh', 'LUCKNOW', 'rabi'],
+  ['Punjab', 'Ludhiana', 'rabi'],
+  ['Tamil Nadu', 'Thanjavur', 'kharif'],
+  ['Maharashtra', 'Nashik', 'kharif'],
+  ['Uttar Pradesh', 'Lucknow', 'rabi'],
 ];
 const V3_PAGE = 100;
 
-// APY publishes district names in upper case; show them title-cased but always send the raw value back.
-const titleCase = (s) => (s && s === s.toUpperCase() ? s.toLowerCase().replace(/(^|[\s(/-])([a-z])/g, (m, a, b) => a + b.toUpperCase()) : s);
 const seasonLabel = (s) => (s === 'whole_year' ? 'Whole year' : SEASONS[s] ? `${SEASONS[s].name} (${SEASONS[s].months})` : s);
 const round2 = (n) => Math.round(n * 100) / 100;
 const num = (n, digits = 1) => (typeof n === 'number' ? n.toLocaleString('en-IN', { maximumFractionDigits: digits }) : '—');
@@ -398,8 +396,9 @@ function useV3Info() {
   return v3;
 }
 
-// Crop years start in years[0] and end in the year after years[1] (e.g. 1997-98 … 2020-21 → 1997–2021).
-const yearSpan = (years) => (years ? `${years[0]}–${years[1] + 1}` : '');
+// The API gives crop-year starts: [1997, 2022] means crop years 1997-98 to 2022-23.
+const cropYear = (y) => `${y}-${String((y + 1) % 100).padStart(2, '0')}`;
+const yearSpan = (years) => (years ? `crop years ${cropYear(years[0])} to ${cropYear(years[1])}` : '');
 const districtCount = (v3) => `${v3.districts} districts${v3.locations ? ` (${v3.locations} locations)` : ''}`;
 
 function useV3Stats() {
@@ -564,7 +563,7 @@ function DistrictAdvisory({ meta, t }) {
   const recs = result?.recommendations ?? [];
   const top = recs[0];
   const shown = showAll ? recs : recs.slice(0, 10);
-  const place = info ? `${titleCase(info.district)}, ${info.state}` : '';
+  const place = info ? `${info.district}, ${info.state}` : '';
   const loadingText = warm.current ? 'Updating…' : 'Loading model… the first prediction after the server starts takes a few seconds.';
   const calendarCrop = top && meta?.crops?.[top.crop];
 
@@ -615,7 +614,7 @@ function DistrictAdvisory({ meta, t }) {
               <option value="">-- Select --</option>
               {stateOpt?.districts.map((d) => (
                 <option key={d.district} value={d.district}>
-                  {titleCase(d.district)}
+                  {d.district}
                 </option>
               ))}
             </select>
@@ -660,7 +659,7 @@ function DistrictAdvisory({ meta, t }) {
             <span>Example districts:</span>
             {examples.map(([s, d, season]) => (
               <button key={d} type="button" className="link-btn" onClick={() => setSel({ state: s, district: d, season })}>
-                {titleCase(d)} ({seasonLabel(season).split(' ')[0]})
+                {d} ({seasonLabel(season).split(' ')[0]})
               </button>
             ))}
           </p>
@@ -932,7 +931,7 @@ const V3_NUM = new Set(['area_ha', 'production', 'yield', 'yield_pct', 'temperat
 
 function v3Cell(col, v) {
   if (v === null || v === undefined || v === '') return '—';
-  if (col === 'district') return titleCase(v);
+  if (col === 'district') return v;
   if (col === 'yield_pct') return `${Math.round(v * 100)}`;
   if (col === 'recommend') return v ? 'Yes' : '';
   if (col === 'soil_source') return v === 'soilgrids_centroid' ? 'point' : v === 'state_median' ? 'state median' : v;
@@ -1004,7 +1003,7 @@ function V3DataBrowser() {
             <option value="">All</option>
             {stateOpt?.districts.map((d) => (
               <option key={d.district} value={d.district}>
-                {titleCase(d.district)}
+                {d.district}
               </option>
             ))}
           </select>
@@ -1026,7 +1025,7 @@ function V3DataBrowser() {
             <option value="">All</option>
             {years.map((y) => (
               <option key={y} value={y}>
-                {y}-{String((y + 1) % 100).padStart(2, '0')}
+                {cropYear(y)}
               </option>
             ))}
           </select>
@@ -2791,9 +2790,9 @@ function PaperPage() {
 
 const DATA_SOURCES = [
   [
-    'District-wise, season-wise crop production statistics (DES, Ministry of Agriculture & Farmers Welfare), via data.gov.in and a 1997–2021 Kaggle compilation',
-    'v3, v4 benchmark: crops grown and yields',
-    'Government Open Data Licence – India (GODL); the Kaggle compilation is CC BY-NC-SA 4.0',
+    'District-wise, season-wise crop production statistics (APY), Directorate of Economics & Statistics, Ministry of Agriculture & Farmers Welfare: official DES portal data.desagri.gov.in',
+    'District mode and the v3/v4 benchmark: crops grown, area, production and yield',
+    'Government of India open data (GODL – India); a Kaggle mirror (CC BY-NC-SA 4.0) was used only to cross-check',
   ],
   ['NASA POWER (monthly temperature, humidity, rainfall)', 'v3, v4 climate at district centroids', 'NASA open data, no restrictions; cite POWER'],
   ['ISRIC SoilGrids 2.0 (pH, nitrogen, organic carbon, texture, CEC)', 'v3, v4 soil at district centroids', 'CC BY 4.0 (Poggio et al. 2021)'],
