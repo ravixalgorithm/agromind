@@ -25,6 +25,7 @@ import calendar
 import difflib
 import hashlib
 import json
+import random
 import re
 import sys
 import time
@@ -347,16 +348,15 @@ def parse_soil(js: dict):
 def fetch_soil(points):
     (CACHE / "soil").mkdir(parents=True, exist_ok=True)
     todo = [p for p in points if not soil_path(*p).exists()]
+    random.Random(0).shuffle(todo)  # spread early coverage over all states (state medians)
     log(f"SoilGrids: {len(points)} points, {len(todo)} to fetch (~{len(todo) * SOIL_GAP_S * 1.4 / 3600:.1f} h)")
     last = 0.0
 
     def throttled(url):
         nonlocal last
         time.sleep(max(0.0, SOIL_GAP_S - (time.time() - last)))
-        try:
-            return json.loads(get(url, timeout=90))
-        finally:
-            last = time.time()
+        last = time.time()
+        return json.loads(get(url, timeout=90))
 
     for n, (lat, lon) in enumerate(todo, 1):
         rec = {"lat": lat, "lon": lon, "props": None, "wrb": None, "at": None}
@@ -411,6 +411,8 @@ def load_apy() -> pd.DataFrame:
     df = df[~df.crop.isin(DROP_CROPS) & df.crop.notna() & df.season.notna()]
     df["state"] = df.state.replace({"Andaman and Nicobar": "Andaman and Nicobar Islands", "Laddakh": "Ladakh"})
     df = df[df.district.str.len() > 1]  # one junk row ("S")
+    # the two Andaman spellings carry one identical record twice
+    df = df.drop_duplicates(["state", "district", "crop_year", "season", "crop"])
     df["year"] = df.crop_year.str[:4].astype(int)
     df["yield"] = (df.production / df.area_ha).where(df.area_ha > 0)
     df["crop_slug"] = df.crop.map(CROPS)
@@ -430,11 +432,30 @@ def label(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def selftest():
+    sq = {"type": "Polygon", "coordinates": [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]]}
+    assert centroid(sq) == (1.0, 1.0)
+    assert norm("B>NKURA") == "BANKURA" and norm("Dadra & Nagar") == "DADRAANDNAGAR"
+    months = {v: {f"{y}{m:02d}": 1.0 for y in (1997, 1998) for m in range(1, 13)} for v in ("T2M", "RH2M", "PRECTOTCORR")}
+    assert season_climate(months, 1997, "Rabi") == (1.0, 1.0, 30 + 31 + 31 + 28 + 31)  # Nov 97 - Mar 98
+    assert season_climate(months, 1998, "Rabi") is None  # needs 1999 data
+    geo = pd.DataFrame({"geo_state": ["BIHAR", "MAHARASHTRA", "KARNATAKA", "CHHATTISGARH"],
+                        "geo_district": ["AURANGABAD", "CHHATRAPATI SAMBHAJINAGAR", "VIJAYAPURA", "BIJAPUR"],
+                        "lat": [1, 2, 3, 4], "lon": [1, 2, 3, 4]})
+    pairs = pd.DataFrame({"s": ["Bihar", "Maharashtra", "Karnataka", "Chhattisgarh"],
+                          "d": ["AURANGABAD", "AURANGABAD", "BIJAPUR", "BIJAPUR"]})
+    assert match_districts(pairs, geo).lat.tolist() == [1, 2, 3, 4]
+    log("selftest ok")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--no-soil-fetch", action="store_true", help="use cached soil only")
     ap.add_argument("--soil-only", action="store_true", help="fill the soil cache, then exit")
+    ap.add_argument("--selftest", action="store_true", help="check centroid / season / matching logic")
     args = ap.parse_args()
+    if args.selftest:
+        return selftest()
     CACHE.mkdir(parents=True, exist_ok=True)
 
     apy, stats = load_apy()
