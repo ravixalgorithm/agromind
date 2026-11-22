@@ -81,15 +81,16 @@ def evaluate(protocol):
             ci, per_i = run.conformal(mk(ic_i, s_ic), mk(te_i, s_te))
             cg, per_g = run.conformal(mk(gc_i, s_gc), mk(te_i, s_te))
             r = dict(fold=f, model=name.split(" [")[0], ndcg3=pq["ndcg@3"].mean(), hit1=100*pq["hit@1"].mean(), hit3=100*pq["hit@3"].mean(),
-                     cov_iid=100*ci["LAC@0.9"]["coverage"], cov_heldout=100*cg["LAC@0.9"]["coverage"], set_size=cg["LAC@0.9"]["size"])
+                     cov_iid=100*ci["LAC@0.9"]["coverage"], size_iid=ci["LAC@0.9"]["size"],
+                     cov_heldout=100*cg["LAC@0.9"]["coverage"], size_heldout=cg["LAC@0.9"]["size"])
             rows.append(r)
             print(f"fold {f} | {r['model']:13s} | NDCG@3 {r['ndcg3']:.3f} | Hit@1 {r['hit1']:5.1f}% | Hit@3 {r['hit3']:5.1f}% | "
-                  f"90% set coverage: iid-cal {r['cov_iid']:5.1f}%  held-out-cal {r['cov_heldout']:5.1f}%  (avg size {r['set_size']:.2f})", flush=True)
+                  f"90% sets: iid-cal {r['cov_iid']:5.1f}% (size {r['size_iid']:.2f})  held-out-cal {r['cov_heldout']:5.1f}% (size {r['size_heldout']:.2f})", flush=True)
             perq.append(pq.assign(model=r["model"], fold=f).reset_index())
             conf.append(per_i.add_suffix("_iid").join(per_g.add_suffix("_grp")).assign(model=r["model"], fold=f,
                         state=lambda d: Q.state.reindex(d.index).values).reset_index(names="qid"))
     R = pd.DataFrame(rows)
-    summ = R.groupby("model", sort=False)[["ndcg3", "hit1", "hit3", "cov_iid", "cov_heldout", "set_size"]].agg(["mean", "std"]).round(3)
+    summ = R.groupby("model", sort=False)[["ndcg3", "hit1", "hit3", "cov_iid", "size_iid", "cov_heldout", "size_heldout"]].agg(["mean", "std"]).round(3)
     return R, summ, pd.concat(perq), pd.concat(conf)
 
 def significance(P, base):
@@ -121,7 +122,23 @@ S_lyo"""),
 code("""significance(P_lyo, ["Persistence", "GaussianNB", "RandomForest", "XGBoost", "MLP"])"""),
 md("## 7. Summary: Hit@1 (%) and NDCG@3 by protocol"),
 code("""summary = pd.concat({"random": S_rand, "leave-states-out": S_lso, "leave-years-out": S_lyo}, axis=0)
-summary[[("hit1", "mean"), ("hit1", "std"), ("ndcg3", "mean"), ("cov_heldout", "mean"), ("set_size", "mean")]]"""),
+summary[[("hit1", "mean"), ("hit1", "std"), ("ndcg3", "mean"), ("cov_iid", "mean"), ("size_iid", "mean"), ("cov_heldout", "mean"), ("size_heldout", "mean")]]"""),
+md("""## 8. Check: the paper's numbers, recomputed here
+Each value below is computed from this notebook's own runs and compared with `docs/research/results.json` → `v4.numbers`, which is the same file the paper's `numbers.tex` comes from."""),
+code("""import json
+paper = json.load(open(root / "docs/research/results.json"))["v4"]["numbers"] if (root / "docs/research/results.json").exists() else {}
+ours, ab = "YieldRank (ours)", {"random": "R", "leave-states-out": "LSO", "leave-years-out": "LYO"}
+check = {}
+for p, (S_, R_) in {"random": (S_rand, R_rand), "leave-states-out": (S_lso, R_lso), "leave-years-out": (S_lyo, R_lyo)}.items():
+    m = R_.groupby("model").mean(numeric_only=True)
+    base = m.drop(index=["YieldRank (ours)", "Persistence"]).hit1.idxmax()
+    check |= {f"OursHit{ab[p]}": f"{m.loc[ours, 'hit1']:.1f}", f"OursNDCG{ab[p]}": f"{m.loc[ours, 'ndcg3']:.3f}",
+              f"PersHit{ab[p]}": f"{m.loc['Persistence', 'hit1']:.1f}", f"BaseHit{ab[p]}": f"{m.loc[base, 'hit1']:.1f}", f"BaseName{ab[p]}": base.replace("RandomForest", "Random Forest").replace("GaussianNB", "Gaussian NB"),
+              f"CovIID{ab[p]}": f"{m.loc[ours, 'cov_iid']:.1f}", f"SizeIID{ab[p]}": f"{m.loc[ours, 'size_iid']:.2f}",
+              f"CovGRP{ab[p]}": f"{m.loc[ours, 'cov_heldout']:.1f}", f"SizeGRP{ab[p]}": f"{m.loc[ours, 'size_heldout']:.2f}"}
+for k, v in check.items():
+    print(f"{k:14s} notebook {v:>14s}   paper {paper.get(k, '?'):>14s}   {'OK' if paper.get(k) == v else 'DIFF'}")
+print("all match:", all(paper.get(k) == v for k, v in check.items()))"""),
 md("""## Reading the numbers
 * The ~99% of Section 1 is a property of the Kaggle table, not of crop choice. On real data, **no** model's top-1 pick matches the best-yielding crop anywhere near that often.
 * Compare each baseline's Hit@1 between the random and leave-states-out tables: the drop is the over-optimism of random splits.
