@@ -24,12 +24,16 @@ import argparse
 import calendar
 import difflib
 import hashlib
+import html.parser
+import http.cookiejar
 import json
 import random
 import re
+import ssl
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -39,11 +43,21 @@ import pandas as pd
 OUT = Path(__file__).resolve().parents[1] / "data" / "large"
 CACHE = OUT / "cache"
 
+# Primary crop source: the official DES (MoA&FW) APY report, one POST per state x crop year.
+DES_PAGE = "https://data.desagri.gov.in/website/crops-apy-report-web"
+DES_POST = "https://data.desagri.gov.in/report/crop/horizontal_crop_vertical_year"
+DES_GAP_S = 1.0  # be polite to a government server
+LE_ROOT_YR = {
+    "url": "https://letsencrypt.org/certs/gen-y/root-yr.pem",
+    "sha256": "d8a34bfb5df6b4a0592b0a9cd6b3b9a9335bd431cb2ac32243ab298cba24cbf2",
+    "file": "le_root_yr.pem",
+}
+
 # Sources pinned to a commit and checked by sha256 so a rebuild sees the exact same bytes.
 APY = {
     # Mirror of kaggle.com/datasets/pyatakov/india-agriculture-crop-production (upd 02.2023),
-    # itself compiled from https://aps.dac.gov.in/ (DES, MoA&FW). Overlapping years match the
-    # official data.gov.in resource 35be999b-0208-4354-b557-f6ca9a5355de row for row.
+    # itself compiled from https://aps.dac.gov.in/ (DES, MoA&FW). No longer a data source:
+    # check_mirror() compares it row for row with the official DES report above.
     "url": "https://raw.githubusercontent.com/akhr1997/India-Crop-Prod-Dashboard/"
     "1600ca705bcb192b4bcc2ed5f31c32b97ac30b5e/Backend/indiaAgricultureCropProduction.csv",
     "sha256": "7068beec8803f4b1e9dda63bc97ce4cf221885033cd7d5116a569006d658b0be",
@@ -65,8 +79,8 @@ GEO_KA = {
 }
 POWER_URL = (
     "https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=T2M,RH2M,PRECTOTCORR"
-    "&community=AG&longitude={lon}&latitude={lat}&start=1997&end=2021&format=JSON"
-)
+    "&community=AG&longitude={lon}&latitude={lat}&start=1997&end=2023&format=JSON"
+)  # 2023: Rabi / Whole Year of crop year 2022-23 run into 2023
 SOIL_PROPS = ("phh2o", "nitrogen", "soc", "clay", "sand", "cec")
 SOIL_URL = (
     "https://rest.isric.org/soilgrids/v2.0/properties/query?lon={lon}&lat={lat}"
@@ -139,10 +153,13 @@ DISTRICT_ALIASES = {
     "BALESHWAR": "BALASORE", "SONEPUR": "SUBARNAPUR", "POONCH": "PUNCH",
     "SIVASAGAR": "SIBSAGAR", "BHADRADRI": "BHADRADRIKOTHAGUDEM",
     "KOMARAMBHEEMASIFABAD": "KOMARRAMBHEEM", "JAYASHANKAR": "JAYASHANKARBHUPALPALLI",
+    "KONASEEMA": "DRBRAMBEDKARKONASEEMA", "AHILYANAGAR": "AHMEDNAGAR", "GEYZING": "GYALSHING",
+    "VIJAYANAGAR": "BALLARI",  # carved out of Ballari in 2021; not in the boundary file -> parent centroid
 }
 STATE_ALIASES = {
     "DADRAANDNAGARHAVELI": "DADRAANDNAGARHAVELIANDDAMANANDDIU",
     "DAMANANDDIU": "DADRAANDNAGARHAVELIANDDAMANANDDIU",
+    "THEDADRAANDNAGARHAVELIANDDAMANANDDIU": "DADRAANDNAGARHAVELIANDDAMANANDDIU",
     "LADDAKH": "LADAKH",
 }
 
@@ -188,6 +205,120 @@ def cached_file(src: dict) -> Path:
         if digest != src["sha256"]:
             raise SystemExit(f"{path} sha256 {digest} != pinned {src['sha256']}; delete it and retry")
     return path
+
+
+class _Rows(html.parser.HTMLParser):
+    """Collects every <tr> as a list of (tag, attrs, text) cells; comments are skipped."""
+
+    def __init__(self):
+        super().__init__()
+        self.rows, self.cell = [], None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "tr":
+            self.rows.append([])
+        elif tag in ("td", "th") and self.rows:
+            self.cell = [tag, dict(attrs), ""]
+
+    def handle_data(self, data):
+        if self.cell is not None:
+            self.cell[2] += data
+
+    def handle_endtag(self, tag):
+        if tag in ("td", "th") and self.cell is not None:
+            self.cell[2] = " ".join(self.cell[2].split())
+            self.rows[-1].append(tuple(self.cell))
+            self.cell = None
+
+
+def _options(page: str, select_id: str):
+    block = re.search(rf'id="{select_id}".*?</select>', page, re.S).group(0)
+    return [(v, " ".join(t.split())) for v, t in re.findall(r'<option value="(\w+)"\s*>([^<]+)', block)]
+
+
+def des_session():
+    # data.desagri.gov.in chains to Let's Encrypt "Root YR" (2025), missing from older CA bundles;
+    # trust it in addition to the defaults (fetched over verified TLS from letsencrypt.org).
+    ctx = ssl.create_default_context()
+    root = cached_file(LE_ROOT_YR)
+    ctx.load_verify_locations(str(root))
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
+                                         urllib.request.HTTPSHandler(context=ctx))
+    opener.addheaders = [("User-Agent", "agromind-dataset-builder")]
+    page = opener.open(DES_PAGE, timeout=120).read().decode()
+    return opener, page
+
+
+def fetch_des() -> Path:
+    """Cache one DES APY report per (state, crop year): all districts, crops and seasons."""
+    d = CACHE / "des"
+    d.mkdir(parents=True, exist_ok=True)
+    index = d / "index.json"
+    if index.exists():
+        idx = json.loads(index.read_text())
+    else:
+        _, page = des_session()
+        idx = {"states": _options(page, "fltrstates"), "years": [y for y, _ in _options(page, "fltrstartyear")],
+               "crops": _options(page, "fltrcrops"), "accessed": time.strftime("%Y-%m-%d")}
+        index.write_text(json.dumps(idx, indent=1))
+    todo = [(s, y) for s, _ in idx["states"] for y in idx["years"] if not (d / f"{s}_{y}.html").exists()]
+    log(f"DES APY: {len(idx['states'])} states x {len(idx['years'])} years, {len(todo)} reports to fetch")
+    opener = page = None
+    for i, (s, y) in enumerate(todo):
+        for attempt in range(5):
+            try:
+                if opener is None:
+                    opener, page = des_session()
+                token = re.search(r'name="_token" value="([^"]+)"', page).group(1)
+                body = urllib.parse.urlencode(
+                    [("reportformat", "horizontal_crop_vertical_year"), ("fltrstates[]", s),
+                     ("fltrdistricts[]", "all"), *[("fltrcrops[]", c) for c, _ in idx["crops"]],
+                     ("fltrstartyear", y), ("fltrendyear", y), ("fltrrptformat", "scrview"), ("_token", token)])
+                req = urllib.request.Request(DES_POST, data=body.encode(), headers={"X-Requested-With": "XMLHttpRequest"})
+                text = opener.open(req, timeout=300).read().decode()
+                if "APY) Statistics" in text:
+                    break
+                err = text[:80]
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                err = e
+            opener = None  # stale token (419) or server hiccup: new session
+            log(f"  DES {s}/{y} retry {attempt + 1}/5 ({err})")
+            time.sleep(10 * (attempt + 1))
+        else:
+            raise RuntimeError(f"DES report {s}/{y} failed")
+        (d / f"{s}_{y}.html").write_text(text)
+        if i % 50 == 0:
+            log(f"  DES {i + 1}/{len(todo)}")
+        time.sleep(DES_GAP_S)
+    return d
+
+
+def parse_des(text: str, state: str) -> list[dict]:
+    p = _Rows()
+    p.feed(text)
+    head = [r for r in p.rows if r and all(c[0] == "th" for c in r)][-3:]
+    body = [r for r in p.rows if r and all(c[0] == "td" for c in r)]
+    if not body or body[0][-1][2] == "No Data Found" or len(body[0]) == 1:
+        return []
+    crops = [(c[2], int(c[1]["colspan"]) // 3) for c in head[0] if "colspan" in c[1]]
+    seasons = [c[2] for c in head[1]]
+    units = [re.search(r"\((.*)\)", c[2]).group(1) for c in head[2]]
+    cols = [(crop, season, units[3 * k + 1]) for k, (crop, season) in
+            enumerate(zip([c for c, n in crops for _ in range(n)], seasons))]
+    assert len(units) == 3 * len(cols) and all(u == "Hectare" for u in units[::3]), "unexpected DES layout"
+    num = lambda v: float(v.replace(",", "")) if v else None
+    out = []
+    for r in body:
+        vals = [c[2] for c in r[-3 * len(cols):]]
+        year, district = r[-3 * len(cols) - 1][2], re.sub(r"^\d+\.\s*", "", r[-3 * len(cols) - 2][2])
+        y0 = int(year[:4])
+        for k, (crop, season, unit) in enumerate(cols):
+            area, prod = num(vals[3 * k]), num(vals[3 * k + 1])
+            if area is None and prod is None:
+                continue
+            out.append({"state": state, "district": district, "crop": crop, "crop_year": f"{y0}-{(y0 + 1) % 100:02d}",
+                        "season": season, "area_ha": area, "production": prod, "production_unit": unit})
+    return out
 
 
 def cached_json(path: Path, url: str):
@@ -298,14 +429,15 @@ def point_key(lat, lon) -> str:
 
 
 def fetch_power(points) -> dict:
-    (CACHE / "power").mkdir(parents=True, exist_ok=True)
+    d = CACHE / "power_1997_2023"
+    d.mkdir(parents=True, exist_ok=True)
 
     def one(pt):
         lat, lon = pt
-        data = cached_json(CACHE / "power" / f"{point_key(lat, lon)}.json", POWER_URL.format(lat=lat, lon=lon))
+        data = cached_json(d / f"{point_key(lat, lon)}.json", POWER_URL.format(lat=lat, lon=lon))
         return point_key(lat, lon), data["properties"]["parameter"]
 
-    todo = [p for p in points if not (CACHE / "power" / f"{point_key(*p)}.json").exists()]
+    todo = [p for p in points if not (d / f"{point_key(*p)}.json").exists()]
     log(f"NASA POWER: {len(points)} points, {len(todo)} to fetch")
     with ThreadPoolExecutor(4) as pool:
         return dict(pool.map(one, points))
@@ -401,9 +533,33 @@ def soil_class(wrb, clay, sand) -> str:
 
 # ── assemble ────────────────────────────────────────────────────────────────────────────
 
-def load_apy() -> pd.DataFrame:
-    df = pd.read_csv(cached_file(APY))
+KEY = ["state", "district", "crop_year", "season", "crop"]
+
+
+def load_des() -> tuple[pd.DataFrame, dict]:
+    d = fetch_des()
+    idx = json.loads((d / "index.json").read_text())
+    recs = [r for s, name in idx["states"] for y in idx["years"] for r in parse_des((d / f"{s}_{y}.html").read_text(), html.unescape(name))]
+    df = pd.DataFrame(recs).astype({c: "string" for c in ("state", "district", "crop", "season", "production_unit")})
     raw = len(df)
+    df = df[~df.crop.isin(DROP_CROPS)]
+    unknown = sorted(set(df.crop) - set(CROPS))
+    if unknown:
+        log(f"DES crops without a CROPS entry (kept, unlabelled): {unknown}")
+    dupes = int(df.duplicated(KEY).sum())
+    df = df.drop_duplicates(KEY)
+    df["year"] = df.crop_year.str[:4].astype(int)
+    df["yield"] = (df.production / df.area_ha).where(df.area_ha > 0)
+    df["crop_slug"] = df.crop.map(CROPS)
+    df["season_app"] = df.season.map(lambda s: SEASONS[s][0])
+    stats = {"des_reports": len(idx["states"]) * len(idx["years"]), "des_accessed": idx["accessed"],
+             "apy_rows_raw": raw, "apy_rows_clean": len(df), "apy_duplicate_keys_dropped": dupes,
+             "crops_unmapped": unknown}
+    return df.reset_index(drop=True), stats
+
+
+def load_mirror() -> pd.DataFrame:
+    df = pd.read_csv(cached_file(APY))
     df.columns = ["state", "district", "crop", "crop_year", "season", "area_ha", "area_unit",
                   "production", "production_unit", "yield_raw"]
     for c in ("state", "district", "crop", "season"):
@@ -412,13 +568,41 @@ def load_apy() -> pd.DataFrame:
     df["state"] = df.state.replace({"Andaman and Nicobar": "Andaman and Nicobar Islands", "Laddakh": "Ladakh"})
     df = df[df.district.str.len() > 1]  # one junk row ("S")
     # the two Andaman spellings carry one identical record twice
-    df = df.drop_duplicates(["state", "district", "crop_year", "season", "crop"])
-    df["year"] = df.crop_year.str[:4].astype(int)
-    df["yield"] = (df.production / df.area_ha).where(df.area_ha > 0)
-    df["crop_slug"] = df.crop.map(CROPS)
-    df["season_app"] = df.season.map(lambda s: SEASONS[s][0])
-    stats = {"apy_rows_raw": raw, "apy_rows_clean": len(df)}
-    return df.drop(columns=["area_unit", "yield_raw"]), stats
+    return df.drop_duplicates(KEY)
+
+
+def check_mirror(des: pd.DataFrame) -> dict:
+    """Compare the Kaggle/GitHub mirror with the official DES rows for the years both cover."""
+    m = load_mirror()
+    keyed = lambda df: df.assign(**{c: df[c].map(norm) for c in ("state", "district", "crop")})
+    d = des[des.crop_year <= m.crop_year.max()]
+    both = keyed(m).merge(keyed(d), on=KEY, how="outer", suffixes=("_m", "_d"), indicator=True)
+    close = lambda a, b: ((a - b).abs() <= 0.006 + 1e-6 * b.abs()) | (a.isna() & b.isna())  # DES prints 2 dp
+    both["area_ok"] = close(both.area_ha_m, both.area_ha_d)
+    both["prod_ok"] = close(both.production_m, both.production_d)
+    ov = both[both._merge == "both"]
+    # Unpaired rows are mostly districts filed under another state (mirror: Jharkhand under Bihar,
+    # Telangana under AP); pair those on the key without state.
+    k2 = KEY[1:]
+    lo, ro = both[both._merge == "left_only"], both[both._merge == "right_only"]
+    lo, ro = lo[~lo.duplicated(k2, keep=False)], ro[~ro.duplicated(k2, keep=False)]
+    re2 = lo[k2 + ["area_ha_m", "production_m"]].merge(ro[k2 + ["area_ha_d", "production_d"]], on=k2)
+    re2_ok = close(re2.area_ha_m, re2.area_ha_d) & close(re2.production_m, re2.production_d)
+    sample = both[both._merge != "right_only"].sample(500, random_state=0)
+    bad = both[(both._merge != "both") | ~(both.area_ok & both.prod_ok)]
+    bad.drop(columns=["area_ok", "prod_ok"]).to_csv(OUT / "mirror_check_mismatches.csv.gz", index=False)
+    pct = lambda s: round(100 * s.mean(), 2)
+    return {"mirror_check": {
+        "years": f"{d.crop_year.min()}..{d.crop_year.max()}", "mirror_rows": len(m), "des_rows": len(d),
+        "overlap_rows": len(ov), "mirror_only": int((both._merge == "left_only").sum()),
+        "des_only": int((both._merge == "right_only").sum()),
+        "overlap_area_match_pct": pct(ov.area_ok), "overlap_production_match_pct": pct(ov.prod_ok),
+        "overlap_both_match_pct": pct(ov.area_ok & ov.prod_ok),
+        "overlap_value_mismatches": int((~(ov.area_ok & ov.prod_ok)).sum()),
+        "paired_ignoring_state": len(re2), "paired_ignoring_state_match_pct": pct(re2_ok),
+        "random500_found_pct": pct(sample._merge == "both"),
+        "random500_match_pct": pct((sample._merge == "both") & sample.area_ok & sample.prod_ok),
+    }}
 
 
 def label(df: pd.DataFrame) -> pd.DataFrame:
@@ -458,7 +642,9 @@ def main():
         return selftest()
     CACHE.mkdir(parents=True, exist_ok=True)
 
-    apy, stats = load_apy()
+    apy, stats = load_des()
+    stats.update(check_mirror(apy))
+    log(json.dumps(stats["mirror_check"]))
     geo = load_centroids()
     match = match_districts(apy[["state", "district"]].drop_duplicates(), geo)
     match.to_csv(OUT / "district_match.csv", index=False)
