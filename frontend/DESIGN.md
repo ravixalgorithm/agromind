@@ -1,28 +1,37 @@
 # AgroMind — Interface Design
 
-The UI follows the look of Indian government information portals (GIGW style): plain, dense, light, boxed. It is an **academic project** and must never look like, or claim to be, an official site.
+An **academic research tool**: clean white page, navy and green accents, serif headings, dense bordered tables, numbers up front. It is inspired by university/ICAR research pages but is **not** a government-portal replica. No tricolour, emblem, ticker, breadcrumbs, visitor counter or portal boilerplate.
 
 ## Hard rules
 
-- No State Emblem / Ashoka emblem, Digital India logo, ministry names or logos, or `.gov.in` styling claims.
-- The footer disclaimer "This is an academic project and is not an official Government of India website." stays on every page.
-- College, department, team, guide and contact details live only in the `SITE` constant at the top of `src/App.jsx`.
+- The site never claims to be an official Government of India service. The one-line footer and the About disclaimer say so.
+- College, department, team, guide and contact live only in `SITE` at the top of `src/App.jsx`.
+- No shadows, gradients or rounded cards. Structure comes from 1px rules (`--rule`) and whitespace.
 
-## Layout (top to bottom)
+## Pages (hash routes)
 
-1. Accessibility strip (navy-dark): skip link, A- / A / A+ (sets root `font-size`; all CSS uses `rem`), high-contrast toggle (`html[data-contrast=high]`), English | हिन्दी (`T` dictionary in `App.jsx`; only nav and headings are translated).
-2. Tricolour band, white header with the wheat logo SVG, English + Hindi title, project line on the right.
-3. Navy nav bar (hash routes `#/advisory`, `#/dataset`, `#/report`, …), saffron for the current page; collapses to a Menu button under 720px.
-4. "What's New" ticker (`NEWS` array), breadcrumb, page content, dark footer.
+| Route | Page |
+|---|---|
+| `#/` | **Advisory** (landing): field inputs left, results right (recommended crop with P(crop), top-ranked crops table, calendar, readings vs typical range), saved analyses below |
+| `#/results` | Model results v1 → v4 from `src/research.json`; sections and table captions are numbered with CSS counters (`.results .numbered h2::before`, `.tcap::before`); `#/report` still works |
+| `#/dataset` | Training-data summary and paged raw-data browser |
+| `#/paper` | Title, abstract (`ABSTRACT_TEX` from `paper/main.tex`, `\Macros` filled from `research.v4.numbers`), PDF/newsletter/code links, Colab links, BibTeX |
+| `#/about` | Project, team, system, data sources with licences, disclaimer |
+
+The header has a small A−/A/A+ text-size control and EN/हि (Hindi covers navigation and headings only).
+
+## Type and colour
+
+- Headings: Source Serif 4 (`--serif`). Body: Noto Sans (`--sans`), with Noto Sans Devanagari for Hindi. Numbers: `tabular-nums`.
+- Tokens are in `:root` in `src/styles.css`: `--navy`, `--green`, `--ink`, `--muted`, `--rule`, `--tint`, `--warn`.
 
 ## Building blocks
 
-- `Panel` — white box, coloured title bar (navy default, `tone="green"` for results/summaries, `tone="orange"` for notices/errors).
-- Tables: `.data` (bordered, zebra, navy-light header) and `.kv` (label/value). Use `.num` for right-aligned numbers.
-- Tags: `.tag`, `.tag-ok`, `.tag-warn`.
-- Form controls are native: `<select>`, and `<input type=range>` paired with a number box (`NumField`).
-- Palette tokens are in `:root` of `src/styles.css`; the high-contrast override redefines the same tokens.
+- `Section` renders a serif `h2` with a rule underneath, plus optional actions on the right.
+- Tables: `.data` (bordered, tinted header, `.num` right-aligned) and `.kv` (label/value). Captions use `caption.tcap` (or `p.tcap`).
+- `.keybox` holds a key-result sentence (computed from data, never typed). `.note` is a small source/definition line under a table.
+- `.hide-sm` hides secondary columns under 640px.
 
-## Model Report
+## Results data
 
-`src/research.json` is a copy of `docs/research/results.json`. The page renders it generically: arrays of rows and `{name: {metric: value}}` maps become tables, flat maps become key/value tables, `figures: [{file, caption}]` load from `public/research/<file name>`. When the file has `"_placeholder": true` an orange notice is shown.
+`src/research.json` is a copy of `docs/research/results.json`; figures are copied to `public/research/`. Generic renderers turn arrays, `{name: {metric}}` maps and flat maps into tables. v4 has its own `V4Report`.

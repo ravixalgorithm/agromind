@@ -9,9 +9,8 @@ const SITE = {
   team: ['[Student Name 1]', '[Student Name 2]', '[Student Name 3]', '[Student Name 4]'],
   guide: '[Guide Name], [Designation]',
   email: '[project-email@college.edu]',
-  phone: '[+91-XXXXX-XXXXX]',
   session: '2026–27',
-  lastUpdated: '22 Nov 2026',
+  repo: 'https://github.com/ravixalgorithm/agromind',
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -31,76 +30,49 @@ const SHORT = { N: 'N', P: 'P', K: 'K', ph: 'pH', temperature: '°C', humidity: 
 const MAX_ROWS = 8;
 const FONT_SIZES = [13, 15, 17];
 
-const PAGES = ['home', 'advisory', 'dataset', 'report', 'about', 'contact'];
-const INFO_PAGES = ['disclaimer', 'privacy', 'help', 'sitemap'];
+const PAGES = ['advisory', 'results', 'dataset', 'paper', 'about'];
 
+// Hindi covers navigation and headings only.
 const T = {
   en: {
     skip: 'Skip to main content',
-    contrast: 'High contrast',
-    home: 'Home',
-    advisory: 'Crop Advisory',
+    advisory: 'Advisory',
+    results: 'Results',
     dataset: 'Dataset',
-    report: 'Model Report',
+    paper: 'Paper',
     about: 'About',
-    contact: 'Contact',
-    disclaimer: 'Disclaimer',
-    privacy: 'Privacy Policy',
-    help: 'Help',
-    sitemap: 'Sitemap',
-    whatsNew: "What's New",
-    welcome: 'Welcome to AgroMind',
-    glance: 'At a Glance',
-    quick: 'Quick Links',
-    notice: 'Important Notice',
-    fieldDetails: 'Soil & Field Details',
-    recommended: 'Recommended Crop',
-    calendar: 'Crop Calendar',
-    ranking: 'Ranking of Suitable Crops',
-    readings: 'Field Readings vs Typical Range',
-    saved: 'Saved Analyses',
-    submit: 'Get Recommendation',
-    reset: 'Reset',
-    rawData: 'Raw Training Data',
-    lastUpdated: 'Last Updated',
+    fieldInputs: 'Field inputs',
+    recommended: 'Recommended crop',
+    topCrops: 'Top-ranked crops',
+    calendar: 'Crop calendar',
+    readings: 'Readings vs typical range',
+    saved: 'Saved analyses',
+    submit: 'Recommend',
+    reset: 'Clear form',
+    newAnalysis: 'New analysis',
+    summary: 'Dataset summary',
+    rawData: 'Training data',
   },
   hi: {
     skip: 'मुख्य सामग्री पर जाएं',
-    contrast: 'उच्च कंट्रास्ट',
-    home: 'मुख्य पृष्ठ',
-    advisory: 'फसल परामर्श',
+    advisory: 'परामर्श',
+    results: 'परिणाम',
     dataset: 'डेटासेट',
-    report: 'मॉडल रिपोर्ट',
+    paper: 'शोध पत्र',
     about: 'परिचय',
-    contact: 'संपर्क',
-    disclaimer: 'अस्वीकरण',
-    privacy: 'गोपनीयता नीति',
-    help: 'सहायता',
-    sitemap: 'साइटमैप',
-    whatsNew: 'नया क्या है',
-    welcome: 'एग्रोमाइंड में आपका स्वागत है',
-    glance: 'एक नज़र में',
-    quick: 'त्वरित लिंक',
-    notice: 'महत्वपूर्ण सूचना',
-    fieldDetails: 'मृदा एवं खेत विवरण',
+    fieldInputs: 'खेत का विवरण',
     recommended: 'अनुशंसित फसल',
+    topCrops: 'शीर्ष फसलें',
     calendar: 'फसल कैलेंडर',
-    ranking: 'उपयुक्त फसलों की श्रेणी',
-    readings: 'खेत के माप बनाम सामान्य सीमा',
+    readings: 'माप बनाम सामान्य सीमा',
     saved: 'सहेजे गए विश्लेषण',
-    submit: 'अनुशंसा प्राप्त करें',
-    reset: 'रीसेट',
+    submit: 'अनुशंसा करें',
+    reset: 'फ़ॉर्म साफ़ करें',
+    newAnalysis: 'नया विश्लेषण',
+    summary: 'डेटासेट सारांश',
     rawData: 'प्रशिक्षण डेटा',
-    lastUpdated: 'अंतिम अद्यतन',
   },
 };
-
-const NEWS = [
-  'Crop Advisory now covers 16 Indian states with Kharif, Rabi and Zaid seasons.',
-  'Model Report page added: v1 vs v2 metrics and model comparison.',
-  'Raw training data can now be browsed and filtered crop-wise on the Dataset page.',
-  'Saved analyses are stored in your browser and can be reopened at any time.',
-];
 
 const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const round = (n) => (Math.abs(n) >= 20 ? String(Math.round(n)) : fmt(n));
@@ -155,22 +127,11 @@ function loadSaved() {
 
 function loadPrefs() {
   try {
-    return { font: 15, contrast: false, lang: 'en', ...JSON.parse(localStorage.getItem(PREFS_KEY)) };
+    return { font: 15, lang: 'en', ...JSON.parse(localStorage.getItem(PREFS_KEY)) };
   } catch {
-    return { font: 15, contrast: false, lang: 'en' };
+    return { font: 15, lang: 'en' };
   }
 }
-
-// Counted once per page load, per browser; there is no server-side counter.
-const VISITS = (() => {
-  try {
-    const n = Number(localStorage.getItem('agromind.visits') || 0) + 1;
-    localStorage.setItem('agromind.visits', String(n));
-    return n;
-  } catch {
-    return null;
-  }
-})();
 
 // Compare the form against one crop's typical band (p10–p90) for every reading.
 function assess(meta, id, form) {
@@ -219,9 +180,7 @@ async function readError(res, fields) {
   try {
     const body = await res.json();
     if (Array.isArray(body.detail)) {
-      return body.detail
-        .map((d) => `${fields.find((f) => f.key === d.loc?.at(-1))?.label ?? d.loc?.at(-1)} ${d.msg.replace(/^Input should be /i, 'should be ')}`)
-        .join(' · ');
+      return body.detail.map((d) => `${fields.find((f) => f.key === d.loc?.at(-1))?.label ?? d.loc?.at(-1)} ${d.msg.replace(/^Input should be /i, 'should be ')}`).join(' · ');
     }
   } catch {
     /* fall through */
@@ -229,8 +188,13 @@ async function readError(res, fields) {
   return `Server error (${res.status})`;
 }
 
+// '#/', '' and unknown hashes open the advisory; '#/report' is the old name of the results page.
 function useRoute() {
-  const read = () => (window.location.hash.startsWith('#/') ? window.location.hash.slice(2) : 'home');
+  const read = () => {
+    const h = window.location.hash.startsWith('#/') ? window.location.hash.slice(2) : '';
+    if (h === 'report') return 'results';
+    return PAGES.includes(h) ? h : 'advisory';
+  };
   const [route, setRoute] = useState(read);
   useEffect(() => {
     const onHash = () => {
@@ -240,7 +204,7 @@ function useRoute() {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-  return PAGES.includes(route) || INFO_PAGES.includes(route) ? route : 'home';
+  return route;
 }
 
 /* ── Shell ────────────────────────────────────────────── */
@@ -250,10 +214,9 @@ function App() {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [prefs, setPrefs] = useState(loadPrefs);
-  const [menuOpen, setMenuOpen] = useState(false);
   const route = useRoute();
   const mainRef = useRef(null);
-  const t = (k) => T[prefs.lang][k] ?? T.en[k];
+  const t = (k) => T[prefs.lang]?.[k] ?? T.en[k];
 
   useEffect(() => {
     setFailed(false);
@@ -266,304 +229,135 @@ function App() {
   useEffect(() => {
     const root = document.documentElement;
     root.style.fontSize = `${prefs.font}px`;
-    root.dataset.contrast = prefs.contrast ? 'high' : 'normal';
     root.lang = prefs.lang;
+    delete root.dataset.contrast;
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ font: prefs.font, lang: prefs.lang }));
     } catch {
       /* ignore */
     }
   }, [prefs]);
 
-  useEffect(() => setMenuOpen(false), [route]);
-
   const pref = (patch) => setPrefs((p) => ({ ...p, ...patch }));
-  const needsMeta = ['home', 'advisory', 'dataset'].includes(route);
+  const needsMeta = route === 'advisory' || route === 'dataset';
 
   let page;
   if (needsMeta && !meta) {
     page = (
-      <Panel title={failed ? 'Server not reachable' : 'Loading'} tone={failed ? 'orange' : undefined}>
+      <div className={`status-box${failed ? ' is-error' : ''}`}>
         {failed ? (
           <>
             <p>Cannot reach the model server at {API_BASE_URL}. Start the backend and try again.</p>
-            <button className="btn" onClick={() => setAttempt((a) => a + 1)}>
+            <button type="button" className="btn" onClick={() => setAttempt((a) => a + 1)}>
               Try again
             </button>
           </>
         ) : (
           <p>Loading crop data…</p>
         )}
-      </Panel>
+      </div>
     );
-  } else if (route === 'home') page = <HomePage meta={meta} t={t} />;
-  else if (route === 'advisory') page = <Advisory meta={meta} t={t} />;
+  } else if (route === 'advisory') page = <Advisory meta={meta} t={t} />;
   else if (route === 'dataset') page = <DatasetPage meta={meta} t={t} />;
-  else if (route === 'report') page = <ReportPage t={t} />;
-  else if (route === 'about') page = <AboutPage />;
-  else if (route === 'contact') page = <ContactPage />;
-  else page = <InfoPage route={route} t={t} />;
+  else if (route === 'results') page = <ResultsPage t={t} />;
+  else if (route === 'paper') page = <PaperPage />;
+  else page = <AboutPage />;
 
   return (
     <>
-      <div className="a11y-strip">
-        <div className="wrap a11y-inner">
-          <a
-            href="#main"
-            className="skip"
-            onClick={(e) => {
-              e.preventDefault();
-              mainRef.current?.focus();
-              mainRef.current?.scrollIntoView();
-            }}
-          >
-            {t('skip')}
+      <a
+        href="#main"
+        className="skip"
+        onClick={(e) => {
+          e.preventDefault();
+          mainRef.current?.focus();
+          mainRef.current?.scrollIntoView();
+        }}
+      >
+        {t('skip')}
+      </a>
+
+      <header className="site-header">
+        <div className="wrap header-inner">
+          <a href="#/" className="brand">
+            <LeafMark />
+            <span className="brand-name">AgroMind</span>
+            <span className="brand-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="brand-sub">Crop Recommendation Research</span>
           </a>
-          <div className="a11y-tools">
-            <span className="font-tools" role="group" aria-label="Text size">
+          <div className="header-tools">
+            <span role="group" aria-label="Text size">
               {FONT_SIZES.map((size, i) => (
-                <button key={size} type="button" aria-pressed={prefs.font === size} onClick={() => pref({ font: size })} aria-label={['Decrease text size', 'Normal text size', 'Increase text size'][i]}>
-                  {['A-', 'A', 'A+'][i]}
+                <button
+                  key={size}
+                  type="button"
+                  aria-pressed={prefs.font === size}
+                  onClick={() => pref({ font: size })}
+                  aria-label={['Smaller text', 'Normal text', 'Larger text'][i]}
+                >
+                  {['A−', 'A', 'A+'][i]}
                 </button>
               ))}
             </span>
-            <button type="button" className="contrast-btn" aria-pressed={prefs.contrast} onClick={() => pref({ contrast: !prefs.contrast })} title={t('contrast')}>
-              <span aria-hidden="true">◐</span> {t('contrast')}
-            </button>
-            <span className="lang-tools" role="group" aria-label="Language">
+            <span role="group" aria-label="Language">
               <button type="button" aria-pressed={prefs.lang === 'en'} onClick={() => pref({ lang: 'en' })}>
-                English
+                EN
               </button>
-              <span aria-hidden="true">|</span>
               <button type="button" aria-pressed={prefs.lang === 'hi'} onClick={() => pref({ lang: 'hi' })} lang="hi">
-                हिन्दी
+                हि
               </button>
             </span>
           </div>
         </div>
-      </div>
-      <div className="tricolour" aria-hidden="true" />
-
-      <header className="site-header">
-        <div className="wrap header-inner">
-          <a href="#/" className="logo-link">
-            <Logo />
-            <span className="site-title">
-              <strong>AgroMind — Crop Recommendation System</strong>
-              <span lang="hi">एग्रोमाइंड — फसल अनुशंसा प्रणाली</span>
-            </span>
-          </a>
-          <p className="header-org">
-            Final Year Project
-            <br />
-            Dept. of {SITE.department}, {SITE.college}
-          </p>
-        </div>
-      </header>
-
-      <nav className="main-nav" aria-label="Main">
-        <div className="wrap nav-inner">
-          <button type="button" className="menu-btn" aria-expanded={menuOpen} aria-controls="nav-list" onClick={() => setMenuOpen((o) => !o)}>
-            ☰ Menu
-          </button>
-          <ul id="nav-list" className={menuOpen ? 'is-open' : ''}>
+        <nav className="main-nav" aria-label="Main">
+          <ul className="wrap">
             {PAGES.map((p) => (
               <li key={p}>
-                <a href={p === 'home' ? '#/' : `#/${p}`} aria-current={route === p ? 'page' : undefined}>
+                <a href={p === 'advisory' ? '#/' : `#/${p}`} aria-current={route === p ? 'page' : undefined}>
                   {t(p)}
                 </a>
               </li>
             ))}
           </ul>
-        </div>
-      </nav>
-
-      <div className="ticker" role="region" aria-label={t('whatsNew')}>
-        <div className="wrap ticker-inner">
-          <strong className="ticker-label">{t('whatsNew')}</strong>
-          <div className="ticker-track">
-            <ul className="ticker-list">
-              {[...NEWS, ...NEWS].map((n, i) => (
-                <li key={i} aria-hidden={i >= NEWS.length || undefined}>
-                  {n}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="wrap">
-        <ol className="breadcrumb" aria-label="Breadcrumb">
-          <li>
-            <a href="#/">{t('home')}</a>
-          </li>
-          {route !== 'home' && <li aria-current="page">{t(route)}</li>}
-        </ol>
-      </div>
+        </nav>
+      </header>
 
       <main id="main" ref={mainRef} tabIndex={-1} className="wrap main">
         {page}
       </main>
 
       <footer className="site-footer">
-        <div className="wrap">
-          <ul className="footer-links">
-            {INFO_PAGES.map((p) => (
-              <li key={p}>
-                <a href={`#/${p}`}>{t(p)}</a>
-              </li>
-            ))}
-            <li>
-              <a href="#/contact">{t('contact')}</a>
-            </li>
-          </ul>
-          <p className="footer-disclaimer">This is an academic project and is not an official Government of India website.</p>
-          <p className="footer-meta">
-            <span>
-              {t('lastUpdated')}: {SITE.lastUpdated}
-            </span>
-            {VISITS !== null && <span>Visits from this browser: {String(VISITS).padStart(6, '0')}</span>}
-            <span>
-              © {SITE.session} Dept. of {SITE.department}, {SITE.college}
-            </span>
-          </p>
-          <p className="footer-meta">Best viewed in the latest versions of Chrome, Firefox, Edge and Safari at 1280×800 or above.</p>
-        </div>
+        <p className="wrap">
+          AgroMind · final year project, Dept. of {SITE.department}, {SITE.college} ({SITE.session}). An academic research prototype, not an official Government of India service.
+        </p>
       </footer>
     </>
   );
 }
 
-function Logo() {
+function LeafMark() {
   return (
-    <svg className="logo" width="56" height="56" viewBox="0 0 64 64" aria-hidden="true">
-      <circle cx="32" cy="32" r="30" fill="#fff" stroke="#138808" strokeWidth="3" />
-      <path d="M32 54V18" stroke="#8a5a14" strokeWidth="2.5" strokeLinecap="round" />
-      {[22, 29, 36, 43].map((y) => (
-        <g key={y} fill="#e0a526">
-          <ellipse cx="26.5" cy={y} rx="4.2" ry="2.3" transform={`rotate(-35 26.5 ${y})`} />
-          <ellipse cx="37.5" cy={y} rx="4.2" ry="2.3" transform={`rotate(35 37.5 ${y})`} />
-        </g>
-      ))}
-      <ellipse cx="32" cy="15" rx="2.3" ry="4" fill="#e0a526" />
-      <path d="M32 50c-6-1-11-5-13-10 6 0 11 4 13 10zM32 50c6-1 11-5 13-10-6 0-11 4-13 10z" fill="#138808" />
+    <svg className="leaf" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 4C11 4 5 9 5 16c0 1.4.3 2.6.8 3.6C7 13 11 9.5 16 8c-4 2.3-7.3 6-8.8 11.2.9.5 2 .8 3.3.8C17 20 20 13 20 4z" fill="currentColor" />
     </svg>
   );
 }
 
-function Panel({ title, tone, children, className = '', actions, id }) {
+function Section({ id, title, children, className = '', actions }) {
   return (
-    <section className={`panel${tone ? ` panel-${tone}` : ''} ${className}`} aria-labelledby={id}>
-      <h2 className="panel-title" id={id}>
-        <span>{title}</span>
+    <section className={`sec ${className}`} id={id} aria-labelledby={id ? `${id}-h` : undefined}>
+      <div className="sec-head">
+        <h2 id={id ? `${id}-h` : undefined}>{title}</h2>
         {actions}
-      </h2>
-      <div className="panel-body">{children}</div>
+      </div>
+      {children}
     </section>
   );
 }
 
-/* ── Home ─────────────────────────────────────────────── */
-
-function HomePage({ meta, t }) {
-  const crops = Object.keys(meta.crops).length;
-  return (
-    <div className="grid-home">
-      <div className="stack">
-        <Panel title={t('welcome')}>
-          <p>
-            <strong>AgroMind</strong> is a crop recommendation system that suggests suitable crops for a field from its soil nutrients (N, P, K, pH), climate (temperature, humidity,
-            seasonal rainfall), soil type, season, water source and state. The recommendation is produced by a machine-learning model trained on {meta.rows.toLocaleString('en-IN')}{' '}
-            records of Indian crop data.
-          </p>
-          <p>
-            For each field the system shows the recommended crop with model confidence, a month-wise sowing and harvest calendar, a ranking of other crops suited to the same season, and
-            a reading-by-reading comparison against each crop's typical range.
-          </p>
-          <p>
-            <a className="btn" href="#/advisory">
-              Go to Crop Advisory »
-            </a>
-          </p>
-        </Panel>
-
-        <Panel title="How to Use">
-          <ol className="steps">
-            <li>
-              Open <a href="#/advisory">Crop Advisory</a>.
-            </li>
-            <li>Select the state, season, soil type and water source of the field.</li>
-            <li>Enter the soil test values (N, P, K, pH) and climate values, or use a sample field.</li>
-            <li>Read the recommended crop, calendar and ranking. The analysis is saved in this browser automatically.</li>
-          </ol>
-        </Panel>
-
-        <Panel title={t('notice')} tone="orange">
-          <p>
-            Recommendations are generated by a statistical model for academic demonstration. They are not agronomic advice. Farmers should consult the local Krishi Vigyan Kendra or
-            agriculture department and their Soil Health Card before taking decisions.
-          </p>
-        </Panel>
-      </div>
-
-      <div className="stack">
-        <Panel title={t('glance')} tone="green">
-          <table className="kv">
-            <tbody>
-              <tr>
-                <th scope="row">Training records</th>
-                <td>{meta.rows.toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
-                <th scope="row">Crops covered</th>
-                <td>{crops}</td>
-              </tr>
-              <tr>
-                <th scope="row">States covered</th>
-                <td>{meta.options.state.length}</td>
-              </tr>
-              <tr>
-                <th scope="row">Soil types</th>
-                <td>{meta.options.soil.length}</td>
-              </tr>
-              <tr>
-                <th scope="row">Seasons</th>
-                <td>{meta.options.season.map((s) => SEASONS[s]?.name ?? s).join(', ')}</td>
-              </tr>
-              <tr>
-                <th scope="row">Data sources</th>
-                <td>{meta.sources?.join(', ')}</td>
-              </tr>
-            </tbody>
-          </table>
-        </Panel>
-
-        <Panel title={t('quick')}>
-          <ul className="link-list">
-            <li>
-              <a href="#/advisory">{t('advisory')}</a> — get a crop recommendation
-            </li>
-            <li>
-              <a href="#/dataset">{t('dataset')}</a> — browse the training data
-            </li>
-            <li>
-              <a href="#/report">{t('report')}</a> — accuracy and model comparison
-            </li>
-            <li>
-              <a href="#/about">{t('about')}</a> — project and team
-            </li>
-            <li>
-              <a href="#/help">{t('help')}</a> — field descriptions
-            </li>
-          </ul>
-        </Panel>
-      </div>
-    </div>
-  );
-}
-
-/* ── Crop Advisory ────────────────────────────────────── */
+/* ── Advisory ─────────────────────────────────────────── */
 
 function initialAnalysis(meta, saved) {
   try {
@@ -678,7 +472,7 @@ function Advisory({ meta, t }) {
   }
   const top = rows[0];
   const selected = rows.find((r) => r.id === selectedId) ?? top;
-  const seasonName = result ? SEASONS[result.form.season]?.name ?? result.form.season : '';
+  const seasonName = result ? (SEASONS[result.form.season]?.name ?? result.form.season) : '';
   const displayName = current.name || (pick ? `${plainName(meta.crops[pick.crop])} · ${seasonName} · ${result.form.state || result.form.soil}` : 'Untitled analysis');
 
   // Autosave whenever a ready recommendation exists (and when the name changes).
@@ -718,136 +512,187 @@ function Advisory({ meta, t }) {
     }
   };
 
-  const fieldRow = (f) => <NumField key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} check={selected?.readings.find((r) => r.key === f.key)} cropName={selected?.crop.name} />;
+  const fieldRow = (f) => (
+    <NumField key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} check={selected?.readings.find((r) => r.key === f.key)} cropName={selected?.crop.name} />
+  );
+  const isError = status === 'offline' || status === 'invalid';
 
   return (
     <>
-      <h1 className="page-title">{t('advisory')}</h1>
-      <div className="grid-advisory">
+      <div className="advisory">
         <form
-          className="panel form-panel"
+          className="adv-form"
           onSubmit={(e) => {
             e.preventDefault();
             resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
           }}
           aria-labelledby="form-title"
         >
-          <h2 className="panel-title" id="form-title">
-            <span>{t('fieldDetails')}</span>
-          </h2>
-          <div className="panel-body">
-            <p className="form-note">
-              Fields marked <span className="req">*</span> are mandatory. Current analysis: <strong>{displayName}</strong>
-            </p>
-
-            <fieldset>
-              <legend>A. Location &amp; Season</legend>
-              <SelectField label="State" value={form.state} onChange={(v) => set('state', v)} options={meta.options.state.map((s) => [s, s])} />
-              <SelectField label="Season" value={form.season} onChange={(v) => set('season', v)} options={meta.options.season.map((s) => [s, `${SEASONS[s]?.name ?? s} (${SEASONS[s]?.months ?? ''})`])} />
-              <SelectField label="Soil type" value={form.soil} onChange={(v) => set('soil', v)} options={meta.options.soil.map((s) => [s, s])} />
-              <SelectField
-                label="Water source"
-                value={form.water_source}
-                onChange={(v) => set('water_source', v)}
-                options={meta.options.water_source.map((w) => [w, w === 'irrigated' ? 'Irrigated' : 'Rainfed'])}
-              />
-            </fieldset>
-
-            <fieldset>
-              <legend>B. Soil Test Values</legend>
-              {meta.fields.filter((f) => NUTRIENTS.includes(f.key)).map(fieldRow)}
-            </fieldset>
-
-            <fieldset>
-              <legend>C. Climate</legend>
-              {meta.fields.filter((f) => !NUTRIENTS.includes(f.key)).map(fieldRow)}
-            </fieldset>
-
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={!complete}>
-                {t('submit')}
-              </button>
-              <button type="button" className="btn btn-plain" onClick={startNew}>
-                {t('reset')}
-              </button>
-            </div>
-
-            <div className="samples">
-              <span>Fill with a sample field:</span>
-              {SAMPLES.filter((s) => meta.crops[s]).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className="link-btn"
-                  onClick={() => {
-                    setForm(sampleValues(meta, id));
-                    setSelectedId(null);
-                  }}
-                >
-                  {plainName(meta.crops[id])}
-                </button>
-              ))}
-            </div>
+          <div className="sec-head">
+            <h2 id="form-title">{t('fieldInputs')}</h2>
           </div>
+          <p className="muted small">
+            All fields required. Analysis: <strong>{displayName}</strong>
+          </p>
+
+          <fieldset>
+            <legend>Location &amp; season</legend>
+            <SelectField label="State" value={form.state} onChange={(v) => set('state', v)} options={meta.options.state.map((s) => [s, s])} />
+            <SelectField
+              label="Season"
+              value={form.season}
+              onChange={(v) => set('season', v)}
+              options={meta.options.season.map((s) => [s, `${SEASONS[s]?.name ?? s} (${SEASONS[s]?.months ?? ''})`])}
+            />
+            <SelectField label="Soil type" value={form.soil} onChange={(v) => set('soil', v)} options={meta.options.soil.map((s) => [s, s])} />
+            <SelectField
+              label="Water source"
+              value={form.water_source}
+              onChange={(v) => set('water_source', v)}
+              options={meta.options.water_source.map((w) => [w, w === 'irrigated' ? 'Irrigated' : 'Rainfed'])}
+            />
+          </fieldset>
+
+          <fieldset>
+            <legend>Soil test (N, P, K, pH)</legend>
+            {meta.fields.filter((f) => NUTRIENTS.includes(f.key)).map(fieldRow)}
+          </fieldset>
+
+          <fieldset>
+            <legend>Climate</legend>
+            {meta.fields.filter((f) => !NUTRIENTS.includes(f.key)).map(fieldRow)}
+          </fieldset>
+
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary" disabled={!complete}>
+              {t('submit')}
+            </button>
+            <button type="button" className="btn btn-plain" onClick={startNew}>
+              {t('reset')}
+            </button>
+          </div>
+
+          <p className="samples">
+            <span>Sample field:</span>
+            {SAMPLES.filter((s) => meta.crops[s]).map((id) => (
+              <button
+                key={id}
+                type="button"
+                className="link-btn"
+                onClick={() => {
+                  setForm(sampleValues(meta, id));
+                  setSelectedId(null);
+                }}
+              >
+                {plainName(meta.crops[id])}
+              </button>
+            ))}
+          </p>
         </form>
 
-        <div className="stack" ref={resultsRef}>
+        <div className="adv-results" ref={resultsRef}>
           {top ? (
             <>
-              <Panel title={`${t('recommended')}: ${top.crop.name}`} tone="green" id="rec-title">
-                <table className="kv">
-                  <tbody>
-                    <tr>
-                      <th scope="row">Recommended crop</th>
-                      <td>
-                        <strong className="big">{top.crop.name}</strong> ({top.crop.type})
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Model confidence</th>
-                      <td>
-                        <strong>{prob(top.confidence)}</strong> <span className={`tag ${top.confidence >= 0.7 ? 'tag-ok' : 'tag-warn'}`}>{top.confidence >= 0.7 ? 'Strong fit' : 'Review'}</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Readings in typical range</th>
-                      <td>
-                        {top.inRange} of {top.readings.length}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Soil suitability ({result.form.soil})</th>
-                      <td>{top.soilOk ? <span className="tag tag-ok">Suitable</span> : <span className="tag tag-warn">Not a usual soil for this crop</span>}</td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Sowing window</th>
-                      <td>{top.crop.sown}</td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Harvest window</th>
-                      <td>{top.crop.harvested}</td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Duration</th>
-                      <td>About {top.crop.duration_days} days</td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Usually grown</th>
-                      <td className="cap">{top.crop.water_source}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                {status === 'loading' && <p className="muted">Updating…</p>}
-              </Panel>
+              <section className="rec" aria-labelledby="rec-h">
+                <p className="eyebrow">{t('recommended')}</p>
+                <h2 id="rec-h" className="rec-crop">
+                  {top.crop.name} <span className="rec-type">{top.crop.type}</span>
+                </h2>
+                <dl className="stats">
+                  <div>
+                    <dt>P(crop)</dt>
+                    <dd>{prob(top.confidence)}</dd>
+                  </div>
+                  <div>
+                    <dt>Readings in range</dt>
+                    <dd>
+                      {top.inRange}/{top.readings.length}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Usual soil ({result.form.soil})</dt>
+                    <dd className={top.soilOk ? 'ok' : 'off'}>{top.soilOk ? 'Yes' : 'No'}</dd>
+                  </div>
+                  <div>
+                    <dt>Sow · harvest</dt>
+                    <dd className="dd-text">
+                      {top.crop.sown} · {top.crop.harvested}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Duration</dt>
+                    <dd className="dd-text">~{top.crop.duration_days} days</dd>
+                  </div>
+                </dl>
+                {status === 'loading' && <p className="muted small">Updating…</p>}
+              </section>
 
-              <Panel title={t('calendar')}>
+              <section className="block" aria-labelledby="top-h">
+                <h3 id="top-h">
+                  {t('topCrops')} · {seasonName} season
+                </h3>
+                <div className="table-wrap">
+                  <table className="data rank-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Crop</th>
+                        <th scope="col" className="hide-sm">
+                          Type
+                        </th>
+                        <th scope="col" className="num">
+                          P(crop)
+                        </th>
+                        <th scope="col" className="num wrap">
+                          In range
+                        </th>
+                        {meta.fields.map((f) => (
+                          <th key={f.key} scope="col" className="c hide-sm" title={f.label}>
+                            {SHORT[f.key] ?? f.key}
+                          </th>
+                        ))}
+                        <th scope="col">
+                          <span className="visually-hidden">Details</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, i) => (
+                        <tr key={row.id} className={row.id === selected.id ? 'is-selected' : undefined}>
+                          <td>{i + 1}</td>
+                          <th scope="row">{row.crop.name}</th>
+                          <td className="hide-sm">{row.crop.type}</td>
+                          <td className="num">{row.confidence === undefined ? '—' : prob(row.confidence)}</td>
+                          <td className="num">
+                            {row.inRange}/{row.readings.length}
+                          </td>
+                          {row.readings.map((r) => (
+                            <td key={r.key} className={`c hide-sm ${r.status === 'ok' ? 'ok' : 'off'}`} title={`${r.label}: ${advice(r, row.crop.name.toLowerCase())}`}>
+                              {r.status === 'ok' ? '✓' : '✗'}
+                            </td>
+                          ))}
+                          <td>
+                            <button type="button" className="link-btn" onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
+                              Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="note">P(crop) is the model&apos;s predicted probability. ✓ means the reading lies inside the crop&apos;s typical range (10th–90th percentile).</p>
+              </section>
+
+              <section className="block" aria-labelledby="cal-h">
+                <h3 id="cal-h">{t('calendar')}</h3>
                 <div className="table-wrap">
                   <table className="data cal-table">
                     <thead>
                       <tr>
                         <th scope="col">Crop</th>
                         {MONTHS.map((m) => (
-                          <th key={m} scope="col">
+                          <th key={m} scope="col" className="c">
                             {m}
                           </th>
                         ))}
@@ -870,67 +715,12 @@ function Advisory({ meta, t }) {
                     <i className="cal-harvest">H</i> Harvest
                   </span>
                 </p>
-              </Panel>
+              </section>
 
-              <Panel title={`${t('ranking')} — ${seasonName} season`}>
-                <div className="table-wrap">
-                  <table className="data rank-table">
-                    <caption className="visually-hidden">Crops ranked for this field. ✓ means the reading is inside the crop's typical range.</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">S.No.</th>
-                        <th scope="col">Crop</th>
-                        <th scope="col" className="hide-sm">
-                          Type
-                        </th>
-                        {meta.fields.map((f) => (
-                          <th key={f.key} scope="col" className="c" title={f.label}>
-                            {SHORT[f.key] ?? f.key}
-                          </th>
-                        ))}
-                        <th scope="col" className="num wrap">
-                          Model probability
-                        </th>
-                        <th scope="col" className="num wrap">
-                          Readings in range
-                        </th>
-                        <th scope="col">Details</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row, i) => {
-                        return (
-                          <tr key={row.id} className={row.id === selected.id ? 'is-selected' : undefined}>
-                            <td>{i + 1}</td>
-                            <td>
-                              {row.crop.name}
-                              {i === 0 && <span className="tag tag-ok">Model pick</span>}
-                            </td>
-                            <td className="hide-sm">{row.crop.type}</td>
-                            {row.readings.map((r) => (
-                              <td key={r.key} className={`c ${r.status === 'ok' ? 'ok' : 'off'}`} title={`${r.label}: ${advice(r, row.crop.name.toLowerCase())}`}>
-                                {r.status === 'ok' ? '✓' : '✗'}
-                              </td>
-                            ))}
-                            <td className="num">{row.confidence === undefined ? '—' : prob(row.confidence)}</td>
-                            <td className="num">
-                              {row.inRange}/{row.readings.length}
-                            </td>
-                            <td>
-                              <button type="button" className="link-btn" onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
-                                View
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="muted small">✓ inside the crop's typical range (10th–90th percentile), ✗ outside.</p>
-              </Panel>
-
-              <Panel title={`${t('readings')} — ${selected.crop.name}`}>
+              <section className="block" aria-labelledby="read-h">
+                <h3 id="read-h">
+                  {t('readings')} · {selected.crop.name}
+                </h3>
                 <div className="table-wrap">
                   <table className="data">
                     <thead>
@@ -940,96 +730,110 @@ function Advisory({ meta, t }) {
                           Your value
                         </th>
                         <th scope="col" className="num">
-                          Typical range
+                          Typical
                         </th>
                         <th scope="col">Status</th>
-                        <th scope="col">Remark</th>
+                        <th scope="col" className="hide-sm">
+                          Remark
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {selected.readings.map((r) => (
                         <tr key={r.key}>
-                          <td>{r.label}</td>
+                          <th scope="row">{r.label}</th>
                           <td className="num">{withUnit(fmt(r.v), r.unit)}</td>
                           <td className="num">{range(r.lo, r.hi, r.unit)}</td>
-                          <td>{r.status === 'ok' ? <span className="tag tag-ok">In range</span> : <span className="tag tag-warn">{r.status === 'low' ? 'Low' : 'High'}</span>}</td>
-                          <td>{advice(r, selected.crop.name.toLowerCase())}</td>
+                          <td className={r.status === 'ok' ? 'ok' : 'off'}>{r.status === 'ok' ? 'In range' : r.status === 'low' ? 'Low' : 'High'}</td>
+                          <td className="hide-sm">{advice(r, selected.crop.name.toLowerCase())}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <p className="muted small">
-                  Suitable soils: {selected.crop.soils.filter((s) => s !== 'Other').join(', ') || 'Varied'}
+                <p className="note">
+                  Usual soils: {selected.crop.soils.filter((s) => s !== 'Other').join(', ') || 'varied'}
                   {!selected.soilOk && ` (not usual for ${result.form.soil.toLowerCase()} soil)`}.
                 </p>
-              </Panel>
+              </section>
             </>
           ) : (
-            <Panel title="Result" tone={status === 'offline' || status === 'invalid' ? 'orange' : undefined}>
-              {status === 'offline' || status === 'invalid' ? (
-                <p className="error">{message}</p>
+            <div className={`status-box${isError ? ' is-error' : ''}`}>
+              {isError ? (
+                <p>{message}</p>
               ) : status === 'loading' ? (
-                <p>Analysing your field…</p>
+                <p>Analysing the field…</p>
               ) : (
                 <>
                   <p>
-                    Fill in all {totalInputs} fields of the form to get a recommendation. <strong>{numericDone + choicesDone}</strong> of {totalInputs} filled.
+                    <strong>
+                      {numericDone + choicesDone} of {totalInputs}
+                    </strong>{' '}
+                    inputs filled. The recommendation appears here as soon as all are set, or pick a sample field.
                   </p>
                   <ul className="checklist">
-                    {[
-                      ['state', 'State'],
-                      ['season', 'Season'],
-                      ['soil', 'Soil type'],
-                      ['water_source', 'Water source'],
-                      ...meta.fields.map((f) => [f.key, f.label]),
-                    ].map(([k, label]) => (
-                      <li key={k} className={form[k] !== '' ? 'done' : ''}>
-                        {form[k] !== '' ? '✓' : '○'} {label}
-                      </li>
-                    ))}
+                    {[['state', 'State'], ['season', 'Season'], ['soil', 'Soil type'], ['water_source', 'Water source'], ...meta.fields.map((f) => [f.key, f.label])].map(
+                      ([k, label]) => (
+                        <li key={k} className={form[k] !== '' ? 'done' : ''}>
+                          <span aria-hidden="true">{form[k] !== '' ? '✓' : '○'}</span> {label}
+                        </li>
+                      ),
+                    )}
                   </ul>
                 </>
               )}
-            </Panel>
+            </div>
           )}
         </div>
       </div>
 
-      <Panel
+      <Section
+        id="saved"
         title={`${t('saved')} (${saved.length})`}
         actions={
-          <button type="button" className="btn btn-small" onClick={startNew}>
-            + New analysis
+          <button type="button" className="btn btn-plain btn-small" onClick={startNew}>
+            + {t('newAnalysis')}
           </button>
         }
       >
         {saved.length === 0 ? (
-          <p className="muted">No saved analyses yet. Each completed recommendation is saved here automatically (in this browser only).</p>
+          <p className="muted small">Each completed recommendation is saved here automatically, in this browser only.</p>
         ) : (
           <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr>
-                  <th scope="col">S.No.</th>
+                  <th scope="col">#</th>
                   <th scope="col">Analysis</th>
-                  <th scope="col">Crop</th>
-                  <th scope="col" className="num">
-                    Confidence
+                  <th scope="col" className="hide-sm">
+                    Crop
                   </th>
-                  <th scope="col">Saved on</th>
+                  <th scope="col" className="num">
+                    P(crop)
+                  </th>
+                  <th scope="col" className="hide-sm">
+                    Saved
+                  </th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {saved.map((s, i) => (
-                  <SavedRow key={s.id} index={i + 1} entry={s} active={s.id === current.id} cropName={meta.crops[s.pick.crop]?.name ?? s.pick.crop} onOpen={() => open(s)} onDelete={() => remove(s.id)} />
+                  <SavedRow
+                    key={s.id}
+                    index={i + 1}
+                    entry={s}
+                    active={s.id === current.id}
+                    cropName={meta.crops[s.pick.crop]?.name ?? s.pick.crop}
+                    onOpen={() => open(s)}
+                    onDelete={() => remove(s.id)}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </Panel>
+      </Section>
     </>
   );
 }
@@ -1126,9 +930,9 @@ function SavedRow({ index, entry, active, cropName, onOpen, onDelete }) {
         {entry.name}
         {active && <span className="tag">Open</span>}
       </td>
-      <td>{cropName}</td>
+      <td className="hide-sm">{cropName}</td>
       <td className="num">{prob(entry.pick.confidence)}</td>
-      <td>{longDate(entry.savedAt)}</td>
+      <td className="hide-sm">{longDate(entry.savedAt)}</td>
       <td className="actions">
         <button type="button" className="link-btn" onClick={onOpen}>
           Open
@@ -1218,47 +1022,52 @@ function DatasetPage({ meta, t }) {
 
   return (
     <>
-      <h1 className="page-title">{t('dataset')}</h1>
-      <Panel title="Dataset Summary" tone="green">
-        <p>
-          The model is trained on a merged dataset of <strong>{meta.rows.toLocaleString('en-IN')}</strong> rows covering <strong>{crops.length}</strong> crops and{' '}
-          <strong>{meta.options.state.length}</strong> states.
+      <header className="page-head">
+        <h1>{t('dataset')}</h1>
+        <p className="lede">
+          The deployed model is trained on {meta.rows.toLocaleString('en-IN')} merged rows: {crops.length} crops across {meta.options.state.length} states. The research benchmark
+          (v3, v4) uses separate district crop statistics, described on the <a href="#/results">Results</a> and <a href="#/about">About</a> pages.
         </p>
+      </header>
+
+      <Section id="summary" title={t('summary')}>
         {coverage.length > 0 && (
           <div className="table-wrap">
             <table className="data narrow">
               <thead>
                 <tr>
-                  <th scope="col">S.No.</th>
                   <th scope="col">Source</th>
                   <th scope="col" className="num">
                     Rows
+                  </th>
+                  <th scope="col" className="num">
+                    Share
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {coverage.map(([key, rows], i) => (
                   <tr key={key}>
-                    <td>{i + 1}</td>
-                    <td>{meta.sources?.[i] ?? key}</td>
+                    <th scope="row">{meta.sources?.[i] ?? key}</th>
                     <td className="num">{rows.toLocaleString('en-IN')}</td>
+                    <td className="num">{((rows / meta.rows) * 100).toFixed(1)}%</td>
                   </tr>
                 ))}
                 <tr className="total">
-                  <td />
                   <th scope="row">Total</th>
                   <td className="num">{meta.rows.toLocaleString('en-IN')}</td>
+                  <td className="num">100%</td>
                 </tr>
               </tbody>
             </table>
           </div>
         )}
-      </Panel>
+      </Section>
 
-      <Panel title={t('rawData')}>
+      <Section id="raw" title={t('rawData')}>
         <div className="toolbar">
           <label className="inline-field">
-            <span>Filter by crop:</span>
+            <span>Crop</span>
             <select
               value={crop}
               onChange={(e) => {
@@ -1275,27 +1084,29 @@ function DatasetPage({ meta, t }) {
             </select>
           </label>
           <p className="range-note" aria-live="polite">
-            {status === 'ready' ? `Showing ${from.toLocaleString('en-IN')}–${to.toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')} records` : '…'}
+            {status === 'ready' ? `Rows ${from.toLocaleString('en-IN')}–${to.toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')}` : '…'}
           </p>
           <div className="pager">
-            <button type="button" className="btn btn-small" disabled={!canPrev || status === 'loading'} onClick={() => setOffset((o) => Math.max(0, o - DATA_PAGE))}>
-              « Previous
+            <button type="button" className="btn btn-plain btn-small" disabled={!canPrev || status === 'loading'} onClick={() => setOffset((o) => Math.max(0, o - DATA_PAGE))}>
+              ← Previous
             </button>
-            <button type="button" className="btn btn-small" disabled={!canNext || status === 'loading'} onClick={() => setOffset((o) => o + DATA_PAGE)}>
-              Next »
+            <button type="button" className="btn btn-plain btn-small" disabled={!canNext || status === 'loading'} onClick={() => setOffset((o) => o + DATA_PAGE)}>
+              Next →
             </button>
           </div>
         </div>
 
-        {status === 'loading' && <p>Loading rows…</p>}
+        {status === 'loading' && <p className="muted">Loading rows…</p>}
         {status === 'error' && <p className="error">{error}</p>}
-        {status === 'ready' && payload?.rows?.length === 0 && <p>No rows for this filter.</p>}
+        {status === 'ready' && payload?.rows?.length === 0 && <p className="muted">No rows for this filter.</p>}
         {status === 'ready' && payload?.rows?.length > 0 && (
           <div className="table-wrap table-scroll">
             <table className="data dense">
               <thead>
                 <tr>
-                  <th scope="col">S.No.</th>
+                  <th scope="col" className="num">
+                    #
+                  </th>
                   {payload.columns.map((col) => (
                     <th key={col} scope="col" className={DATA_NUM_COLS.has(col) ? 'num' : undefined}>
                       {DATA_HEADERS[col] ?? col}
@@ -1306,7 +1117,7 @@ function DatasetPage({ meta, t }) {
               <tbody>
                 {payload.rows.map((row, i) => (
                   <tr key={`${offset}-${i}`}>
-                    <td>{offset + i + 1}</td>
+                    <td className="num">{offset + i + 1}</td>
                     {payload.columns.map((col) => (
                       <td key={col} className={DATA_NUM_COLS.has(col) ? 'num' : col === 'season' || col === 'water' ? 'cap' : undefined}>
                         {row[col]}
@@ -1318,30 +1129,46 @@ function DatasetPage({ meta, t }) {
             </table>
           </div>
         )}
-      </Panel>
+      </Section>
     </>
   );
 }
 
-/* ── Model Report ─────────────────────────────────────── */
+/* ── Results ──────────────────────────────────────────── */
 
-// Panel titles and order for docs/research/results.json; keys not listed here (and future v3/v4) still render generically.
+// Section titles and order for docs/research/results.json; keys not listed here (and future v5…) still render generically.
 const SECTIONS = {
-  improvement: 'v1 vs v2 — What Changed',
-  app_protocol: "Deployed Model on the Application's Test Split",
-  v1: 'Model v1 (original, reproduced)',
-  v1_fixed: 'Model v1 Corrected (plain multiclass, Kaggle data)',
-  models: 'Model Comparison on v2 Data (stratified 5-fold CV)',
-  v3: 'Model v3 — Large Real Dataset (district crop statistics)',
-  v4: 'Model v4 — YieldRank + Conformal Prediction Sets (proposed method)',
-  ablation: 'Feature Ablation (deployed Random Forest)',
-  loso: 'Leave-One-Source-Out Validation',
-  leave_states_out: 'Leave-States-Out Validation (multi-state source)',
-  mcnemar: "McNemar's Test — v1 Corrected vs v2",
-  calibration: 'Calibration of Predicted Probabilities',
-  importance: 'Permutation Feature Importance',
-  confusion_top_pairs: 'Most Frequent Confusions',
-  dataset: 'Dataset Audit',
+  v1: 'v1 baseline: the original model, reproduced',
+  v1_fixed: 'v1 corrected: plain multiclass models on the Kaggle data',
+  improvement: 'From v1 to v2: what changed',
+  models: 'v2: model comparison (stratified 5-fold CV)',
+  app_protocol: "v2: deployed model on the application's test split",
+  ablation: 'v2: feature ablation',
+  loso: 'v2: leave-one-source-out validation',
+  leave_states_out: 'v2: leave-states-out validation (multi-state source)',
+  mcnemar: "v2: McNemar's test against v1 corrected",
+  calibration: 'v2: calibration of predicted probabilities',
+  importance: 'v2: permutation feature importance',
+  confusion_top_pairs: 'v2: most frequent confusions',
+  v3: 'v3: large real dataset (district crop statistics)',
+  v4: 'v4: YieldRank and conformal prediction sets (proposed)',
+  dataset: 'Audit of the v2 training data',
+};
+// Table captions where the section title alone would be vague.
+const CAPTIONS = {
+  v1: 'v1 models as originally trained: reported vs reproduced accuracy and decode failures',
+  v1_fixed: 'v1 estimators refit as plain multiclass models',
+  improvement: 'Summary of changes from v1 to v2',
+  models: 'Ten classifiers on the merged v2 data, sorted by macro-F1 (deployed model highlighted)',
+  app_protocol: "Deployed Random Forest on the backend's own 80/20 split",
+  ablation: 'Deployed configuration with different categorical feature sets',
+  loso: 'Train on two sources, test on the third',
+  leave_states_out: 'Multi-state source: random split vs unseen states',
+  mcnemar: 'Paired comparison of v1 corrected and v2',
+  calibration: 'Calibration of the deployed model on the application test split',
+  importance: 'Accuracy drop when each input is shuffled (sorted)',
+  confusion_top_pairs: 'Crop pairs most often confused by the deployed model',
+  dataset: 'Merged v2 training data',
 };
 const SPLIT_KEYS = { loso: ['Held-out source', 'Variant'], mcnemar: ['Model', 'Comparison'] };
 const COLS = {
@@ -1418,7 +1245,7 @@ const meanStd = (mean, std, key) => {
 };
 
 // rows: [{...}]. head: leading row-header columns. Pairs x_mean / x_std are merged into one "mean ± sd" column.
-function RowsTable({ rows, head = [], highlight }) {
+function RowsTable({ rows, head = [], highlight, caption }) {
   const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((k) => !head.includes(k));
   const cols = keys
     .filter((k) => !(k.endsWith('_std') && keys.includes(`${k.slice(0, -4)}_mean`)))
@@ -1426,6 +1253,7 @@ function RowsTable({ rows, head = [], highlight }) {
   return (
     <div className="table-wrap">
       <table className="data">
+        {caption && <caption className="tcap">{caption}</caption>}
         <thead>
           <tr>
             {head.map((h) => (
@@ -1463,35 +1291,43 @@ function RowsTable({ rows, head = [], highlight }) {
 
 const isFlatObj = (x) => x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every(isPlain);
 // {name: {metric: n}} maps; one extra level ({hit1_by_year: {2015: n}}) is flattened into "hit1_by_year:2015" columns.
-const isMetricMap = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).length > 0 && Object.values(v).every((x) => x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every((y) => isPlain(y) || isFlatObj(y)));
+const isMetricMap = (v) =>
+  v &&
+  typeof v === 'object' &&
+  !Array.isArray(v) &&
+  Object.values(v).length > 0 &&
+  Object.values(v).every((x) => x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every((y) => isPlain(y) || isFlatObj(y)));
 const flatten = (row) => Object.fromEntries(Object.entries(row).flatMap(([k, v]) => (isPlain(v) ? [[k, v]] : Object.entries(v).map(([s, x]) => [`${k}:${s}`, x]))));
 
 // Render any results.json value: arrays of rows and {name: {metric: n}} maps become tables, flat values a key/value table.
-function ReportValue({ value, name = 'Name', split, highlight, ctx = '' }) {
+function ReportValue({ value, name = 'Name', split, highlight, ctx = '', caption }) {
   if (isPlain(value)) return <p>{cell(value)}</p>;
-  if (Array.isArray(value)) return value.every((v) => v && typeof v === 'object') ? <RowsTable rows={value} /> : <p>{cell(value)}</p>;
+  if (Array.isArray(value)) return value.every((v) => v && typeof v === 'object') ? <RowsTable rows={value} caption={caption} /> : <p>{cell(value)}</p>;
   if (isMetricMap(value)) {
     const rows = Object.entries(value).map(([k, v]) => {
       if (!split) return { [name]: k, ...flatten(v) };
       const [a, b = ''] = k.split('|').map((s) => s.trim());
       return { [split[0]]: a, [split[1]]: b, ...flatten(v) };
     });
-    return <RowsTable rows={rows} head={split ?? [name]} highlight={highlight} />;
+    return <RowsTable rows={rows} head={split ?? [name]} highlight={highlight} caption={caption} />;
   }
   const entries = Object.entries(value);
   // A long map of name -> rate (e.g. 35 states) reads better as a compact grid, best first.
   if (entries.length > 12 && entries.every(([, v]) => typeof v === 'number')) {
     return (
-      <ul className="kv-grid">
-        {entries
-          .sort((a, b) => b[1] - a[1])
-          .map(([k, v]) => (
-            <li key={k}>
-              <span>{k}</span>
-              <strong>{cell(v, RATE.test(k) ? k : ctx)}</strong>
-            </li>
-          ))}
-      </ul>
+      <div className="grid-table">
+        {caption && <p className="tcap">{caption}</p>}
+        <ul className="kv-grid">
+          {entries
+            .sort((a, b) => b[1] - a[1])
+            .map(([k, v]) => (
+              <li key={k}>
+                <span>{k}</span>
+                <strong>{cell(v, RATE.test(k) ? k : ctx)}</strong>
+              </li>
+            ))}
+        </ul>
+      </div>
     );
   }
   const flat = entries.filter(([, v]) => isPlain(v) || (Array.isArray(v) && v.every(isPlain)));
@@ -1502,9 +1338,12 @@ function ReportValue({ value, name = 'Name', split, highlight, ctx = '' }) {
   const nested = entries.filter((e) => !flat.includes(e) && !grouped.includes(e));
   return (
     <>
-      {grouped.length > 0 && <RowsTable rows={grouped.map(([k, v]) => ({ [name]: rowName(k), ...v }))} head={[name]} />}
+      {grouped.length > 0 && (
+        <RowsTable rows={grouped.map(([k, v]) => ({ [name]: rowName(k), ...v }))} head={[name]} caption={flat.length ? grouped.map(([k]) => rowName(k)).join(', ') : caption} />
+      )}
       {flat.length > 0 && (
         <table className="kv">
+          {caption && <caption className="tcap">{caption}</caption>}
           <tbody>
             {flat.map(([k, v]) => (
               <tr key={k}>
@@ -1517,8 +1356,7 @@ function ReportValue({ value, name = 'Name', split, highlight, ctx = '' }) {
       )}
       {nested.map(([k, v]) => (
         <div key={k} className="sub-section">
-          <h3>{SUBTITLES[k] ?? rowName(k)}</h3>
-          <ReportValue value={v} ctx={k} />
+          <ReportValue value={v} ctx={k} caption={SUBTITLES[k] ?? rowName(k)} />
         </div>
       ))}
     </>
@@ -1535,10 +1373,10 @@ function losoSummary(loso) {
   const acc = rows.map((r) => r.accuracy);
   const ind = rows.map((r) => r.in_distribution_acc).filter((v) => typeof v === 'number');
   return (
-    <p className="notice">
-      <strong>Reading this table:</strong> the model is trained on two data sources and tested on the third{open.length ? ' (open-set rows)' : ''}. Accuracy falls to {pc(Math.min(...acc))}–{pc(Math.max(...acc))}, against{' '}
-      {pc(Math.min(...ind))}–{pc(Math.max(...ind))} when testing on unseen rows of the same sources. The three sources record the same crops under very different conditions, so the
-      cross-validated accuracy should not be expected to carry over to a new, independent data source.
+    <p className="keybox">
+      <strong>Reading this table:</strong> the model is trained on two data sources and tested on the third{open.length ? ' (open-set rows)' : ''}. Accuracy falls to{' '}
+      {pc(Math.min(...acc))}–{pc(Math.max(...acc))}, against {pc(Math.min(...ind))}–{pc(Math.max(...ind))} when testing on unseen rows of the same sources. The three sources record
+      the same crops under very different conditions, so the cross-validated accuracy should not be expected to carry over to a new, independent data source.
     </p>
   );
 }
@@ -1562,9 +1400,9 @@ function generalisationSummary(v) {
   if (!parts.length) return null;
   const [[firstName, first], ...rest] = parts;
   return (
-    <p className="notice">
-      <strong>Headline:</strong> for {firstName}, the best model ({first.model}) ranks a high-yield crop first in <strong>{pc(first.m1)}</strong> of district-season queries ({pc(first.m3)}{' '}
-      within its top 3), against {pc(first.b1)} / {pc(first.b3)} for the best popularity baseline.
+    <p className="keybox">
+      <strong>Headline:</strong> for {firstName}, the best model ({first.model}) ranks a high-yield crop first in <strong>{pc(first.m1)}</strong> of district-season queries (
+      {pc(first.m3)} within its top 3), against {pc(first.b1)} / {pc(first.b3)} for the best popularity baseline.
       {rest.map(([name, r]) => (
         <span key={name}>
           {' '}
@@ -1600,28 +1438,31 @@ function V4Report({ v }) {
   return (
     <>
       {ours && bestClf && (
-        <p className="notice">
+        <p className="keybox">
           <strong>Headline:</strong> on unseen states, YieldRank ranks the best-yielding crop first in <strong>{pct1(ours[1].mean['hit@1'])}</strong> of district-season-year
           queries, against {pct1(bestClf[1].mean['hit@1'])} for the best literature classifier ({bestClf[0]}); NDCG@3 {ours[1].mean['ndcg@3'].toFixed(3)} vs{' '}
-          {bestClf[1].mean['ndcg@3'].toFixed(3)} (Wilcoxon p {pval(bestClf[1]['wilcoxon_vs_ours_hit@1']?.p)}, n = {bestClf[1]['wilcoxon_vs_ours_hit@1']?.n?.toLocaleString('en-IN')}).
+          {bestClf[1].mean['ndcg@3'].toFixed(3)} (Wilcoxon p {pval(bestClf[1]['wilcoxon_vs_ours_hit@1']?.p)}, n = {bestClf[1]['wilcoxon_vs_ours_hit@1']?.n?.toLocaleString('en-IN')}
+          ).
           {pers && (
             <>
               {' '}
-              <strong>But</strong> a simple persistence rule (last year&apos;s crop) reaches {pct1(pers[1].mean['hit@1'])} (difference p {pval(pers[1]['wilcoxon_vs_ours_hit@1']?.p)})
-              {pointwise && <>, and a pointwise LightGBM model {pct1(pointwise[1].mean['hit@1'])}</>}.
+              <strong>But</strong> a simple persistence rule (last year&apos;s crop) reaches {pct1(pers[1].mean['hit@1'])} (difference p{' '}
+              {pval(pers[1]['wilcoxon_vs_ours_hit@1']?.p)}){pointwise && <>, and a pointwise LightGBM model {pct1(pointwise[1].mean['hit@1'])}</>}.
             </>
           )}
           {n.OursHitColdLSO && n.PersHitColdLSO && (
             <>
               {' '}
-              Its clear gain over persistence is on cold-start queries ({n.ColdShareLSO ? `${n.ColdShareLSO}% of cases, where some candidate crop has no yield history` : 'some candidate crop has no yield history'}): {n.OursHitColdLSO}% vs {n.PersHitColdLSO}%.
+              Its clear gain over persistence is on cold-start queries (
+              {n.ColdShareLSO ? `${n.ColdShareLSO}% of cases, where some candidate crop has no yield history` : 'some candidate crop has no yield history'}): {n.OursHitColdLSO}% vs{' '}
+              {n.PersHitColdLSO}%.
             </>
           )}
           {iid && (
             <>
               {' '}
-              With 90% conformal prediction sets (i.i.d. calibration), coverage on unseen states is <strong>{pct1(iid.coverage)}</strong> with {iid.size.toFixed(2)} crops per set on
-              average{n.WorstState && n.WorstIID ? `, but it drops to ${n.WorstIID}% in ${n.WorstState}` : ''}.
+              With 90% conformal prediction sets (i.i.d. calibration), coverage on unseen states is <strong>{pct1(iid.coverage)}</strong> with {iid.size.toFixed(2)} crops per set
+              on average{n.WorstState && n.WorstIID ? `, but it drops to ${n.WorstIID}% in ${n.WorstState}` : ''}.
             </>
           )}
         </p>
@@ -1629,9 +1470,9 @@ function V4Report({ v }) {
 
       {Object.entries(main).map(([split, methods]) => (
         <div key={split} className="sub-section">
-          <h3>Ranking quality — {V4_SPLITS[split] ?? split}</h3>
           <div className="table-wrap">
             <table className="data">
+              <caption className="tcap">Ranking quality — {V4_SPLITS[split] ?? split}</caption>
               <thead>
                 <tr>
                   <th scope="col">Method</th>
@@ -1671,9 +1512,9 @@ function V4Report({ v }) {
       ))}
 
       <div className="sub-section">
-        <h3>Ablation — Hit@1 without yield history or soil</h3>
         <div className="table-wrap">
           <table className="data">
+            <caption className="tcap">Ablation — Hit@1 without yield history or soil</caption>
             <thead>
               <tr>
                 <th scope="col">Features</th>
@@ -1721,9 +1562,9 @@ function V4Report({ v }) {
 
       {v.crossconf && (
         <div className="sub-section">
-          <h3>Conformal prediction sets — coverage · average set size</h3>
           <div className="table-wrap">
             <table className="data">
+              <caption className="tcap">Conformal prediction sets — coverage · average set size</caption>
               <thead>
                 <tr>
                   <th scope="col">Calibration</th>
@@ -1786,9 +1627,9 @@ function V4Report({ v }) {
 
       {states.length > 0 && (
         <div className="sub-section">
-          <h3>Coverage of 90% sets for each held-out state, cross-group calibration (lowest first)</h3>
           <div className="table-wrap">
             <table className="data">
+              <caption className="tcap">Coverage of 90% sets for each held-out state, cross-group calibration (lowest first)</caption>
               <thead>
                 <tr>
                   <th scope="col">State</th>
@@ -1827,22 +1668,23 @@ function V4Report({ v }) {
               </tbody>
             </table>
           </div>
-          <p className="muted small">Rows shaded red have LAC coverage below 85%. Per-state values use cross-group calibration, so they differ slightly from the i.i.d. figure in the headline.</p>
+          <p className="note">
+            Rows shaded red have LAC coverage below 85%. Per-state values use cross-group calibration, so they differ slightly from the i.i.d. figure in the headline.
+          </p>
         </div>
       )}
 
       {v.kaggle_random_split_accuracy && (
         <div className="sub-section">
-          <h3>Sanity check — accuracy on the Kaggle set with a random split</h3>
-          <ReportValue value={v.kaggle_random_split_accuracy} ctx="accuracy" />
-          <p className="muted small">Near-perfect scores on the small Kaggle set show that task is almost a lookup; the grouped splits above are the meaningful test.</p>
+          <ReportValue value={v.kaggle_random_split_accuracy} ctx="accuracy" caption="Sanity check: accuracy on the Kaggle set with a random split" />
+          <p className="note">Near-perfect scores on the small Kaggle set show that task is almost a lookup; the grouped splits above are the meaningful test.</p>
         </div>
       )}
 
       {v.meta && (
         <div className="sub-section">
-          <h3>Run details</h3>
           <ReportValue
+            caption="v4 run details"
             value={{
               ...v.meta,
               ...(Array.isArray(v.meta.years) && { years: v.meta.years.join('–') }),
@@ -1852,12 +1694,12 @@ function V4Report({ v }) {
           />
         </div>
       )}
-      {typeof v._doc === 'string' && <p className="muted small">{v._doc}</p>}
+      {typeof v._doc === 'string' && <p className="note">{v._doc}</p>}
     </>
   );
 }
 
-function ReportPage({ t }) {
+function ResultsPage({ t }) {
   const [info, setInfo] = useState(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -1877,8 +1719,7 @@ function ReportPage({ t }) {
     ...(isMetricMap(sections.models) && { models: byDesc(sections.models, 'macro_f1_mean') }),
     ...(isMetricMap(sections.importance) && { importance: byDesc(sections.importance, 'accuracy_drop_mean') }),
   };
-
-  // vN sections: results first, setup last; their own figure list is already in the Figures panel.
+  // vN sections: results first, setup last; their own figure list is already in the Figures section.
   const V_ORDER = ['summary', 'leave_districts_out', 'leave_years_out', 'leave_states_out', 'leave_states_out_per_state_hit1', 'soil_subset'];
   for (const v of Object.keys(prepared).filter((k) => /^v\d+$/.test(k) && !isPlain(prepared[k]) && !Array.isArray(prepared[k]))) {
     const { figures: _f, ...rest } = prepared[v];
@@ -1886,18 +1727,65 @@ function ReportPage({ t }) {
     prepared[v] = Object.fromEntries([...V_ORDER.filter((k) => k in rest), ...ks.filter((k) => !V_ORDER.includes(k))].map((k) => [k, rest[k]]));
   }
 
+  const toc = [
+    ...keys.map((k) => ({ id: `r-${k}`, title: SECTIONS[k] ?? label(k) })),
+    { id: 'r-live', title: 'Deployed model (live from the server)' },
+    ...(runMeta ? [{ id: 'r-setup', title: 'Experiment setup' }] : []),
+    { id: 'r-figures', title: 'Figures' },
+  ];
+
   return (
-    <>
-      <h1 className="page-title">{t('report')}</h1>
+    <div className="results">
+      <header className="page-head">
+        <h1>{t('results')}</h1>
+        <p className="lede">
+          Evaluation of AgroMind from the original v1 model to the proposed v4 ranker. Every table and figure below is generated from <code>docs/research/results.json</code>,
+          written by the research notebooks; nothing is typed in by hand.
+        </p>
+      </header>
+
       {_placeholder && (
-        <div className="notice notice-orange" role="note">
+        <div className="keybox is-warn" role="note">
           <strong>Placeholder data.</strong> {note}
         </div>
       )}
 
-      <Panel title="Deployed Model (live from server)" tone="green">
+      <nav className="toc" aria-label="Contents">
+        <p className="eyebrow">Contents</p>
+        <ol>
+          {toc.map((s) => (
+            <li key={s.id}>
+              <button type="button" className="link-btn" onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth' })}>
+                {s.title}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      {keys.map((k) => (
+        <Section key={k} id={`r-${k}`} title={SECTIONS[k] ?? label(k)} className="numbered">
+          {k === 'loso' && losoSummary(prepared.loso)}
+          {/^v\d+$/.test(k) && !prepared[k]?.metrics?.main && generalisationSummary(prepared[k])}
+          {k === 'v4' && prepared.v4?.metrics?.main ? (
+            <V4Report v={prepared.v4} />
+          ) : (
+            <ReportValue
+              value={prepared[k]}
+              caption={CAPTIONS[k] ?? SECTIONS[k] ?? label(k)}
+              name={k === 'importance' ? 'Input' : k === 'ablation' ? 'Feature set' : 'Model'}
+              split={SPLIT_KEYS[k]}
+              highlight={deployed ? (r) => Object.values(r).includes(deployed) : undefined}
+            />
+          )}
+          {typeof doc[k] === 'string' && <p className="note">{doc[k]}</p>}
+        </Section>
+      ))}
+
+      <Section id="r-live" title="Deployed model (live from the server)" className="numbered">
         {info ? (
           <table className="kv">
+            <caption className="tcap">Model currently served by the advisory</caption>
             <tbody>
               <tr>
                 <th scope="row">Algorithm</th>
@@ -1920,35 +1808,17 @@ function ReportPage({ t }) {
             </tbody>
           </table>
         ) : (
-          <p>{failed ? `Cannot reach the model server at ${API_BASE_URL}.` : 'Loading…'}</p>
+          <p className="muted">{failed ? `Cannot reach the model server at ${API_BASE_URL}.` : 'Loading…'}</p>
         )}
-      </Panel>
-
-      {keys.map((k) => (
-        <Panel key={k} title={SECTIONS[k] ?? label(k)}>
-          {k === 'loso' && losoSummary(prepared.loso)}
-          {/^v\d+$/.test(k) && !prepared[k]?.metrics?.main && generalisationSummary(prepared[k])}
-          {k === 'v4' && prepared.v4?.metrics?.main ? (
-            <V4Report v={prepared.v4} />
-          ) : (
-            <ReportValue
-              value={prepared[k]}
-              name={k === 'importance' ? 'Input' : k === 'ablation' ? 'Feature set' : 'Model'}
-              split={SPLIT_KEYS[k]}
-              highlight={deployed ? (r) => Object.values(r).includes(deployed) : undefined}
-            />
-          )}
-          {doc[k] && <p className="muted small">{doc[k]}</p>}
-        </Panel>
-      ))}
+      </Section>
 
       {runMeta && (
-        <Panel title="Experiment Setup">
-          <ReportValue value={runMeta} />
-        </Panel>
+        <Section id="r-setup" title="Experiment setup" className="numbered">
+          <ReportValue value={runMeta} caption="Software and protocol used for the v1–v2 experiments" />
+        </Section>
       )}
 
-      <Panel title="Figures">
+      <Section id="r-figures" title="Figures" className="numbered">
         <div className="figures">
           {(figures.length ? figures : [{ caption: 'Figure to be added' }]).map((f, i) => {
             // Figure images are copied from docs/research/figures/ into frontend/public/research/.
@@ -1969,180 +1839,257 @@ function ReportPage({ t }) {
             );
           })}
         </div>
-      </Panel>
-    </>
+      </Section>
+    </div>
   );
 }
 
-/* ── Static pages ─────────────────────────────────────── */
+/* ── Paper ────────────────────────────────────────────── */
+
+const PAPER_TITLE = 'Beyond 99%: Yield-Grounded Crop Ranking with Conformal Prediction Sets, Evaluated on Unseen Indian States and Years';
+
+// Abstract copied from paper/main.tex; \Macros are filled from results.json v4.numbers (the same values numbers.tex holds).
+const ABSTRACT_TEX = String.raw`Crop-recommendation papers routinely report 97--99.9\% accuracy, almost always on a small,
+augmented, location-free table split at random. We ask how such recommenders behave on real data
+in states and years they have never seen. From Government of India
+district\,$\times$\,season\,$\times$\,year crop statistics joined with NASA POWER climate and
+SoilGrids soil, we build a benchmark of \NQueries{} district-season-years (\NCrops{} crops,
+\NStates{} states/UTs, \YearA--\YearB). We recast recommendation as \emph{ranking the crops grown in
+a district by realised yield}. Four classifier families from the literature, which reach
+\KaggleRF\% on the Kaggle table, pick the best-yielding crop in at most \BaseHitR\% of cases under
+a random split. On held-out states this falls to \BaseHitLSO\%, below a one-line rule that repeats
+last year's yield ranking (\PersHitLSO\%). A yield-grounded ranker (YieldRank) reaches
+\OursHitLSO\% on held-out states (+\GainHitLSO{} points over \BaseNameLSO, NDCG@3
+\BaseNDCGLSO$\to$\OursNDCGLSO). Its margin over persistence is small overall but
+\OursHitColdLSO\% vs \PersHitColdLSO\% on the \ColdShareLSO\% of cases where some crop lacks
+last-year history. Split-conformal sets at a 90\% target cover the best crop in \CovIIDLSO\% of
+unseen-state cases with \SizeIIDLSO{} crops on average, but coverage drops to \WorstIID\% in the
+worst state. Calibrating the classifiers on held-out states rather than i.i.d.\ queries raises
+Random-Forest coverage from \RFCovIIDMean\% to \RFCovGRPMean\%.`;
+
+function texToText(tex, numbers) {
+  return tex
+    .replace(/\\emph\{([^}]*)\}/g, '$1')
+    .replace(/\\,\$\\times\$\\,/g, ' × ')
+    .replace(/\$\\to\$/g, ' → ')
+    .replace(/\\([A-Za-z]+)(\{\})?/g, (m, name) => numbers[name] ?? '—')
+    .replace(/\\%/g, '%')
+    .replace(/\\ /g, ' ')
+    .replace(/--/g, '–')
+    .replace(/\s*\n\s*/g, ' ');
+}
+
+const NOTEBOOKS = [
+  ['AgroMind_v2_Research.ipynb', 'v1 reproduction and corrected decode; v2 merged data, 10-model comparison, ablation, leave-one-source-out, McNemar, calibration.'],
+  ['AgroMind_v3_LargeScale.ipynb', 'v3: Government district crop statistics with NASA POWER climate and SoilGrids soil; unseen districts, states and years.'],
+  ['AgroMind_v4_Novel_Method.ipynb', 'v4: YieldRank (LambdaMART yield ranking) against literature classifiers and persistence, with split-conformal prediction sets.'],
+];
+
+function PaperPage() {
+  const numbers = research.v4?.numbers ?? {};
+  const [copied, setCopied] = useState(false);
+  const authors = SITE.team.join(' and ');
+  const bibtex = `@misc{agromind2026,
+  title        = {${PAPER_TITLE.replace('%', '\\%')}},
+  author       = {${authors}},
+  year         = {2026},
+  note         = {Final year project, Dept. of ${SITE.department}, ${SITE.college}},
+  howpublished = {\\url{${SITE.repo}}}
+}`;
+  const blob = (path) => `${SITE.repo}/blob/main/${path}`;
+
+  return (
+    <article className="paper">
+      <header className="page-head">
+        <p className="eyebrow">Paper · preprint</p>
+        <h1>{PAPER_TITLE}</h1>
+        <p className="authors">
+          {SITE.team.join(', ')}
+          <br />
+          Dept. of {SITE.department}, {SITE.college} · Guide: {SITE.guide}
+        </p>
+        <p className="paper-links">
+          <a className="btn" href={blob('paper/main.pdf')} target="_blank" rel="noreferrer">
+            Paper (PDF)
+          </a>
+          <a className="btn btn-plain" href={blob('docs/newsletter/AgroMind_Newsletter.pdf')} target="_blank" rel="noreferrer">
+            Newsletter (PDF)
+          </a>
+          <a className="btn btn-plain" href={SITE.repo} target="_blank" rel="noreferrer">
+            Source code
+          </a>
+        </p>
+      </header>
+
+      <Section id="abstract" title="Abstract">
+        <p className="abstract">{texToText(ABSTRACT_TEX, numbers)}</p>
+        {!research.v4?.numbers && <p className="note">Numbers appear once results.json contains v4.numbers.</p>}
+      </Section>
+
+      <Section id="notebooks" title="Notebooks">
+        <div className="table-wrap">
+          <table className="data nb-table">
+            <caption className="visually-hidden">Research notebooks</caption>
+            <thead>
+              <tr>
+                <th scope="col">Notebook</th>
+                <th scope="col">Contents</th>
+                <th scope="col">Run</th>
+              </tr>
+            </thead>
+            <tbody>
+              {NOTEBOOKS.map(([file, about]) => (
+                <tr key={file}>
+                  <th scope="row">
+                    <a href={blob(`notebooks/${file}`)} target="_blank" rel="noreferrer">
+                      {file}
+                    </a>
+                  </th>
+                  <td>{about}</td>
+                  <td>
+                    <a
+                      href={`https://colab.research.google.com/github/${SITE.repo.replace('https://github.com/', '')}/blob/main/notebooks/${file}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="badge">Open in Colab</span>
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <Section
+        id="cite"
+        title="Cite this"
+        actions={
+          <button
+            type="button"
+            className="btn btn-plain btn-small"
+            onClick={() => {
+              navigator.clipboard?.writeText(bibtex).then(
+                () => setCopied(true),
+                () => setCopied(false),
+              );
+            }}
+          >
+            {copied ? 'Copied' : 'Copy BibTeX'}
+          </button>
+        }
+      >
+        <pre className="bibtex">{bibtex}</pre>
+      </Section>
+    </article>
+  );
+}
+
+/* ── About ────────────────────────────────────────────── */
+
+const DATA_SOURCES = [
+  [
+    'District-wise, season-wise crop production statistics (DES, Ministry of Agriculture & Farmers Welfare), via data.gov.in and a 1997–2021 Kaggle compilation',
+    'v3, v4 benchmark: crops grown and yields',
+    'Government Open Data Licence – India (GODL); the Kaggle compilation is CC BY-NC-SA 4.0',
+  ],
+  ['NASA POWER (monthly temperature, humidity, rainfall)', 'v3, v4 climate at district centroids', 'NASA open data, no restrictions; cite POWER'],
+  ['ISRIC SoilGrids 2.0 (pH, nitrogen, organic carbon, texture, CEC)', 'v3, v4 soil at district centroids', 'CC BY 4.0 (Poggio et al. 2021)'],
+  ['datta07/INDIAN-SHAPEFILES (district boundaries)', 'District centroids', 'MIT'],
+  ['Kaggle Crop Recommendation dataset (2,200 rows)', 'v1 model; part of v2 training data', 'As listed on the Kaggle dataset page'],
+  [
+    'Multi-state India crop records (8,000 rows) and Tamil Nadu field records (57,000 rows)',
+    'v2 training data (deployed advisory model)',
+    'Supplied with the original project; source licence to be confirmed',
+  ],
+];
 
 function AboutPage() {
   return (
     <>
-      <h1 className="page-title">About the Project</h1>
-      <div className="grid-home">
-        <Panel title="Project Overview">
-          <p>
-            AgroMind is a final year project of the Department of {SITE.department}, {SITE.college}, session {SITE.session}. It applies machine learning to recommend crops for Indian
-            fields from soil test values, climate, soil type, season, water source and state.
-          </p>
-          <h3>Technology used</h3>
-          <table className="kv">
-            <tbody>
-              <tr>
-                <th scope="row">Frontend</th>
-                <td>React 18, Vite</td>
+      <header className="page-head">
+        <h1>About</h1>
+        <p className="lede">
+          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). It recommends crops for Indian fields from soil tests, climate,
+          season and location, and studies how such recommenders hold up on states and years they have never seen.
+        </p>
+      </header>
+
+      <Section id="team" title="Team">
+        <table className="data narrow">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SITE.team.map((name) => (
+              <tr key={name}>
+                <th scope="row">{name}</th>
+                <td>Student</td>
               </tr>
-              <tr>
-                <th scope="row">Backend</th>
-                <td>Python, FastAPI</td>
-              </tr>
-              <tr>
-                <th scope="row">Model</th>
-                <td>scikit-learn Random Forest (see Model Report)</td>
-              </tr>
-              <tr>
-                <th scope="row">Data</th>
-                <td>Merged Indian crop datasets (see Dataset)</td>
-              </tr>
-            </tbody>
-          </table>
-        </Panel>
-        <Panel title="Project Team" tone="green">
+            ))}
+            <tr>
+              <th scope="row">{SITE.guide}</th>
+              <td>Project guide</td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="note">
+          Contact: {SITE.email} · {SITE.address}
+        </p>
+      </Section>
+
+      <Section id="system" title="System">
+        <table className="kv">
+          <tbody>
+            <tr>
+              <th scope="row">Advisory model</th>
+              <td>Random Forest over soil tests, climate, soil type, season and state (see Results)</td>
+            </tr>
+            <tr>
+              <th scope="row">Research method</th>
+              <td>YieldRank, a yield-grounded ranker with conformal prediction sets (see Paper)</td>
+            </tr>
+            <tr>
+              <th scope="row">Software</th>
+              <td>React 18 and Vite (interface); Python, FastAPI and scikit-learn (server); LightGBM (research)</td>
+            </tr>
+          </tbody>
+        </table>
+      </Section>
+
+      <Section id="sources" title="Data sources and licences">
+        <div className="table-wrap">
           <table className="data">
             <thead>
               <tr>
-                <th scope="col">S.No.</th>
-                <th scope="col">Name</th>
-                <th scope="col">Role</th>
+                <th scope="col">Source</th>
+                <th scope="col">Used for</th>
+                <th scope="col">Licence</th>
               </tr>
             </thead>
             <tbody>
-              {SITE.team.map((name, i) => (
-                <tr key={name}>
-                  <td>{i + 1}</td>
-                  <td>{name}</td>
-                  <td>Student</td>
+              {DATA_SOURCES.map(([src, use, lic]) => (
+                <tr key={src}>
+                  <th scope="row">{src}</th>
+                  <td>{use}</td>
+                  <td>{lic}</td>
                 </tr>
               ))}
-              <tr>
-                <td>{SITE.team.length + 1}</td>
-                <td>{SITE.guide}</td>
-                <td>Project Guide</td>
-              </tr>
             </tbody>
           </table>
-        </Panel>
-      </div>
-    </>
-  );
-}
+        </div>
+        <p className="note">
+          Full provenance, file hashes and processing steps: <code>docs/research/DATASET.md</code>.
+        </p>
+      </Section>
 
-function ContactPage() {
-  return (
-    <>
-      <h1 className="page-title">Contact Us</h1>
-      <Panel title="Project Contact">
-        <table className="kv">
-          <tbody>
-            <tr>
-              <th scope="row">Department</th>
-              <td>Dept. of {SITE.department}</td>
-            </tr>
-            <tr>
-              <th scope="row">Institution</th>
-              <td>{SITE.college}</td>
-            </tr>
-            <tr>
-              <th scope="row">Address</th>
-              <td>{SITE.address}</td>
-            </tr>
-            <tr>
-              <th scope="row">Project guide</th>
-              <td>{SITE.guide}</td>
-            </tr>
-            <tr>
-              <th scope="row">E-mail</th>
-              <td>{SITE.email}</td>
-            </tr>
-            <tr>
-              <th scope="row">Phone</th>
-              <td>{SITE.phone}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="muted small">For farming queries, please contact your nearest Krishi Vigyan Kendra or state agriculture department.</p>
-      </Panel>
-    </>
-  );
-}
-
-function InfoPage({ route, t }) {
-  const body = {
-    disclaimer: (
-      <>
-        <p>
-          <strong>This is an academic project and is not an official Government of India website.</strong> It is not affiliated with, endorsed by or operated by any ministry,
-          department or government body.
-        </p>
-        <p>
-          Crop recommendations are produced by a machine-learning model for demonstration and evaluation purposes. They may be inaccurate and must not be used as the sole basis for
-          farming, financial or policy decisions. The project team accepts no liability for any loss arising from use of this website.
-        </p>
-      </>
-    ),
-    privacy: (
-      <>
-        <p>This website does not collect personal information and uses no cookies or analytics.</p>
-        <p>
-          Field values you enter are sent to the project's model server only to compute a recommendation and are not stored there. Saved analyses, display preferences and the visit
-          count are kept in your own browser (local storage) and can be removed by clearing site data.
-        </p>
-      </>
-    ),
-    help: (
-      <>
-        <table className="kv">
-          <tbody>
-            <tr>
-              <th scope="row">N, P, K</th>
-              <td>Nitrogen, phosphorus and potassium values from the soil test report (Soil Health Card).</td>
-            </tr>
-            <tr>
-              <th scope="row">Soil pH</th>
-              <td>Acidity / alkalinity of the soil, 3–10.</td>
-            </tr>
-            <tr>
-              <th scope="row">Temperature, Humidity</th>
-              <td>Average temperature (°C) and relative humidity (%) during the growing season.</td>
-            </tr>
-            <tr>
-              <th scope="row">Seasonal rainfall</th>
-              <td>Total rainfall expected over the season, in mm.</td>
-            </tr>
-            <tr>
-              <th scope="row">Season</th>
-              <td>Kharif (Jun–Oct), Rabi (Oct–Mar), Zaid (Mar–Jun).</td>
-            </tr>
-          </tbody>
-        </table>
-        <p>Use the A-, A, A+ buttons at the top to change text size, and the contrast button for a high-contrast view.</p>
-      </>
-    ),
-    sitemap: (
-      <ul className="link-list">
-        {[...PAGES, ...INFO_PAGES].map((p) => (
-          <li key={p}>
-            <a href={p === 'home' ? '#/' : `#/${p}`}>{t(p)}</a>
-          </li>
-        ))}
-      </ul>
-    ),
-  }[route];
-  return (
-    <>
-      <h1 className="page-title">{t(route)}</h1>
-      <Panel title={t(route)}>{body}</Panel>
+      <p className="disclaimer">
+        Academic project. Recommendations come from a statistical model and are not agronomic advice; this is not an official Government of India website or service.
+      </p>
     </>
   );
 }
