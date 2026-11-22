@@ -24,7 +24,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from .india_ref import CROP_META, crop_name
+from .india_ref import CALENDAR, CROP_META, crop_name
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 LARGE_DIR = BASE_DIR / "data" / "large"
@@ -124,8 +124,16 @@ class V3Service:
                      for dist, gg in g.groupby("district", sort=True)]
             states.append({"state": state, "districts": dists})
         crops = sorted(self.labelled.crop_slug.unique().tolist())
-        return {"states": states, "seasons": SEASON_ORDER,
-                "crops": [{"slug": c, "name": crop_name(c), "type": CROP_META.get(c, {}).get("type", "Crop")} for c in crops]}
+        return {"states": states, "seasons": SEASON_ORDER, "crops": [self._crop(c) for c in crops]}
+
+    @staticmethod
+    def _crop(slug: str) -> dict:
+        """Name, type and, where a curated calendar exists, 0-based sow/harvest months (else null)."""
+        cal = CALENDAR.get(slug)
+        return {"slug": slug, "name": crop_name(slug), "type": CROP_META.get(slug, {}).get("type", "Crop"),
+                "sow_months": list(cal["sow"]) if cal else None,
+                "harvest_months": list(cal["harvest"]) if cal else None,
+                "duration_days": int(cal["days"]) if cal else None}
 
     def _district_row(self, state: str, district: str, season: str) -> pd.Series:
         try:
@@ -213,6 +221,23 @@ class V3Service:
         return {"columns": DATASET_COLUMNS, "rows": rows, "total": total, "page": page, "page_size": page_size,
                 "pages": pages, "total_rows_in_dataset": int(len(df))}
 
+    def history(self) -> dict:
+        """v1 / v2 headline numbers (research history) from docs/research/results.json."""
+        if not RESULTS.exists():
+            return {}
+        r = json.loads(RESULTS.read_text())
+        v2 = r.get("models", {}).get("RandomForest (v2 deployed)", {})
+        loso = [v["accuracy"] for k, v in r.get("loso", {}).items() if k.endswith("|open set")]
+        return {
+            "v1": {"data": "Kaggle Crop_recommendation.csv, 2,200 rows, 22 crops",
+                   "reported_accuracy": r.get("v1", {}).get("RandomForest", {}).get("reported_accuracy"),
+                   "fixed_cv5_accuracy": r.get("v1_fixed", {}).get("RandomForest", {}).get("cv5_accuracy_mean")},
+            "v2": {"data": "3 merged CSVs, 67,200 rows, 74 crops (retired: the sources disagree and do not transfer)",
+                   "cv5_accuracy": v2.get("accuracy_mean"), "cv5_top3": v2.get("top3_mean"),
+                   "leave_one_source_out_accuracy": [min(loso), max(loso)] if loso else None},
+            "source": "docs/research/results.json (notebooks/AgroMind_v2_Research.ipynb)",
+        }
+
     def info(self) -> dict:
         df, lab = self.df, self.labelled
         metrics = {}
@@ -240,5 +265,5 @@ class V3Service:
             "years": [int(df.year.min()), int(df.year.max())],
             "label": "recommend == 1: top-3 crops by within-crop yield percentile per district-year-season",
             "metrics": metrics,
-            "dataset": "Govt of India APY district-wise crop statistics + NASA POWER climate + ISRIC SoilGrids",
+            "dataset": "Government of India DES district-wise crop statistics (APY, data.desagri.gov.in) + NASA POWER climate + ISRIC SoilGrids",
         }
