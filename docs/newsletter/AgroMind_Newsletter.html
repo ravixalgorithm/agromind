@@ -177,7 +177,7 @@
       cross-checked against a community copy <span class="cite">[36]</span>: 4,00,379 rows across 37 states and union territories and 748 districts.
       Each district is matched to its centre point to attach seasonal temperature, humidity and rainfall from
       NASA POWER <span class="cite">[29]</span> and topsoil pH, nitrogen and texture from SoilGrids 2.0
-      <span class="cite">[27]</span>. A crop is labelled "recommended" for a district, season and year if it is
+      <span class="cite">[27]</span> (99.81% of rows). A crop is labelled "recommended" for a district, season and year if it is
       among that query's top three by yield percentile, giving 43,998 queries over 49 crops.</p>
     <h3>How we test</h3>
     <ul>
@@ -303,7 +303,7 @@
   <p class="kicker">Future work</p>
   <div class="cols fw">
     <ul>
-      <li>Complete the soil data: 91.51% of v3 rows now have their own district's SoilGrids point; the rest use a state value.</li>
+      <li>Find out why soil does not help yet: on the 737 districts with their own SoilGrids point, adding soil moves v3 hit@1 from 72.26% to 71.14%.</li>
       <li>Pre-fill N, P, K and pH from a farmer's Soil Health Card <span class="cite">[24], [25]</span>.</li>
       <li>Recalibrate the app's confidence figure.</li>
       <li>Add SHAP explanations <span class="cite">[23]</span> for each recommendation.</li>
@@ -323,8 +323,8 @@
   <p style="margin-top:2mm;font-size:8.4pt;text-align:center">Head of Department: <b>[HoD Name]</b> · Project
     Coordinator: <b>[Coordinator Name]</b> · Contact: [email@college.edu]</p>
   <p style="font-size:7.4pt;line-height:1.3;color:var(--muted);text-align:center"><i>Disclaimer:</i> AgroMind is an academic
-    project. v1 and v2 are trained on public and partly synthetic datasets; v3 uses official production statistics
-    with interim soil data. Recommendations are for education and demonstration only and are not validated
+    project. v1 and v2 are trained on public and partly synthetic datasets; v3 and v4 use official production
+    statistics. Recommendations are for education and demonstration only and are not validated
     agronomic advice.</p>
 
   <hr class="sep">
