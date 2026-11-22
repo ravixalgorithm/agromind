@@ -14,6 +14,7 @@ const SITE = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const FINAL = 'AgroMind v4 (final)';
 const SAVED_KEY = 'agromind.saved-analyses.v3';
 // Keys left by the removed soil-test mode; cleared once so old v2 entries don't linger.
 const OLD_KEYS = ['agromind.saved-analyses.v2', 'agromind.active-analysis.v2', 'agromind.advisory-mode'];
@@ -168,6 +169,7 @@ function App() {
               ·
             </span>
             <span className="brand-sub">Crop Recommendation Research</span>
+            <span className="brand-tag">v4 (final)</span>
           </a>
           <div className="header-tools">
             <span role="group" aria-label="Text size">
@@ -1098,8 +1100,8 @@ function DatasetPage({ t }) {
       <header className="page-head">
         <h1>{t('dataset')}</h1>
         <p className="lede">
-          Government of India district-wise, season-wise crop statistics (APY){stats ? `: ${stats}` : ''}, joined with NASA POWER climate and SoilGrids soil. These are the records
-          behind the advisory. Licences are listed on the <a href="#/about">About</a> page.
+          The data behind {FINAL}: Government of India district-wise, season-wise crop statistics (APY){stats ? `: ${stats}` : ''}, joined with NASA POWER climate and SoilGrids
+          soil. The model learns from these yields, and the advisory shows each district&apos;s history from them. Licences are listed on the <a href="#/about">About</a> page.
         </p>
       </header>
       <Section id="records" title={t('rawData')}>
@@ -1121,14 +1123,13 @@ const isOurs = (name) => name.includes('(ours)');
 const isClassifier = (name) => /\[[\d,]+\]/.test(name); // literature classifiers carry their citation numbers
 // The pointwise LightGBM row uses the proposed yield-ranking formulation too; name it so it doesn't read as an outside baseline.
 const methodName = (name) => (/pointwise/i.test(name) ? 'LightGBM pointwise (same yield-ranking formulation, ours)' : name);
-const MIN_STATE_QUERIES = 30;
 const V3_TESTS = [
   ['leave_districts_out', 'Unseen districts'],
   ['leave_years_out', 'Future crop years'],
   ['leave_states_out', 'Unseen states'],
 ];
 
-// For one grouped test: the ExtraTrees row (the served model) and the best popularity baseline by Hit@1.
+// For one grouped test: the ExtraTrees row (the v3 model) and the best popularity baseline by Hit@1.
 function v3Pair(test) {
   const rows = Object.entries(test ?? {});
   const model = rows.find(([n]) => n.startsWith('ExtraTrees'));
@@ -1136,101 +1137,183 @@ function v3Pair(test) {
   return model && base ? { model, base } : null;
 }
 
-function ImprovementTable({ r }) {
+// Numbers each version is summarised by, all read from results.json (v1/v2 from the v2 notebook, v3 and v4 from theirs).
+const V2_MODEL = 'RandomForest (v2 deployed)';
+const SOURCE_NAMES = { india: 'Multi-state (india)', tamilnadu: 'Tamil Nadu', kaggle: 'Kaggle' };
+function versionNumbers(r) {
   const v1 = r.v1?.RandomForest;
-  const imp = Object.fromEntries((r.improvement ?? []).map((x) => [x.aspect, x.v1]));
+  const v2 = r.models?.[V2_MODEL];
+  const loso = Object.entries(r.loso ?? {})
+    .filter(([k]) => k.endsWith('|open set'))
+    .map(([k, x]) => [k.split('|')[0], x.accuracy]);
+  const losoVals = loso.map(([, a]) => a).filter((a) => typeof a === 'number');
   const v3 = r.v3 ?? {};
-  const v3sum = Object.fromEntries((v3.summary ?? []).map((x) => [x.aspect, x.v3]));
-  const n = r.v4?.numbers ?? {};
-  const m4 = r.v4?.meta ?? {};
-  const kaggle = r.dataset?.rows_by_source?.kaggle;
   const pairs = Object.fromEntries(V3_TESTS.map(([k]) => [k, v3Pair(v3[k])]));
+  const h3 = (k) => metric(pairs[k]?.model[1], 'hit1');
+  return {
+    v1,
+    v2,
+    loso,
+    losoRange: losoVals.length ? `${(Math.min(...losoVals) * 100).toFixed(1)}–${pct1(Math.max(...losoVals))}` : '—',
+    v3,
+    pairs,
+    h3,
+    n: r.v4?.numbers ?? {},
+    m4: r.v4?.meta ?? {},
+    sources: Object.keys(r.dataset?.rows_by_source ?? {}),
+  };
+}
+
+// Four steps; each fixed the previous one's weakness. The prose is fixed, every number comes from results.json.
+function VersionHistory({ r }) {
+  const x = versionNumbers(r);
+  const steps = [
+    {
+      v: 'v1',
+      name: 'Previous project',
+      fact: `${pct1(x.v1?.reported_accuracy)} accuracy on ${r.dataset?.rows_by_source?.kaggle?.toLocaleString('en-IN') ?? '—'} Kaggle rows`,
+      fixed: 'Starting point',
+      lacked: `Argmax decode bug (GaussianNB exact-match ${pct1(r.v1?.GaussianNB?.exact_match_accuracy)} vs ${pct1(r.v1?.GaussianNB?.reported_accuracy)} reported); one random split`,
+    },
+    {
+      v: 'v2',
+      name: 'Merged sources',
+      fact: `${pct2(x.v2?.accuracy_mean)} ± ${pct2(x.v2?.accuracy_std)} (5-fold), top-3 ${pct2(x.v2?.top3_mean)} on ${r.dataset?.rows?.toLocaleString('en-IN') ?? '—'} rows`,
+      fixed: `One multiclass model, ${x.sources.length} merged sources, cross-validation`,
+      lacked: `The sources disagree: on an unseen source accuracy falls to ${x.losoRange}`,
+    },
+    {
+      v: 'v3',
+      name: 'Intermediate',
+      fact: `Hit@1 ${pct1(x.h3('leave_districts_out'))} / ${pct1(x.h3('leave_states_out'))} / ${pct1(x.h3('leave_years_out'))} on unseen districts / states / years`,
+      fixed: `${x.v3.data?.rows?.toLocaleString('en-IN') ?? '—'} real district records, tested on places and years it has not seen`,
+      lacked: 'Predicts what is grown, not what yields best; no uncertainty',
+    },
+    {
+      v: 'v4',
+      name: 'Final',
+      fact: `Hit@1 ${x.n.OursHitLSO ?? '—'}% on unseen states; 90% sets of ${x.n.SizeIIDLSO ?? '—'} crops`,
+      fixed: 'Ranks crops by realised yield and gives a 90% prediction set',
+      lacked: null,
+    },
+  ];
+  return (
+    <ol className="versions" aria-label="Version history">
+      {steps.map((s) => (
+        <li key={s.v} className={s.v === 'v4' ? 'is-final' : undefined}>
+          <p className="ver-name">
+            <strong>{s.v}</strong> {s.v === 'v4' ? FINAL.replace('AgroMind v4 ', '') : s.name.toLowerCase()}
+          </p>
+          <p className="ver-fact">{s.fact}</p>
+          <p className="ver-line">
+            <span>Fixed:</span> {s.fixed}
+          </p>
+          {s.lacked && (
+            <p className="ver-line">
+              <span>Still lacked:</span> {s.lacked}
+            </p>
+          )}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ImprovementTable({ r }) {
+  const x = versionNumbers(r);
+  const imp = Object.fromEntries((r.improvement ?? []).map((row) => [row.aspect, row]));
+  const { v3, pairs, n, m4 } = x;
+  const v3sum = Object.fromEntries((v3.summary ?? []).map((row) => [row.aspect, row.v3]));
+  const kaggle = r.dataset?.rows_by_source?.kaggle;
   const vs = (p) => (p ? `${pct1(metric(p.model[1], 'hit1'))} vs ${pct1(metric(p.base[1], 'hit1'))} baseline` : '—');
   const rows = [
     [
       'Data',
       `Kaggle crop-recommendation table, ${kaggle?.toLocaleString('en-IN') ?? '—'} rows`,
+      `${r.dataset?.rows?.toLocaleString('en-IN') ?? '—'} rows merged from ${x.sources.map((k) => SOURCE_NAMES[k] ?? k).join(', ')}`,
       `Government of India district crop statistics, ${v3.data?.rows?.toLocaleString('en-IN') ?? '—'} records`,
       `Same statistics as ${n.NQueries ?? '—'} district-season-year queries`,
     ],
     [
       'Coverage',
       `${r.dataset?.crops_by_source?.kaggle ?? '—'} crops; no location or season`,
+      `${r.dataset?.crops ?? '—'} crops; inputs ${imp.Inputs?.v2 ?? '—'}`,
       `${v3.data?.crops_app ?? '—'} crops · ${v3.data?.districts ?? '—'} districts · ${v3.data?.states ?? '—'} states · ${v3.data?.crop_years ?? '—'} crop years`,
       `${m4.crops ?? '—'} crops · ${m4.states ?? '—'} states · ${n.YearA ?? '—'}–${n.YearB ?? '—'}`,
     ],
-    ['What is predicted', 'One crop label per row', v3sum.Labels ?? '—', 'A ranking of the crops grown in a district by realised yield, plus a 90% prediction set'],
-    ['Evaluation', imp['Evaluation protocol'] ?? '—', v3sum.Validation ?? '—', 'Random split, unseen states and future years; Wilcoxon tests'],
+    [
+      'What is predicted',
+      'One crop label per row',
+      'One crop label per row (single multiclass model)',
+      v3sum.Labels ?? '—',
+      'A ranking of the crops grown in a district by realised yield, plus a 90% prediction set',
+    ],
+    [
+      'Evaluation',
+      imp['Evaluation protocol']?.v1 ?? '—',
+      'Stratified 5-fold CV, leave-one-source-out, McNemar',
+      v3sum.Validation ?? '—',
+      'Random split, unseen states and future years; Wilcoxon tests',
+    ],
     [
       'Headline result',
-      `${pct2(v1?.reported_accuracy)} accuracy on a random split (reported)`,
+      `${pct2(x.v1?.reported_accuracy)} accuracy on a random split (reported)`,
+      `${pct2(x.v2?.accuracy_mean)} ± ${pct2(x.v2?.accuracy_std)} accuracy, top-3 ${pct2(x.v2?.top3_mean)} (5-fold)`,
       `Unseen districts: ${vs(pairs.leave_districts_out)} (Hit@1)`,
       `Unseen states: ${n.OursHitLSO ?? '—'}% vs ${n.BaseHitLSO ?? '—'}% for the best classifier (${n.BaseNameLSO ?? '—'}); persistence ${n.PersHitLSO ?? '—'}%`,
     ],
     [
       'Tested on new places and years',
-      imp['Generalisation to an unseen source'] ?? 'not tested',
+      imp['Generalisation to an unseen source']?.v1 ?? 'not tested',
+      `Unseen source: ${x.losoRange} accuracy`,
       `Unseen states ${vs(pairs.leave_states_out)}; future years ${vs(pairs.leave_years_out)}`,
-      'Unseen states and future years (Section 3)',
+      'Unseen states and future years (Section 2)',
     ],
     [
       'Uncertainty',
-      imp['Probability calibration'] ?? 'not measured',
+      imp['Probability calibration']?.v1 ?? 'not measured',
+      `Probability per crop (ECE ${typeof r.calibration?.[V2_MODEL]?.ece === 'number' ? r.calibration[V2_MODEL].ece.toFixed(3) : '—'})`,
       'Probability per crop',
       `90% prediction sets: ${n.CovIIDLSO ?? '—'}% coverage with ${n.SizeIIDLSO ?? '—'} crops on average`,
     ],
   ];
   return (
-    <div className="table-wrap">
-      <table className="data compare">
-        <caption className="tcap">From the previous project (v1) to the current system (v3) and the improved method (v4)</caption>
-        <thead>
-          <tr>
-            <th scope="col">Aspect</th>
-            <th scope="col">Previous project (v1)</th>
-            <th scope="col">Current system (v3, live)</th>
-            <th scope="col">Improved method (v4)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([aspect, a, b, c]) => (
-            <tr key={aspect}>
-              <th scope="row">{aspect}</th>
-              <td>{a}</td>
-              <td>{b}</td>
-              <td>{c}</td>
+    <>
+      <p className="tcap">From the previous project (v1) through v2 and v3 to {FINAL}</p>
+      <div className="table-wrap">
+        <table className="data compare">
+          <thead>
+            <tr>
+              <th scope="col">Aspect</th>
+              <th scope="col">Previous project (v1)</th>
+              <th scope="col">v2</th>
+              <th scope="col">Intermediate (v3)</th>
+              <th scope="col" className="is-final">
+                {FINAL}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map(([aspect, a, b, c, d]) => (
+              <tr key={aspect}>
+                <th scope="row">{aspect}</th>
+                <td>{a}</td>
+                <td>{b}</td>
+                <td>{c}</td>
+                <td className="is-final">{d}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
-function V3Section({ v, served, failed }) {
-  const pairs = V3_TESTS.map(([k, name]) => [name, v3Pair(v[k])]).filter(([, p]) => p);
-  const [first, ...rest] = pairs;
-  const states = Object.entries(v.leave_states_out_per_state_hit1 ?? {}).sort((a, b) => b[1] - a[1]);
-  const stateN = v.leave_states_out_per_state_n; // queries per held-out state, when results.json carries it
-  const soil = Object.entries(v.soil_subset ?? {}).filter(([, x]) => x && typeof x === 'object' && 'hit1_mean' in x);
-  const figures = (v.figures?.length ? v.figures : (research.figures ?? []).filter((f) => f.file?.includes('_v3_'))) ?? [];
-
+// The model the advisory serves right now, read live from /model-info.
+function ServedModel({ served, failed }) {
   return (
     <>
-      {first && (
-        <p className="keybox">
-          <strong>Headline:</strong> for {first[0].toLowerCase()}, the served model ({first[1].model[0]}) ranks a high-yield crop first in{' '}
-          <strong>{pct1(metric(first[1].model[1], 'hit1'))}</strong> of district-season queries ({pct1(metric(first[1].model[1], 'hit3'))} within its top 3), against{' '}
-          {pct1(metric(first[1].base[1], 'hit1'))} / {pct1(metric(first[1].base[1], 'hit3'))} for the best popularity baseline.
-          {rest.map(([name, p]) => (
-            <span key={name}>
-              {' '}
-              {name}: {pct1(metric(p.model[1], 'hit1'))} vs {pct1(metric(p.base[1], 'hit1'))}.
-            </span>
-          ))}
-        </p>
-      )}
-
       {served ? (
         <table className="kv">
           <caption className="tcap">Model served by the advisory (live from the server)</caption>
@@ -1264,128 +1347,128 @@ function V3Section({ v, served, failed }) {
           </tbody>
         </table>
       ) : (
-        <p className="muted small">{failed ? `Cannot reach the model server at ${API_BASE_URL}; the tables below come from results.json.` : 'Loading the served model…'}</p>
-      )}
-
-      <div className="sub-section table-wrap">
-        <table className="data">
-          <caption className="tcap">Grouped evaluation: the served ExtraTrees model against the best popularity baseline</caption>
-          <thead>
-            <tr>
-              <th scope="col">Test</th>
-              <th scope="col" className="num">
-                Hit@1
-              </th>
-              <th scope="col" className="num">
-                Hit@3
-              </th>
-              <th scope="col" className="num wrap">
-                Baseline Hit@1
-              </th>
-              <th scope="col" className="num wrap">
-                Baseline Hit@3
-              </th>
-              <th scope="col" className="hide-sm">
-                Baseline
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {pairs.map(([name, p]) => (
-              <tr key={name}>
-                <th scope="row">{name}</th>
-                <td className="num">{pct2(metric(p.model[1], 'hit1'))}</td>
-                <td className="num">{pct2(metric(p.model[1], 'hit3'))}</td>
-                <td className="num">{pct2(metric(p.base[1], 'hit1'))}</td>
-                <td className="num">{pct2(metric(p.base[1], 'hit3'))}</td>
-                <td className="hide-sm">{p.base[0].replace(/^baseline:\s*/, '')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {typeof v.meta?.doc === 'string' && <p className="note">{v.meta.doc}</p>}
-
-      {states.length > 0 && (
-        <div className="sub-section grid-table">
-          <p className="tcap">Hit@1 for each held-out state (unseen states test), best first</p>
-          <ul className="kv-grid">
-            {states.map(([name, x]) => {
-              const count = stateN?.[name];
-              const small = typeof count === 'number' && count < MIN_STATE_QUERIES;
-              return (
-                <li key={name} className={small ? 'is-small' : undefined} title={small ? 'Too few queries for a reliable figure' : undefined}>
-                  <span>{name}</span>
-                  <span className="grid-val">
-                    <strong>{pct2(x)}</strong>
-                    {typeof count === 'number' && <small> · n {count.toLocaleString('en-IN')}</small>}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          {stateN && (
-            <p className="note">
-              n = district-season-year queries for the held-out state. States with fewer than {MIN_STATE_QUERIES} queries are greyed out: their Hit@1 rests on too few cases to read
-              as a success or a failure.
-            </p>
-          )}
-        </div>
-      )}
-
-      {soil.length > 0 && (
-        <div className="sub-section table-wrap">
-          <table className="data narrow">
-            <caption className="tcap">Does soil help? Districts with a measured SoilGrids point</caption>
-            <thead>
-              <tr>
-                <th scope="col">Model</th>
-                <th scope="col" className="num">
-                  Hit@1
-                </th>
-                <th scope="col" className="num">
-                  Hit@3
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {soil.map(([name, x]) => (
-                <tr key={name}>
-                  <th scope="row">{name}</th>
-                  <td className="num">{pct2(x.hit1_mean)}</td>
-                  <td className="num">{pct2(x.hit3_mean)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="note">
-            {v.soil_subset.queries?.toLocaleString('en-IN')} queries in {v.soil_subset.districts} districts. Adding soil does not improve the ranking, so the served model leaves it
-            out.
-          </p>
-        </div>
-      )}
-
-      {figures.length > 0 && (
-        <div className="sub-section figures">
-          {figures.map((f, i) => {
-            // Figure images are copied from docs/research/figures/ into frontend/public/research/.
-            const src = `${import.meta.env.BASE_URL}research/${f.file.split('/').pop()}`;
-            return (
-              <figure key={f.file} className="figure">
-                <a href={src} target="_blank" rel="noreferrer" title="Open full size">
-                  <img src={src} alt={f.caption} loading="lazy" />
-                </a>
-                <figcaption className="fcap">{f.caption}</figcaption>
-              </figure>
-            );
-          })}
-        </div>
+        <p className="muted small">{failed ? `Cannot reach the model server at ${API_BASE_URL}; the tables on this page come from results.json.` : 'Loading the served model…'}</p>
       )}
     </>
   );
 }
 
-function V4Section({ v }) {
+// v3 step, kept short: one table and the generalisation figure.
+function researchFigure(f) {
+  // Figure images are copied from docs/research/figures/ into frontend/public/research/.
+  const src = `${import.meta.env.BASE_URL}research/${f.file.split('/').pop()}`;
+  return (
+    <figure key={f.file} className="figure">
+      <a href={src} target="_blank" rel="noreferrer" title="Open full size">
+        <img src={src} alt={f.caption} loading="lazy" />
+      </a>
+      <figcaption className="fcap">{f.caption}</figcaption>
+    </figure>
+  );
+}
+
+function V3Section({ v }) {
+  const pairs = V3_TESTS.map(([k, name]) => [name, v3Pair(v[k])]).filter(([, p]) => p);
+  const fig = (v.figures ?? []).find((f) => f.file?.includes('generalisation'));
+
+  return (
+    <>
+      <p>
+        v3 moved to {v.data?.rows?.toLocaleString('en-IN') ?? '—'} Government of India district records and was tested on districts, states and years it had not seen. It still
+        predicted which crops are grown rather than which yield best, and gave no uncertainty; {FINAL} addresses both.
+      </p>
+      {pairs.length > 0 && (
+        <div className="sub-section">
+          <p className="tcap">v3 (ExtraTrees) against the best popularity baseline</p>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Test</th>
+                  <th scope="col" className="num">
+                    Hit@1
+                  </th>
+                  <th scope="col" className="num">
+                    Hit@3
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Baseline Hit@1
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Baseline Hit@3
+                  </th>
+                  <th scope="col" className="hide-sm">
+                    Baseline
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pairs.map(([name, p]) => (
+                  <tr key={name}>
+                    <th scope="row">{name}</th>
+                    <td className="num">{pct2(metric(p.model[1], 'hit1'))}</td>
+                    <td className="num">{pct2(metric(p.model[1], 'hit3'))}</td>
+                    <td className="num">{pct2(metric(p.base[1], 'hit1'))}</td>
+                    <td className="num">{pct2(metric(p.base[1], 'hit3'))}</td>
+                    <td className="hide-sm">{p.base[0].replace(/^baseline:\s*/, '')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {fig && <div className="sub-section figures one">{researchFigure(fig)}</div>}
+    </>
+  );
+}
+
+// v2 step, kept short: one table (cross-validation and leave-one-source-out) and the LOSO figure.
+function V2Section({ r }) {
+  const x = versionNumbers(r);
+  const fig = (r.figures ?? []).find((f) => f.file?.includes('_loso'));
+  return (
+    <>
+      <p>
+        v2 merged {x.sources.length} sources into {r.dataset?.rows?.toLocaleString('en-IN') ?? '—'} rows and replaced v1&apos;s per-crop heads with one multiclass model. It scored
+        well within its own data, but the sources disagree: trained on two and tested on the third, it falls to {x.losoRange} accuracy. That led to v3.
+      </p>
+      <div className="sub-section">
+        <p className="tcap">v2 deployed Random Forest: cross-validation and unseen sources</p>
+        <div className="table-wrap">
+          <table className="data narrow">
+            <tbody>
+              <tr>
+                <th scope="row">Accuracy (5-fold CV)</th>
+                <td className="num">
+                  {pct2(x.v2?.accuracy_mean)} ± {pct2(x.v2?.accuracy_std)}
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Macro-F1 (5-fold CV)</th>
+                <td className="num">{pct2(x.v2?.macro_f1_mean)}</td>
+              </tr>
+              <tr>
+                <th scope="row">Top-3 accuracy (5-fold CV)</th>
+                <td className="num">{pct2(x.v2?.top3_mean)}</td>
+              </tr>
+              {x.loso.map(([src, acc]) => (
+                <tr key={src}>
+                  <th scope="row">Unseen source: {src}</th>
+                  <td className="num">{pct2(acc)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="note">Unseen source = trained on the other two sources, tested on this one, open crop vocabulary.</p>
+      </div>
+      {fig && <div className="sub-section figures one">{researchFigure(fig)}</div>}
+    </>
+  );
+}
+
+function V4Section({ v, served, failed }) {
   const lso = v.metrics?.main?.['leave-states-out'] ?? {};
   const entries = Object.entries(lso);
   const ours = entries.find(([name]) => isOurs(name));
@@ -1439,6 +1522,8 @@ function V4Section({ v }) {
           )}
         </p>
       )}
+
+      <ServedModel served={served} failed={failed} />
 
       {entries.length > 0 && (
         <div className="table-wrap">
@@ -1960,6 +2045,31 @@ function MethodComparison({ mc, papers }) {
   );
 }
 
+// Headline of the final model, from results.json `final`. Renders nothing until CC5 writes it.
+function FinalBox({ f }) {
+  const items = Array.isArray(f?.headline) ? f.headline.filter((h) => h && h.label && h.value != null) : [];
+  if (!items.length) return null;
+  return (
+    <section className="keybox final-box" aria-labelledby="final-h">
+      <h2 id="final-h">Final model: {f.name ?? FINAL}</h2>
+      {f.method && <p>{f.method}</p>}
+      <dl className="final-stats">
+        {items.map((h) => (
+          <div key={h.label}>
+            <dt>{h.label}</dt>
+            <dd>
+              {h.value}
+              {h.unit === '%' ? '%' : h.unit ? ` ${h.unit}` : ''}
+              {h.split && <small>{SPLIT_NAMES[h.split] ?? h.split}</small>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {f.note && <p className="note">{f.note}</p>}
+    </section>
+  );
+}
+
 function ResultsPage({ t }) {
   const [info, setInfo] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -1975,8 +2085,9 @@ function ResultsPage({ t }) {
       <header className="page-head">
         <h1>{t('results')}</h1>
         <p className="lede">
-          What changed since the previous project, how the current advisory model performs on districts, states and years it has not seen, and the improved ranking method. Every
-          number below is generated from <code>docs/research/results.json</code>, written by the research notebooks.
+          {FINAL} ranks the crops grown in a district by the yield they can be expected to give, with a 90% prediction set. This page shows how it holds up on states and years it
+          has not seen, how it compares with other methods and recent work, and how it grew out of the earlier versions v1, v2 and v3. Every number below is generated from{' '}
+          <code>docs/research/results.json</code>, written by the research notebooks.
         </p>
       </header>
 
@@ -1986,19 +2097,22 @@ function ResultsPage({ t }) {
         </div>
       )}
 
-      <Section id="r-improvement" title="Improvement over the previous version" className="numbered">
+      <FinalBox f={research.final} />
+
+      <Section id="r-improvement" title={`From v1 to ${FINAL}`} className="numbered">
+        <VersionHistory r={research} />
         <ImprovementTable r={research} />
       </Section>
 
-      {research.v3 && (
-        <Section id="r-v3" title="Current system (v3, live model)" className="numbered">
-          <V3Section v={research.v3} served={served} failed={failed} />
+      {research.v4?.metrics?.main && (
+        <Section id="r-v4" title={`${FINAL}: YieldRank and conformal prediction sets`} className="numbered">
+          <V4Section v={research.v4} served={served} failed={failed} />
         </Section>
       )}
 
-      {research.v4?.metrics?.main && (
-        <Section id="r-v4" title="Improved method (v4): YieldRank and conformal prediction sets" className="numbered">
-          <V4Section v={research.v4} />
+      {research.method_comparison?.methods?.length > 0 && (
+        <Section id="r-methods" title={`Method comparison: why we chose ${research.method_comparison.chosen ?? 'YieldRank'}`} className="numbered">
+          <MethodComparison mc={research.method_comparison} papers={research.related_work ?? []} />
         </Section>
       )}
 
@@ -2008,9 +2122,15 @@ function ResultsPage({ t }) {
         </Section>
       )}
 
-      {research.method_comparison?.methods?.length > 0 && (
-        <Section id="r-methods" title={`Method comparison: why we chose ${research.method_comparison.chosen ?? 'YieldRank'}`} className="numbered">
-          <MethodComparison mc={research.method_comparison} papers={research.related_work ?? []} />
+      {research.v3 && (
+        <Section id="r-v3" title="Intermediate step: v3" className="numbered">
+          <V3Section v={research.v3} />
+        </Section>
+      )}
+
+      {research.models?.[V2_MODEL] && (
+        <Section id="r-v2" title="Earlier step: v2" className="numbered">
+          <V2Section r={research} />
         </Section>
       )}
     </div>
@@ -2052,10 +2172,11 @@ function texToText(tex, numbers) {
     .replace(/\s*\n\s*/g, ' ');
 }
 
+// Final model first, then the steps that led to it.
 const NOTEBOOKS = [
-  ['AgroMind_v2_Research.ipynb', 'v1 reproduction and corrected decode; v2 merged data, 10-model comparison, ablation, leave-one-source-out, McNemar, calibration.'],
+  ['AgroMind_v4_Novel_Method.ipynb', `${FINAL}: YieldRank (LambdaMART yield ranking) against literature classifiers and persistence, with split-conformal prediction sets.`],
   ['AgroMind_v3_LargeScale.ipynb', 'v3: Government district crop statistics with NASA POWER climate and SoilGrids soil; unseen districts, states and years.'],
-  ['AgroMind_v4_Novel_Method.ipynb', 'v4: YieldRank (LambdaMART yield ranking) against literature classifiers and persistence, with split-conformal prediction sets.'],
+  ['AgroMind_v2_Research.ipynb', 'v1 reproduction and corrected decode; v2 merged data, 10-model comparison, ablation, leave-one-source-out, McNemar, calibration.'],
 ];
 
 function PaperPage() {
@@ -2074,7 +2195,7 @@ function PaperPage() {
   return (
     <article className="paper">
       <header className="page-head">
-        <p className="eyebrow">Paper · preprint</p>
+        <p className="eyebrow">Paper · preprint · {FINAL}</p>
         <h1>{PAPER_TITLE}</h1>
         <p className="authors">
           {SITE.team.join(', ')}
@@ -2165,11 +2286,11 @@ const DATA_SOURCES = [
   // Wording for the four district-data rows follows docs/research/DATA_PROVENANCE.md.
   [
     'Crop area & production: Directorate of Economics & Statistics, Ministry of Agriculture & Farmers Welfare, Govt. of India — APY district-wise season-wise statistics, 1997-98 to 2022-23, data.desagri.gov.in',
-    'District mode and the v3/v4 benchmark: crops grown, area, production and yield',
+    `${FINAL}: crops grown, area, production and yield (training data and benchmark; also v3)`,
     'Reproduced with acknowledgement under the DES copyright policy',
   ],
   ['Climate: NASA POWER (power.larc.nasa.gov), 1997–2023', 'Season temperature, humidity and rainfall at district centres', 'NASA open data, no restrictions; cite POWER'],
-  ['Soil: ISRIC SoilGrids 2.0', 'District soil profile (context only)', 'CC BY 4.0'],
+  ['Soil: ISRIC SoilGrids 2.0', `District soil inputs to ${FINAL}`, 'CC BY 4.0'],
   ['District boundaries: datta07/INDIAN-SHAPEFILES', 'District centres', 'MIT'],
   ['Kaggle Crop Recommendation dataset (2,200 rows)', 'v1 and v2 research models (Results page)', 'As listed on the Kaggle dataset page'],
   [
@@ -2185,8 +2306,9 @@ function AboutPage() {
       <header className="page-head">
         <h1>About</h1>
         <p className="lede">
-          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). It recommends crops for Indian districts from the season and its
-          climate and the district's location, and studies how such recommenders hold up on states and years they have never seen.
+          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). Its final model, {FINAL}, ranks the crops grown in an Indian district
+          by the yield they can be expected to give, from the district&apos;s yield history, season climate and soil, with a 90% prediction set; the project also studies how such
+          recommenders hold up on states and years they have never seen.
         </p>
       </header>
 
@@ -2222,17 +2344,17 @@ function AboutPage() {
             <tr>
               <th scope="row">Advisory model</th>
               <td>
-                ExtraTrees over season climate, district location, season and state, trained on Government of India district crop statistics. Earlier models (v1, v2) are documented
-                on the Results page.
+                {FINAL}: YieldRank ranks the crops grown in a district by expected yield and gives a 90% conformal prediction set. Trained on Government of India district crop
+                statistics. The previous project (v1) and the intermediate system (v3) are documented on the Results page.
               </td>
             </tr>
             <tr>
-              <th scope="row">Research method</th>
-              <td>YieldRank, a yield-grounded ranker with conformal prediction sets (see Paper)</td>
+              <th scope="row">Method</th>
+              <td>YieldRank, a yield-grounded ranker with split-conformal prediction sets (see Paper)</td>
             </tr>
             <tr>
               <th scope="row">Software</th>
-              <td>React 18 and Vite (interface); Python, FastAPI and scikit-learn (server); LightGBM (research)</td>
+              <td>React 18 and Vite (interface); Python, FastAPI, LightGBM and scikit-learn (server and research)</td>
             </tr>
           </tbody>
         </table>
