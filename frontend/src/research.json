@@ -1,19 +1,750 @@
 {
-  "_placeholder": true,
-  "note": "These tables are empty until the research notebook publishes docs/research/results.json; copy that file over frontend/src/research.json (and its figures into frontend/public/research/).",
-  "improvement": [
-    { "metric": "Accuracy", "v1": null, "v2": null, "note": null },
-    { "metric": "Macro F1", "v1": null, "v2": null, "note": null },
-    { "metric": "Top-3 accuracy", "v1": null, "v2": null, "note": null }
-  ],
-  "models": {
-    "Random Forest": { "accuracy_mean": null, "macro_f1_mean": null, "top3_mean": null, "fit_seconds": null },
-    "Logistic Regression": { "accuracy_mean": null, "macro_f1_mean": null, "top3_mean": null, "fit_seconds": null },
-    "Decision Tree": { "accuracy_mean": null, "macro_f1_mean": null, "top3_mean": null, "fit_seconds": null }
-  },
   "figures": [
-    { "file": null, "caption": "Confusion matrix (to be added)" },
-    { "file": null, "caption": "Feature importance (to be added)" },
-    { "file": null, "caption": "Model comparison (to be added)" }
-  ]
+    {
+      "file": "figures/01_v1_decode_flaw.png",
+      "caption": "v1 MultiOutputClassifier decode: share of test rows where zero or several one-vs-rest heads fire, and the argmax confusion matrix showing errors falling into class 0 (apple)."
+    },
+    {
+      "file": "figures/02_class_balance.png",
+      "caption": "Rows per crop in the merged v2 training set, stacked by source."
+    },
+    {
+      "file": "figures/03_kaggle_narrow_boxes.png",
+      "caption": "Per-crop distributions of rainfall and humidity in the Kaggle set: narrow, largely non-overlapping ranges make the task almost a lookup."
+    },
+    {
+      "file": "figures/04_cross_source_shift.png",
+      "caption": "Per-source medians of rainfall, N and temperature for the crops shared by all three sources."
+    },
+    {
+      "file": "figures/05_model_comparison.png",
+      "caption": "Stratified 5-fold CV macro-F1 and top-3 accuracy of eleven classifiers on the merged v2 data."
+    },
+    {
+      "file": "figures/06_ablation.png",
+      "caption": "Accuracy of the deployed RF configuration with different categorical feature sets, overall and per source."
+    },
+    {
+      "file": "figures/07_loso.png",
+      "caption": "In-distribution CV accuracy versus leave-one-source-out accuracy (open and closed crop vocabulary) for each source."
+    },
+    {
+      "file": "figures/08_permutation_importance.png",
+      "caption": "Permutation importance of each input column for the deployed RF on held-out data."
+    },
+    {
+      "file": "figures/09_confusion_top_errors.png",
+      "caption": "Row-normalised confusion matrix of the deployed RF for the 15 crops with the most test-set errors."
+    },
+    {
+      "file": "figures/10_calibration.png",
+      "caption": "Reliability diagram and confidence histogram of the deployed RF (and the best CV model) on the application's test split."
+    }
+  ],
+  "v1": {
+    "GaussianNB": {
+      "reported_accuracy": 0.9709,
+      "reproduced_accuracy": 0.9709,
+      "exact_match_accuracy": 0.8691,
+      "zero_fire_pct": 0.0,
+      "multi_fire_pct": 13.09,
+      "pred_class0_pct": 5.09,
+      "true_class0_pct": 5.09
+    },
+    "DecisionTree": {
+      "reported_accuracy": 0.9673,
+      "reproduced_accuracy": 0.9673,
+      "exact_match_accuracy": 0.9455,
+      "zero_fire_pct": 3.09,
+      "multi_fire_pct": 2.36,
+      "pred_class0_pct": 8.18,
+      "true_class0_pct": 5.09
+    },
+    "RandomForest": {
+      "reported_accuracy": 0.98,
+      "reproduced_accuracy": 0.98,
+      "exact_match_accuracy": 0.98,
+      "zero_fire_pct": 1.82,
+      "multi_fire_pct": 0.0,
+      "pred_class0_pct": 6.91,
+      "true_class0_pct": 5.09
+    },
+    "KNN": {
+      "reported_accuracy": 0.9745,
+      "reproduced_accuracy": 0.9745,
+      "exact_match_accuracy": 0.9745,
+      "zero_fire_pct": 0.18,
+      "multi_fire_pct": 0.0,
+      "pred_class0_pct": 5.27,
+      "true_class0_pct": 5.09
+    },
+    "GradientBoosting": {
+      "reported_accuracy": 0.98,
+      "reproduced_accuracy": 0.9818,
+      "exact_match_accuracy": 0.9782,
+      "zero_fire_pct": 1.45,
+      "multi_fire_pct": 0.36,
+      "pred_class0_pct": 6.55,
+      "true_class0_pct": 5.09
+    }
+  },
+  "v1_fixed": {
+    "GaussianNB": {
+      "accuracy_same_split": 0.9927,
+      "macro_f1_same_split": 0.9927,
+      "cv5_accuracy_mean": 0.9945,
+      "cv5_accuracy_std": 0.0018
+    },
+    "DecisionTree": {
+      "accuracy_same_split": 0.9873,
+      "macro_f1_same_split": 0.9867,
+      "cv5_accuracy_mean": 0.9886,
+      "cv5_accuracy_std": 0.0057
+    },
+    "RandomForest": {
+      "accuracy_same_split": 0.9945,
+      "macro_f1_same_split": 0.9941,
+      "cv5_accuracy_mean": 0.995,
+      "cv5_accuracy_std": 0.003
+    },
+    "KNN": {
+      "accuracy_same_split": 0.9745,
+      "macro_f1_same_split": 0.9742,
+      "cv5_accuracy_mean": 0.9809,
+      "cv5_accuracy_std": 0.0065
+    },
+    "GradientBoosting": {
+      "accuracy_same_split": 0.9891,
+      "macro_f1_same_split": 0.9885,
+      "cv5_accuracy_mean": 0.9909,
+      "cv5_accuracy_std": 0.0045
+    }
+  },
+  "dataset": {
+    "rows": 67200,
+    "crops": 74,
+    "rows_by_source": {
+      "tamilnadu": 57000,
+      "india": 8000,
+      "kaggle": 2200
+    },
+    "crops_by_source": {
+      "india": 25,
+      "kaggle": 22,
+      "tamilnadu": 55
+    },
+    "rows_per_crop_min": 54,
+    "rows_per_crop_median": 1000,
+    "rows_per_crop_max": 2000,
+    "imbalance_ratio": 37.0,
+    "separability": {
+      "Kaggle (v1 data)": {
+        "rows_in_exactly_one_box_%": 88.1818,
+        "rows_in_no_box_%": 11.4545,
+        "rows_in_2plus_boxes_%": 0.3636,
+        "box_rule_accuracy": 0.88,
+        "within_crop_spread": 0.319
+      },
+      "Multi-state (india)": {
+        "rows_in_exactly_one_box_%": 0.1882,
+        "rows_in_no_box_%": 0.6274,
+        "rows_in_2plus_boxes_%": 99.1844,
+        "box_rule_accuracy": 0.0006,
+        "within_crop_spread": 0.8701
+      },
+      "Tamil Nadu": {
+        "rows_in_exactly_one_box_%": 72.6197,
+        "rows_in_no_box_%": 0.4208,
+        "rows_in_2plus_boxes_%": 26.9595,
+        "box_rule_accuracy": 0.7251,
+        "within_crop_spread": 0.3632
+      },
+      "merged v2": {
+        "rows_in_exactly_one_box_%": 5.0744,
+        "rows_in_no_box_%": 0.1786,
+        "rows_in_2plus_boxes_%": 94.747,
+        "box_rule_accuracy": 0.05,
+        "within_crop_spread": 0.5169
+      }
+    },
+    "duplicates": {
+      "kaggle": {
+        "rows": 2200,
+        "exact_duplicate_rows": 0,
+        "feature_vectors_with_conflicting_labels": 0,
+        "numeric_vectors_with_conflicting_labels": 0
+      },
+      "india": {
+        "rows": 8000,
+        "exact_duplicate_rows": 0,
+        "feature_vectors_with_conflicting_labels": 0,
+        "numeric_vectors_with_conflicting_labels": 0
+      },
+      "tamilnadu": {
+        "rows": 57000,
+        "exact_duplicate_rows": 0,
+        "feature_vectors_with_conflicting_labels": 0,
+        "numeric_vectors_with_conflicting_labels": 0
+      },
+      "merged": {
+        "rows": 67200,
+        "exact_duplicate_rows": 0,
+        "feature_vectors_with_conflicting_labels": 0,
+        "numeric_vectors_with_conflicting_labels": 0
+      }
+    },
+    "crop_overlap": {
+      "india&tamilnadu": 14,
+      "india&kaggle": 9,
+      "tamilnadu&kaggle": 10
+    },
+    "shared_by_all_sources": [
+      "chickpea",
+      "cotton",
+      "jute",
+      "maize",
+      "rice"
+    ],
+    "rainfall_median_by_source": {
+      "india": 1145.9,
+      "kaggle": 94.9,
+      "tamilnadu": 929.5
+    },
+    "state_source_confound": {
+      "Unspecified_is_kaggle_pct": 100.0,
+      "TamilNadu_rows_from_tamilnadu_source_pct": 99.2
+    }
+  },
+  "models": {
+    "LogisticRegression": {
+      "accuracy_mean": 0.8703,
+      "accuracy_std": 0.0027,
+      "macro_f1_mean": 0.846,
+      "macro_f1_std": 0.0034,
+      "top3_mean": 0.9776,
+      "top3_std": 0.0019,
+      "fit_seconds_per_fold": 10.44,
+      "train_rows_cap": null,
+      "oof_accuracy_india": 0.5709,
+      "oof_accuracy_tamilnadu": 0.9168,
+      "oof_accuracy_kaggle": 0.7527
+    },
+    "KNN (k=5)": {
+      "accuracy_mean": 0.8901,
+      "accuracy_std": 0.0012,
+      "macro_f1_mean": 0.8687,
+      "macro_f1_std": 0.0026,
+      "top3_mean": 0.9672,
+      "top3_std": 0.001,
+      "fit_seconds_per_fold": 0.06,
+      "train_rows_cap": null,
+      "oof_accuracy_india": 0.5644,
+      "oof_accuracy_tamilnadu": 0.9336,
+      "oof_accuracy_kaggle": 0.9468
+    },
+    "GaussianNB": {
+      "accuracy_mean": 0.7156,
+      "accuracy_std": 0.0032,
+      "macro_f1_mean": 0.7024,
+      "macro_f1_std": 0.0039,
+      "top3_mean": 0.8765,
+      "top3_std": 0.0029,
+      "fit_seconds_per_fold": 0.07,
+      "train_rows_cap": null,
+      "oof_accuracy_india": 0.3967,
+      "oof_accuracy_tamilnadu": 0.7674,
+      "oof_accuracy_kaggle": 0.5323
+    },
+    "DecisionTree": {
+      "accuracy_mean": 0.921,
+      "accuracy_std": 0.0023,
+      "macro_f1_mean": 0.8927,
+      "macro_f1_std": 0.0021,
+      "top3_mean": 0.9234,
+      "top3_std": 0.0024,
+      "fit_seconds_per_fold": 0.72,
+      "train_rows_cap": null,
+      "oof_accuracy_india": 0.6001,
+      "oof_accuracy_tamilnadu": 0.964,
+      "oof_accuracy_kaggle": 0.9755
+    },
+    "SVM-RBF (15k)": {
+      "accuracy_mean": 0.908,
+      "accuracy_std": 0.0019,
+      "macro_f1_mean": 0.882,
+      "macro_f1_std": 0.0017,
+      "top3_mean": 0.9826,
+      "top3_std": 0.001,
+      "fit_seconds_per_fold": 2.55,
+      "train_rows_cap": 15000,
+      "oof_accuracy_india": 0.5938,
+      "oof_accuracy_tamilnadu": 0.9507,
+      "oof_accuracy_kaggle": 0.945
+    },
+    "RandomForest (15k)": {
+      "accuracy_mean": 0.9346,
+      "accuracy_std": 0.0016,
+      "macro_f1_mean": 0.9076,
+      "macro_f1_std": 0.003,
+      "top3_mean": 0.9875,
+      "top3_std": 0.0006,
+      "fit_seconds_per_fold": 2.43,
+      "train_rows_cap": 15000,
+      "oof_accuracy_india": 0.6591,
+      "oof_accuracy_tamilnadu": 0.9713,
+      "oof_accuracy_kaggle": 0.985
+    },
+    "RandomForest (v2 deployed)": {
+      "accuracy_mean": 0.9433,
+      "accuracy_std": 0.0012,
+      "macro_f1_mean": 0.9215,
+      "macro_f1_std": 0.0029,
+      "top3_mean": 0.9918,
+      "top3_std": 0.0009,
+      "fit_seconds_per_fold": 10.06,
+      "train_rows_cap": null,
+      "oof_accuracy_india": 0.715,
+      "oof_accuracy_tamilnadu": 0.9734,
+      "oof_accuracy_kaggle": 0.9941
+    },
+    "ExtraTrees": {
+      "accuracy_mean": 0.931,
+      "accuracy_std": 0.0011,
+      "macro_f1_mean": 0.9108,
+      "macro_f1_std": 0.0017,
+      "top3_mean": 0.9899,
+      "top3_std": 0.0003,
+      "fit_seconds_per_fold": 5.16,
+      "train_rows_cap": null,
+      "oof_accuracy_india": 0.6726,
+      "oof_accuracy_tamilnadu": 0.965,
+      "oof_accuracy_kaggle": 0.9918
+    },
+    "LightGBM (15k)": {
+      "accuracy_mean": 0.9348,
+      "accuracy_std": 0.0014,
+      "macro_f1_mean": 0.9096,
+      "macro_f1_std": 0.0046,
+      "top3_mean": 0.9883,
+      "top3_std": 0.001,
+      "fit_seconds_per_fold": 98.77,
+      "train_rows_cap": 15000,
+      "oof_accuracy_india": 0.681,
+      "oof_accuracy_tamilnadu": 0.9687,
+      "oof_accuracy_kaggle": 0.98
+    },
+    "XGBoost (15k)": {
+      "accuracy_mean": 0.9344,
+      "accuracy_std": 0.0017,
+      "macro_f1_mean": 0.9094,
+      "macro_f1_std": 0.0055,
+      "top3_mean": 0.9883,
+      "top3_std": 0.0007,
+      "fit_seconds_per_fold": 68.79,
+      "train_rows_cap": 15000,
+      "oof_accuracy_india": 0.6847,
+      "oof_accuracy_tamilnadu": 0.9679,
+      "oof_accuracy_kaggle": 0.9732
+    }
+  },
+  "meta": {
+    "cv": "StratifiedKFold(5, shuffle=True, random_state=42)",
+    "best_model_by_macro_f1": "RandomForest (v2 deployed)",
+    "deployed_model": "RandomForest (v2 deployed)",
+    "generated_by": "notebooks/AgroMind_v2_Research.ipynb",
+    "date": "2026-11-22",
+    "python": "3.12.14",
+    "sklearn": "1.9.1",
+    "xgboost": "3.4.1",
+    "lightgbm": "4.7.0",
+    "seed": 42,
+    "rows": 67200,
+    "crops": 74,
+    "runtime_seconds": 1653.1
+  },
+  "app_protocol": {
+    "split": "train_test_split(test_size=0.2, random_state=42, stratify=crop)",
+    "accuracy": 0.9462,
+    "top3": 0.9921,
+    "macro_f1": 0.9232,
+    "project_md_claim": {
+      "accuracy": 0.9453,
+      "top3": 0.992
+    },
+    "test_rows": 13440
+  },
+  "ablation": {
+    "numeric only": {
+      "accuracy_mean": 0.8716,
+      "accuracy_std": 0.0012,
+      "macro_f1_mean": 0.8344,
+      "top3_mean": 0.9557,
+      "oof_accuracy_india": 0.3222,
+      "oof_accuracy_tamilnadu": 0.9441,
+      "oof_accuracy_kaggle": 0.9909
+    },
+    "+soil": {
+      "accuracy_mean": 0.891,
+      "accuracy_std": 0.0021,
+      "macro_f1_mean": 0.8523,
+      "top3_mean": 0.9619,
+      "oof_accuracy_india": 0.3322,
+      "oof_accuracy_tamilnadu": 0.9654,
+      "oof_accuracy_kaggle": 0.9927
+    },
+    "+season": {
+      "accuracy_mean": 0.9171,
+      "accuracy_std": 0.0016,
+      "macro_f1_mean": 0.8844,
+      "top3_mean": 0.9831,
+      "oof_accuracy_india": 0.5933,
+      "oof_accuracy_tamilnadu": 0.9596,
+      "oof_accuracy_kaggle": 0.9927
+    },
+    "+state": {
+      "accuracy_mean": 0.8747,
+      "accuracy_std": 0.0013,
+      "macro_f1_mean": 0.8407,
+      "top3_mean": 0.9645,
+      "oof_accuracy_india": 0.3493,
+      "oof_accuracy_tamilnadu": 0.9438,
+      "oof_accuracy_kaggle": 0.995
+    },
+    "+soil+season": {
+      "accuracy_mean": 0.9344,
+      "accuracy_std": 0.0021,
+      "macro_f1_mean": 0.9053,
+      "top3_mean": 0.9868,
+      "oof_accuracy_india": 0.6421,
+      "oof_accuracy_tamilnadu": 0.9732,
+      "oof_accuracy_kaggle": 0.9936
+    },
+    "+soil+season+state (v2)": {
+      "accuracy_mean": 0.9433,
+      "accuracy_std": 0.0012,
+      "macro_f1_mean": 0.9215,
+      "top3_mean": 0.9918,
+      "oof_accuracy_india": 0.715,
+      "oof_accuracy_tamilnadu": 0.9734,
+      "oof_accuracy_kaggle": 0.9941
+    }
+  },
+  "loso": {
+    "Multi-state (india)|open set": {
+      "n_test": 5419.0,
+      "coverage_%": 67.7,
+      "shared_crops": 18.0,
+      "chance": 0.0556,
+      "accuracy": 0.115,
+      "macro_f1": 0.0621,
+      "top3": 0.2205,
+      "in_distribution_acc": 0.715
+    },
+    "Multi-state (india)|numeric only": {
+      "n_test": 5419.0,
+      "coverage_%": 67.7,
+      "shared_crops": 18.0,
+      "chance": 0.0556,
+      "accuracy": 0.0921,
+      "macro_f1": 0.0234,
+      "top3": 0.136,
+      "in_distribution_acc": 0.715
+    },
+    "Multi-state (india)|closed set": {
+      "n_test": 5419.0,
+      "coverage_%": 67.7,
+      "shared_crops": 18.0,
+      "chance": 0.0556,
+      "accuracy": 0.1367,
+      "macro_f1": 0.0716,
+      "top3": 0.3375,
+      "in_distribution_acc": 0.715
+    },
+    "Tamil Nadu|open set": {
+      "n_test": 19000.0,
+      "coverage_%": 33.3,
+      "shared_crops": 19.0,
+      "chance": 0.0526,
+      "accuracy": 0.1289,
+      "macro_f1": 0.1119,
+      "top3": 0.2901,
+      "in_distribution_acc": 0.9734
+    },
+    "Tamil Nadu|numeric only": {
+      "n_test": 19000.0,
+      "coverage_%": 33.3,
+      "shared_crops": 19.0,
+      "chance": 0.0526,
+      "accuracy": 0.0043,
+      "macro_f1": 0.0043,
+      "top3": 0.1174,
+      "in_distribution_acc": 0.9734
+    },
+    "Tamil Nadu|closed set": {
+      "n_test": 19000.0,
+      "coverage_%": 33.3,
+      "shared_crops": 19.0,
+      "chance": 0.0526,
+      "accuracy": 0.1185,
+      "macro_f1": 0.093,
+      "top3": 0.393,
+      "in_distribution_acc": 0.9734
+    },
+    "Kaggle|open set": {
+      "n_test": 1400.0,
+      "coverage_%": 63.6,
+      "shared_crops": 14.0,
+      "chance": 0.0714,
+      "accuracy": 0.07,
+      "macro_f1": 0.0353,
+      "top3": 0.1436,
+      "in_distribution_acc": 0.9941
+    },
+    "Kaggle|numeric only": {
+      "n_test": 1400.0,
+      "coverage_%": 63.6,
+      "shared_crops": 14.0,
+      "chance": 0.0714,
+      "accuracy": 0.0114,
+      "macro_f1": 0.0193,
+      "top3": 0.0386,
+      "in_distribution_acc": 0.9941
+    },
+    "Kaggle|closed set": {
+      "n_test": 1400.0,
+      "coverage_%": 63.6,
+      "shared_crops": 14.0,
+      "chance": 0.0714,
+      "accuracy": 0.3257,
+      "macro_f1": 0.2364,
+      "top3": 0.5436,
+      "in_distribution_acc": 0.9941
+    }
+  },
+  "leave_states_out": {
+    "random split, with state": {
+      "accuracy_mean": 0.7119,
+      "accuracy_std": 0.0067,
+      "macro_f1_mean": 0.5337
+    },
+    "random split, no state": {
+      "accuracy_mean": 0.6531,
+      "accuracy_std": 0.0102,
+      "macro_f1_mean": 0.4544
+    },
+    "unseen states (GroupKFold), no state": {
+      "accuracy_mean": 0.5585,
+      "accuracy_std": 0.0279,
+      "macro_f1_mean": 0.3127
+    }
+  },
+  "importance": {
+    "state": {
+      "accuracy_drop_mean": 0.0203,
+      "accuracy_drop_std": 0.001
+    },
+    "P": {
+      "accuracy_drop_mean": 0.0286,
+      "accuracy_drop_std": 0.0011
+    },
+    "K": {
+      "accuracy_drop_mean": 0.0761,
+      "accuracy_drop_std": 0.0027
+    },
+    "ph": {
+      "accuracy_drop_mean": 0.0782,
+      "accuracy_drop_std": 0.0027
+    },
+    "N": {
+      "accuracy_drop_mean": 0.0919,
+      "accuracy_drop_std": 0.0033
+    },
+    "temperature": {
+      "accuracy_drop_mean": 0.0984,
+      "accuracy_drop_std": 0.0014
+    },
+    "soil": {
+      "accuracy_drop_mean": 0.1981,
+      "accuracy_drop_std": 0.0033
+    },
+    "humidity": {
+      "accuracy_drop_mean": 0.2078,
+      "accuracy_drop_std": 0.0041
+    },
+    "rainfall": {
+      "accuracy_drop_mean": 0.2144,
+      "accuracy_drop_std": 0.0041
+    },
+    "season": {
+      "accuracy_drop_mean": 0.5496,
+      "accuracy_drop_std": 0.0069
+    }
+  },
+  "confusion_top_pairs": [
+    {
+      "true": "frenchbean",
+      "predicted": "cowpea",
+      "count": 66
+    },
+    {
+      "true": "ribbedgourd",
+      "predicted": "bittergourd",
+      "count": 35
+    },
+    {
+      "true": "potato",
+      "predicted": "banana",
+      "count": 33
+    },
+    {
+      "true": "moringa",
+      "predicted": "tinda",
+      "count": 28
+    },
+    {
+      "true": "banana",
+      "predicted": "potato",
+      "count": 28
+    },
+    {
+      "true": "ribbedgourd",
+      "predicted": "muskmelon",
+      "count": 28
+    },
+    {
+      "true": "pumpkin",
+      "predicted": "ashgourd",
+      "count": 19
+    },
+    {
+      "true": "cotton",
+      "predicted": "sugarcane",
+      "count": 17
+    }
+  ],
+  "calibration": {
+    "RandomForest (v2 deployed)": {
+      "ece": 0.0759,
+      "brier": 0.0885,
+      "mean_top1_confidence": 0.8704,
+      "accuracy": 0.9462
+    }
+  },
+  "mcnemar": {
+    "RandomForest (v2 deployed) | (a) Kaggle test rows": {
+      "n": 440,
+      "acc_v1_fixed": 0.9932,
+      "acc_v2": 0.9955,
+      "b_v1_right_v2_wrong": 0,
+      "c_v1_wrong_v2_right": 1,
+      "chi2_cc": 0.0,
+      "p_chi2": 1.0,
+      "p_exact": 1.0
+    },
+    "RandomForest (v2 deployed) | (b) full v2 test split": {
+      "n": 13440,
+      "acc_v1_fixed": 0.0441,
+      "acc_v2": 0.9462,
+      "b_v1_right_v2_wrong": 8,
+      "c_v1_wrong_v2_right": 12132,
+      "chi2_cc": 12106.024,
+      "p_chi2": 0.0,
+      "p_exact": 0.0
+    }
+  },
+  "improvement": [
+    {
+      "aspect": "Training data",
+      "v1": "2,200 rows (Kaggle only)",
+      "v2": "67,200 rows (3 merged sources)",
+      "note": "x30.5 rows"
+    },
+    {
+      "aspect": "Crops covered",
+      "v1": "22",
+      "v2": "74",
+      "note": "Indian crops incl. millets, pulses, vegetables"
+    },
+    {
+      "aspect": "Inputs",
+      "v1": "7 numeric",
+      "v2": "7 numeric + soil, season, state",
+      "note": "\u00a74 measures the value of each"
+    },
+    {
+      "aspect": "Decoding",
+      "v1": "argmax over 22 binary heads; 0.0% of rows (GaussianNB) had no head firing",
+      "v2": "single multiclass model, one ranked answer per row",
+      "note": "\u00a71.1"
+    },
+    {
+      "aspect": "Evaluation protocol",
+      "v1": "one 75/25 split, accuracy only",
+      "v2": "stratified 5-fold CV (mean \u00b1 sd), macro-F1, top-3, LOSO, leave-states-out, McNemar, calibration",
+      "note": "\u00a73\u20136"
+    },
+    {
+      "aspect": "Headline accuracy (as reported)",
+      "v1": "0.9800 (RF, 22 crops, 1 split)",
+      "v2": "0.9433 \u00b1 0.0012 (RF, 74 crops, 5-fold)",
+      "note": "not comparable tasks: see McNemar rows"
+    },
+    {
+      "aspect": "v1-fixed on v1's task (best: RandomForest)",
+      "v1": "0.9950 (5-fold)",
+      "v2": "\u2014",
+      "note": "the Kaggle task is near-trivially separable (\u00a72.1)"
+    },
+    {
+      "aspect": "Macro-F1 (v2 data, 5-fold)",
+      "v1": "not reported",
+      "v2": "0.9215 (deployed RF); 0.9215 (RandomForest (v2 deployed))",
+      "note": ""
+    },
+    {
+      "aspect": "Top-3 accuracy (v2 data, 5-fold)",
+      "v1": "not reported",
+      "v2": "0.9918 (deployed RF)",
+      "note": "UI shows 3 crops"
+    },
+    {
+      "aspect": "Paired test, full v2 test split",
+      "v1": "0.0441",
+      "v2": "0.9462",
+      "note": "McNemar b=8, c=12132, p=0"
+    },
+    {
+      "aspect": "Paired test, Kaggle test rows (v1's home ground)",
+      "v1": "0.9932",
+      "v2": "0.9955",
+      "note": "McNemar b=0, c=1, p=1"
+    },
+    {
+      "aspect": "Generalisation to an unseen source",
+      "v1": "not tested",
+      "v2": "Multi-state (india) 0.12, Tamil Nadu 0.13, Kaggle 0.07",
+      "note": "LOSO open-set accuracy (\u00a75.1)"
+    },
+    {
+      "aspect": "Probability calibration",
+      "v1": "not measured",
+      "v2": "ECE 0.076 (deployed RF)",
+      "note": "\u00a76.3"
+    }
+  ],
+  "_doc": {
+    "v1": "v1 reproduced exactly (Kaggle, MultiOutputClassifier, argmax decode, 75/25 split rs=0). zero_fire_pct / multi_fire_pct = % of 550 test rows where no / >1 one-vs-rest head fires; pred_class0_pct = % predicted as class 0 (apple).",
+    "v1_fixed": "same estimators as plain multiclass models: same split, and StratifiedKFold(5) on the full Kaggle set.",
+    "dataset": "audit of the merged v2 set from backend/app/data_loader.load_dataset().",
+    "models": "StratifiedKFold(5, shuffle, rs=42) on merged v2 data, features = 7 numerics + one-hot soil/season/state. *_mean/*_std over folds. train_rows_cap = training-fold subsample size (null = full fold). oof_accuracy_<source> = out-of-fold accuracy on that source's rows.",
+    "app_protocol": "the backend's own 80/20 split re-run for the deployed RF.",
+    "ablation": "deployed RF config, same folds, different categorical feature sets.",
+    "loso": "key 'held_out|variant'. Train on two sources, test on the third restricted to crops seen in training. open set = all train crops; numeric only = no categorical features; closed set = training restricted to shared crops.",
+    "leave_states_out": "multi-state source only, GroupKFold(4) by state vs StratifiedKFold(4).",
+    "importance": "permutation importance (accuracy drop), deployed RF, 5,000 test rows, 5 repeats.",
+    "calibration": "top-1 reliability on the app test split, 15 bins. ece = expected calibration error; brier = multiclass Brier score.",
+    "mcnemar": "paired v1-fixed (RF on Kaggle rows, 7 numerics) vs v2 on the same test rows; b = v1 right & v2 wrong, c = v1 wrong & v2 right; p_exact = exact binomial test.",
+    "improvement": "v1 -> v2 summary table (array of rows).",
+    "figures": "PNG files relative to docs/research/."
+  }
 }

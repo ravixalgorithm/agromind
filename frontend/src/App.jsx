@@ -1325,39 +1325,106 @@ function DatasetPage({ meta, t }) {
 
 /* ── Model Report ─────────────────────────────────────── */
 
-const LABELS = { v1: 'Model v1', v1_fixed: 'Model v1 (corrected)', v2: 'Model v2', v3: 'Model v3', loso: 'Leave-one-source-out validation', mcnemar: "McNemar's test", ece: 'ECE' };
-const label = (k) => LABELS[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+// Panel titles and order for docs/research/results.json; keys not listed here (and future v3/v4) still render generically.
+const SECTIONS = {
+  improvement: 'v1 vs v2 — What Changed',
+  app_protocol: "Deployed Model on the Application's Test Split",
+  v1: 'Model v1 (original, reproduced)',
+  v1_fixed: 'Model v1 Corrected (plain multiclass, Kaggle data)',
+  models: 'Model Comparison on v2 Data (stratified 5-fold CV)',
+  v3: 'Model v3',
+  v4: 'Model v4',
+  ablation: 'Feature Ablation (deployed Random Forest)',
+  loso: 'Leave-One-Source-Out Validation',
+  leave_states_out: 'Leave-States-Out Validation (multi-state source)',
+  mcnemar: "McNemar's Test — v1 Corrected vs v2",
+  calibration: 'Calibration of Predicted Probabilities',
+  importance: 'Permutation Feature Importance',
+  confusion_top_pairs: 'Most Frequent Confusions',
+  dataset: 'Dataset Audit',
+};
+const SPLIT_KEYS = { loso: ['Held-out source', 'Variant'], mcnemar: ['Model', 'Comparison'] };
+const COLS = {
+  accuracy: 'Accuracy',
+  macro_f1: 'Macro-F1',
+  top3: 'Top-3 accuracy',
+  fit_seconds_per_fold: 'Fit time / fold (s)',
+  train_rows_cap: 'Train rows cap',
+  oof_accuracy_india: 'OOF acc. multi-state',
+  oof_accuracy_tamilnadu: 'OOF acc. Tamil Nadu',
+  oof_accuracy_kaggle: 'OOF acc. Kaggle',
+  n_test: 'Test rows',
+  'coverage_%': 'Rows covered',
+  in_distribution_acc: 'In-distribution acc.',
+  accuracy_drop: 'Accuracy drop when shuffled',
+  ece: 'ECE',
+  brier: 'Brier score',
+  chi2_cc: 'χ² (continuity corr.)',
+  p_chi2: 'p (χ²)',
+  p_exact: 'p (exact)',
+  b_v1_right_v2_wrong: 'v1 right, v2 wrong',
+  c_v1_wrong_v2_right: 'v1 wrong, v2 right',
+  acc_v1_fixed: 'Acc. v1 corrected',
+  acc_v2: 'Acc. v2',
+  aspect: 'Aspect',
+  v1: 'v1',
+  v2: 'v2',
+};
+const label = (k) => COLS[k] ?? SECTIONS[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 const isPlain = (v) => v === null || typeof v !== 'object';
-const cell = (v) => {
+const RATE = /acc|f1|top3|chance|drop|confidence/;
+
+// Rates (0–1) as percentages, *_pct / *_% as given, p-values and scores as decimals.
+const cell = (v, key = '') => {
   if (v === null || v === undefined || v === '') return '—';
-  if (typeof v === 'number') return Number.isInteger(v) ? v.toLocaleString('en-IN') : v.toFixed(4);
   if (Array.isArray(v)) return v.join(', ');
   if (typeof v === 'object') return JSON.stringify(v);
-  return String(v);
+  if (typeof v !== 'number') return String(v);
+  if (/_pct$|%/.test(key)) return `${v.toFixed(1)}%`;
+  if (/^p_/.test(key)) return v < 0.0001 ? '< 0.0001' : v.toFixed(4);
+  if (RATE.test(key) && Math.abs(v) <= 1) return `${(v * 100).toFixed(2)}%`;
+  return Number.isInteger(v) ? v.toLocaleString('en-IN') : v.toFixed(v >= 100 ? 1 : 4);
+};
+const meanStd = (mean, std, key) => {
+  if (mean === null || mean === undefined) return '—';
+  if (std === null || std === undefined) return cell(mean, key);
+  return RATE.test(key) && Math.abs(mean) <= 1 ? `${(mean * 100).toFixed(2)} ± ${(std * 100).toFixed(2)}%` : `${cell(mean, key)} ± ${cell(std, key)}`;
 };
 
-function RowsTable({ rows, first }) {
-  const cols = [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((c) => c !== first);
+// rows: [{...}]. head: leading row-header columns. Pairs x_mean / x_std are merged into one "mean ± sd" column.
+function RowsTable({ rows, head = [], highlight }) {
+  const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((k) => !head.includes(k));
+  const cols = keys
+    .filter((k) => !(k.endsWith('_std') && keys.includes(`${k.slice(0, -4)}_mean`)))
+    .map((k) => (k.endsWith('_mean') ? { key: k.slice(0, -5), mean: k, std: keys.includes(`${k.slice(0, -5)}_std`) ? `${k.slice(0, -5)}_std` : null } : { key: k }));
   return (
     <div className="table-wrap">
       <table className="data">
         <thead>
           <tr>
-            {first && <th scope="col">{label(first)}</th>}
+            {head.map((h) => (
+              <th key={h} scope="col">
+                {label(h)}
+              </th>
+            ))}
             {cols.map((c) => (
-              <th key={c} scope="col">
-                {label(c)}
+              <th key={c.key} scope="col" className={typeof rows[0]?.[c.mean ?? c.key] === 'number' ? 'num wrap' : 'wrap'}>
+                {label(c.key)}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i}>
-              {first && <th scope="row">{label(String(r[first]))}</th>}
+            <tr key={i} className={highlight?.(r) ? 'is-highlight' : undefined}>
+              {head.map((h) => (
+                <th key={h} scope="row">
+                  {r[h]}
+                </th>
+              ))}
               {cols.map((c) => (
-                <td key={c} className={typeof r[c] === 'number' ? 'num' : undefined}>
-                  {cell(r[c])}
+                <td key={c.key} className={typeof r[c.mean ?? c.key] === 'number' ? 'num' : undefined}>
+                  {c.mean ? meanStd(r[c.mean], c.std && r[c.std], c.key) : cell(r[c.key], c.key)}
                 </td>
               ))}
             </tr>
@@ -1368,34 +1435,63 @@ function RowsTable({ rows, first }) {
   );
 }
 
-// Render any results.json value: arrays of rows and {name: {metric: n}} maps become tables, flat maps become key/value tables.
-function ReportValue({ value }) {
+const isMetricMap = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).length > 0 && Object.values(v).every((x) => x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every(isPlain));
+
+// Render any results.json value: arrays of rows and {name: {metric: n}} maps become tables, flat values a key/value table.
+function ReportValue({ value, name = 'Name', split, highlight }) {
   if (isPlain(value)) return <p>{cell(value)}</p>;
   if (Array.isArray(value)) return value.every((v) => v && typeof v === 'object') ? <RowsTable rows={value} /> : <p>{cell(value)}</p>;
+  if (isMetricMap(value)) {
+    const rows = Object.entries(value).map(([k, v]) => {
+      if (!split) return { [name]: k, ...v };
+      const [a, b = ''] = k.split('|').map((s) => s.trim());
+      return { [split[0]]: a, [split[1]]: b, ...v };
+    });
+    return <RowsTable rows={rows} head={split ?? [name]} highlight={highlight} />;
+  }
   const entries = Object.entries(value);
-  if (entries.every(([, v]) => isPlain(v) || Array.isArray(v))) {
-    return (
-      <table className="kv">
-        <tbody>
-          {entries.map(([k, v]) => (
-            <tr key={k}>
-              <th scope="row">{label(k)}</th>
-              <td>{cell(v)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  }
-  if (entries.every(([, v]) => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).every(isPlain))) {
-    return <RowsTable first="name" rows={entries.map(([k, v]) => ({ name: k, ...v }))} />;
-  }
-  return entries.map(([k, v]) => (
-    <div key={k} className="sub-section">
-      <h3>{label(k)}</h3>
-      <ReportValue value={v} />
-    </div>
-  ));
+  const flat = entries.filter(([, v]) => isPlain(v) || (Array.isArray(v) && v.every(isPlain)));
+  const nested = entries.filter((e) => !flat.includes(e));
+  return (
+    <>
+      {flat.length > 0 && (
+        <table className="kv">
+          <tbody>
+            {flat.map(([k, v]) => (
+              <tr key={k}>
+                <th scope="row">{label(k)}</th>
+                <td>{cell(v, k)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {nested.map(([k, v]) => (
+        <div key={k} className="sub-section">
+          <h3>{label(k)}</h3>
+          <ReportValue value={v} />
+        </div>
+      ))}
+    </>
+  );
+}
+
+// One honest sentence on leave-one-source-out, computed from the numbers so it stays true when they change.
+function losoSummary(loso) {
+  const all = Object.entries(loso ?? {}).filter(([, r]) => typeof r.accuracy === 'number');
+  const open = all.filter(([k]) => k.includes('open set'));
+  const rows = (open.length ? open : all).map(([, r]) => r);
+  if (!rows.length) return null;
+  const pc = (v) => `${Math.round(v * 100)}%`;
+  const acc = rows.map((r) => r.accuracy);
+  const ind = rows.map((r) => r.in_distribution_acc).filter((v) => typeof v === 'number');
+  return (
+    <p className="notice">
+      <strong>Reading this table:</strong> the model is trained on two data sources and tested on the third{open.length ? ' (open-set rows)' : ''}. Accuracy falls to {pc(Math.min(...acc))}–{pc(Math.max(...acc))}, against{' '}
+      {pc(Math.min(...ind))}–{pc(Math.max(...ind))} when testing on unseen rows of the same sources. The three sources record the same crops under very different conditions, so the
+      cross-validated accuracy should not be expected to carry over to a new, independent data source.
+    </p>
+  );
 }
 
 function ReportPage({ t }) {
@@ -1408,9 +1504,16 @@ function ReportPage({ t }) {
       .catch(() => setFailed(true));
   }, []);
 
-  const { _placeholder, note, figures = [], meta: runMeta, ...sections } = research;
-  const order = ['improvement', 'v1', 'v1_fixed', 'models'];
-  const keys = [...order.filter((k) => k in sections), ...Object.keys(sections).filter((k) => !order.includes(k))];
+  const { _placeholder, note, _doc: doc = {}, figures = [], meta: runMeta, ...sections } = research;
+  const order = Object.keys(SECTIONS);
+  const keys = [...order.filter((k) => k in sections), ...Object.keys(sections).filter((k) => !order.includes(k) && !k.startsWith('_'))];
+  const deployed = runMeta?.deployed_model;
+  const byDesc = (obj, key) => Object.fromEntries(Object.entries(obj).sort((a, b) => (b[1][key] ?? 0) - (a[1][key] ?? 0)));
+  const prepared = {
+    ...sections,
+    ...(isMetricMap(sections.models) && { models: byDesc(sections.models, 'macro_f1_mean') }),
+    ...(isMetricMap(sections.importance) && { importance: byDesc(sections.importance, 'accuracy_drop_mean') }),
+  };
 
   return (
     <>
@@ -1436,7 +1539,7 @@ function ReportPage({ t }) {
               {Object.entries(info.metrics ?? {}).map(([k, v]) => (
                 <tr key={k}>
                   <th scope="row">{label(k)}</th>
-                  <td>{k.includes('accuracy') ? `${(v * 100).toFixed(2)}%` : cell(v)}</td>
+                  <td>{cell(v, k)}</td>
                 </tr>
               ))}
               <tr>
@@ -1450,29 +1553,45 @@ function ReportPage({ t }) {
         )}
       </Panel>
 
+      {keys.map((k) => (
+        <Panel key={k} title={SECTIONS[k] ?? label(k)}>
+          {k === 'loso' && losoSummary(prepared.loso)}
+          <ReportValue
+            value={prepared[k]}
+            name={k === 'importance' ? 'Input' : k === 'ablation' ? 'Feature set' : 'Model'}
+            split={SPLIT_KEYS[k]}
+            highlight={deployed ? (r) => Object.values(r).includes(deployed) : undefined}
+          />
+          {doc[k] && <p className="muted small">{doc[k]}</p>}
+        </Panel>
+      ))}
+
       {runMeta && (
         <Panel title="Experiment Setup">
           <ReportValue value={runMeta} />
         </Panel>
       )}
 
-      {keys.map((k) => (
-        <Panel key={k} title={label(k)}>
-          <ReportValue value={sections[k]} />
-        </Panel>
-      ))}
-
       <Panel title="Figures">
         <div className="figures">
-          {(figures.length ? figures : [{ caption: 'Figure to be added' }]).map((f, i) => (
-            <figure key={i} className="figure">
-              {/* Figure images are served from frontend/public/research/. */}
-              {f.file ? <img src={`/research/${f.file.split('/').pop()}`} alt={f.caption} loading="lazy" /> : <div className="figure-empty">Figure {i + 1}</div>}
-              <figcaption>
-                Fig. {i + 1}: {f.caption}
-              </figcaption>
-            </figure>
-          ))}
+          {(figures.length ? figures : [{ caption: 'Figure to be added' }]).map((f, i) => {
+            // Figure images are copied from docs/research/figures/ into frontend/public/research/.
+            const src = f.file && `${import.meta.env.BASE_URL}research/${f.file.split('/').pop()}`;
+            return (
+              <figure key={i} className="figure">
+                {src ? (
+                  <a href={src} target="_blank" rel="noreferrer" title="Open full size">
+                    <img src={src} alt={f.caption} loading="lazy" />
+                  </a>
+                ) : (
+                  <div className="figure-empty">Figure {i + 1}</div>
+                )}
+                <figcaption>
+                  <strong>Fig. {i + 1}:</strong> {f.caption}
+                </figcaption>
+              </figure>
+            );
+          })}
         </div>
       </Panel>
     </>

@@ -520,6 +520,11 @@ table {
   font-weight: 600;
 }
 
+.data tbody tr.is-highlight {
+  background: var(--green-light);
+  font-weight: 700;
+}
+
 .data .total {
   font-weight: 700;
 }
@@ -536,6 +541,10 @@ table {
   white-space: nowrap;
 }
 
+.kv td {
+  overflow-wrap: anywhere;
+}
+
 .kv th {
   width: 42%;
   background: var(--zebra);
@@ -543,6 +552,7 @@ table {
 }
 
 .num {
+  white-space: nowrap;
   text-align: right !important;
   font-variant-numeric: tabular-nums;
 }
@@ -928,7 +938,7 @@ input[type='number'] {
 
 .figures {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
   gap: 12px;
 }
 
