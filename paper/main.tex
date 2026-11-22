@@ -159,7 +159,7 @@ districts (state medians elsewhere). We flag this as a limitation and rerun when
 complete.
 
 \textbf{Task.} A \emph{query} is one district $\times$ season $\times$ year. Its
-\emph{candidates} are the crops actually grown there (median 4, max 27). The relevance of crop $c$
+\emph{candidates} are the crops actually grown there (median 5, max 27). The relevance of crop $c$
 in query $q$ is its \emph{yield percentile}: the rank of its yield among all districts that grew
 $c$ that year, scaled to $[0,1]$. Percentiles make yields comparable across crops with very
 different units (t/ha of sugarcane vs pulses) and express comparative advantage. The
@@ -249,7 +249,18 @@ slightly \emph{better} than the LambdaMART objective on held-out states (\PointH
 \OursHitLSO\% Hit@1, $p\PointPLSO$; NDCG@3 \PointNDCGLSO{} vs \OursNDCGLSO). The gain over
 the literature therefore comes from the yield-grounded \emph{pair} formulation, which lets crop
 identity interact with environment and history, not from the listwise loss. Practitioners can
-use the simpler regressor. \NHABLATION
+use the simpler regressor. Without district history, i.e.\ with only the climate-and-soil
+features the literature uses, every model collapses on unseen states. Random Forest falls from
+\NHRFHitR\% (random split) to \NHRFHitLSO\%, and YieldRank reaches only \NHOursHitLSO\% (best
+classifier, \NHBaseNameLSO: \NHBaseHitLSO\%), barely above the crop prior
+(\NHPriorHitLSO\%). Its i.i.d.-calibrated conformal coverage also drops to \NHCovIIDLSO\%.
+Environmental features alone thus carry little \emph{transferable} signal about which crop
+yields best, and history does most of the work. Dropping soil does the opposite of what
+random splits suggest: it lowers random-split Hit@1 (RF \NSRFHitR\% vs \RFHitR\%) but raises
+it on held-out states (RF \NSRFHitLSO\% vs \RFHitLSO\%; XGBoost \NSXGBHitLSO\% vs
+\XGBHitLSO\%). Soil, mostly a state median in this version, acts as a location proxy that
+the classifiers overfit, as Meyer et al.\ warn \cite{meyer2019}. YieldRank barely changes
+(\NSOursHitLSO\% vs \OursHitLSO\%).
 
 \begin{table}[t]
 \caption{YieldRank on held-out states: 90\% LAC sets under different calibration schemes
@@ -262,10 +273,13 @@ coverage, and worst state coverage).}
 
 \textbf{Conformal sets.} With i.i.d.\ calibration, YieldRank's 90\% LAC sets keep near-nominal
 \emph{marginal} coverage on unseen states (\CovIIDLSO\%, \SizeIIDLSO{} crops of about six;
-Table~\ref{tab:conf}). The classifiers' do not: Random Forest covers only \RFCovIIDMean\%
+Table~\ref{tab:conf}). The classifiers' sets do not: Random Forest covers only \RFCovIIDMean\%
 (\RFCovIIDMin--\RFCovIIDMax\% across folds). Calibrating on held-out training states restores
 it to \RFCovGRPMean\% (\RFCovGRPMin--\RFCovGRPMax\%). Its confidence learned on seen states is
-over-confident on new ones, and only a state-disjoint calibration set reveals this. Marginal
+over-confident on new ones, and only a state-disjoint calibration set reveals this. Even
+then its sets are much larger than YieldRank's at similar coverage (\RFSizeGRPLSO{} and
+\XGBSizeGRPLSO{} crops for RF and XGBoost vs \SizeGRPLSO), so the better ranker also gives
+more informative sets. Marginal
 coverage hides state-level failures, though (Fig.~\ref{fig:cov}). The median state is covered
 at \MedianStateCovIID\%, but \StatesBelowIID{} of \StatesN{} states fall below 85\%, worst
 \WorstState{} (\WorstIID\%). Telangana has records only from 2013 (it was formed in 2014) and
@@ -310,8 +324,11 @@ data, two choices matter more than the classifier family. The first is the evalu
 random splits overstate the classifiers' Hit@1 by up to
 \ClfDropMax{} points (YieldRank: \OursDrop) relative to unseen states. The second is the problem formulation: ranking
 (query, crop) pairs by realised yield is consistently better than predicting a crop label.
-A persistence rule that no prior paper reports is a stronger baseline than any of them, and we
-recommend that future work include it.
+A third is the feature set: climate and soil alone, the inputs of nearly every recommender in
+Table~\ref{tab:lit}, barely transfer across states, and adding location-like features can
+raise random-split scores while lowering out-of-state ones. A persistence rule that no prior
+paper reports is a stronger baseline than any classifier, and we recommend that future work
+include it.
 
 \textbf{Limitations.} (i) Relevance is observed only for crops actually grown. We rank among
 these, so the benchmark cannot score a crop a district has never tried. (ii) Yield percentile

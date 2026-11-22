@@ -25,6 +25,9 @@ TEX = {"GaussianNB [6,12]": r"Gaussian NB~\cite{pudumalar2017,elbasi2023}",
        "LGBM pointwise": "LightGBM pointwise (ablation)", OURS: r"\textbf{YieldRank (ours)}"}
 
 
+NICE = {"GaussianNB [6,12]": "Gaussian NB", "RandomForest [8,21]": "Random Forest", "XGBoost [11,22]": "XGBoost", "MLP [13]": "MLP"}
+
+
 def kaggle_reference():
     """The literature's setting: Kaggle crop set [31], random 80/20 split."""
     df = pd.read_csv(ROOT.parent / "backend/data/Crop_recommendation.csv")
@@ -161,7 +164,7 @@ def main():
         c = S[p]["conformal"]
         mac |= {f"OursNDCG{ab}": f"{o['ndcg@3']:.3f}", f"OursHit{ab}": f"{100*o['hit@1']:.1f}", f"OursHitThree{ab}": f"{100*o['hit@3']:.1f}",
                 f"BaseNDCG{ab}": f"{b['ndcg@3']:.3f}", f"BaseHit{ab}": f"{100*b['hit@1']:.1f}", f"BaseHitThree{ab}": f"{100*b['hit@3']:.1f}",
-                f"BaseName{ab}": best_base[p].split(" [")[0],
+                f"BaseName{ab}": NICE[best_base[p]],
                 f"GainHit{ab}": f"{100*(o['hit@1']-b['hit@1']):.1f}", f"GainNDCG{ab}": f"{o['ndcg@3']-b['ndcg@3']:.3f}",
                 f"PersNDCG{ab}": f"{pe.get('ndcg@3', float('nan')):.3f}", f"PersHit{ab}": f"{100*pe.get('hit@1', float('nan')):.1f}",
                 f"PHit{ab}": fp(w['hit@1']['p']) if w['hit@1'] else "--", f"NPaired{ab}": f"{w['hit@1']['n']:,}" if w['hit@1'] else "--",
@@ -194,6 +197,8 @@ def main():
     for cal, ab in (("conformal_iid_cal", "IID"), ("conformal_group_cal", "GRP")):
         v = [100 * f[cal]["LAC@0.9"]["coverage"] for f in rf]
         mac |= {f"RFCov{ab}Mean": f"{np.mean(v):.1f}", f"RFCov{ab}Min": f"{min(v):.1f}", f"RFCov{ab}Max": f"{max(v):.1f}"}
+    for m, k in (("RandomForest [8,21]", "RF"), ("XGBoost [11,22]", "XGB")):
+        mac[f"{k}SizeGRPLSO"] = f"{conf_mean(met['leave-states-out'][m], 'conformal_group_cal', 'LAC@0.9', 'size'):.2f}"
     pw = met["leave-states-out"]["LGBM pointwise"]
     mac |= {"PointHitLSO": f"{100*pw['mean']['hit@1']:.1f}", "PointNDCGLSO": f"{pw['mean']['ndcg@3']:.3f}",
             "PointPLSO": fp(pw['wilcoxon_vs_ours_hit@1']['p']),
@@ -214,7 +219,17 @@ def main():
             bb = max((m for m in N[p] if "[" in m), key=lambda m: N[p][m]["mean"]["hit@1"])
             mac |= {f"NHOursHit{ab}": f"{100*N[p][OURS]['mean']['hit@1']:.1f}", f"NHOursNDCG{ab}": f"{N[p][OURS]['mean']['ndcg@3']:.3f}",
                     f"NHBaseHit{ab}": f"{100*N[p][bb]['mean']['hit@1']:.1f}", f"NHBaseNDCG{ab}": f"{N[p][bb]['mean']['ndcg@3']:.3f}",
-                    f"NHBaseName{ab}": bb.split(" [")[0], f"NHCovIID{ab}": f"{100*conf_mean(N[p][OURS], 'conformal_iid_cal', 'LAC@0.9', 'coverage'):.1f}"}
+                    f"NHBaseName{ab}": NICE[bb], f"NHCovIID{ab}": f"{100*conf_mean(N[p][OURS], 'conformal_iid_cal', 'LAC@0.9', 'coverage'):.1f}"}
+    ns = RES / "metrics_nosoil.json"
+    if ns.exists():
+        N = json.load(open(ns))["metrics"]
+        for p, ab in zip(PROTO, ("R", "LSO", "LYO")):
+            for m, k in (("RandomForest [8,21]", "RF"), ("XGBoost [11,22]", "XGB"), (OURS, "Ours")):
+                mac[f"NS{k}Hit{ab}"] = f"{100*N[p][m]['mean']['hit@1']:.1f}"
+    if nh.exists():
+        N = json.load(open(nh))["metrics"]
+        mac["NHRFHitR"], mac["NHRFHitLSO"] = (f"{100*N[p]['RandomForest [8,21]']['mean']['hit@1']:.1f}" for p in ("random", "leave-states-out"))
+        mac["NHPriorHitLSO"] = f"{100*N['leave-states-out']['Crop prior']['mean']['hit@1']:.1f}"
     cc = RES / "crossconf_main.json"
     if cc.exists():
         X = json.load(open(cc))
