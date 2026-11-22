@@ -13,7 +13,7 @@ An **academic research tool**: clean white page, navy and green accents, serif h
 | Route | Page |
 |---|---|
 | `#/` | **Advisory** (landing, the only mode): State → District → Season with editable season climate on the left; recommended crop with P(crop), ranked crops with historical yield, district history, crop calendar (when `/options` has months) and a read-only soil profile on the right; saved analyses below (localStorage `agromind.saved-analyses.v3`) |
-| `#/results` | Three numbered sections from `src/research.json`: (1) improvement table v1 → v3 → v4, (2) current system v3 (served model from `/model-info`, grouped evaluation, per-state grid, soil test, figs 11–13), (3) improved method v4 (headline, unseen-states ranking, conformal summary, per-state coverage). Table captions are numbered with CSS counters (`.tcap::before`); `#/report` still works |
+| `#/results` | Three numbered sections from `src/research.json`: (1) improvement table v1 → v3 → v4, (2) current system v3 (served model from `/model-info`, grouped evaluation, per-state grid, soil test, figs 11–13), (3) improved method v4 (headline, unseen-states ranking, conformal summary, per-state coverage), (4) recent work and gap matrix (`related_work`, `related_work_ours`), (5) method comparison: Hit@1 dot plot, selection table, ablation, reasons (`method_comparison`). Sections 4–5 render only when their keys exist. Captions are numbered with CSS counters (`.tcap::before` tables, `.fcap::before` figures); wide tables put `p.tcap` outside `.table-wrap` so mobile does not clip it; `#/report` still works |
 | `#/dataset` | Paged, filterable browser of the district crop records (`/dataset`) |
 | `#/paper` | Title, abstract (`ABSTRACT_TEX` from `paper/main.tex`, `\Macros` filled from `research.v4.numbers`), PDF/newsletter/code links, Colab links, BibTeX |
 | `#/about` | Project, team, system, data sources with licences, disclaimer |
@@ -39,4 +39,4 @@ The header has a small A−/A/A+ text-size control and EN/हि (Hindi covers n
 
 ## Results data
 
-`src/research.json` is a copy of `docs/research/results.json`; only the v3 figures (11–13) are copied to `public/research/`. `ImprovementTable`, `V3Section` and `V4Section` read named keys from it; v1/v2 detail is no longer shown.
+`src/research.json` is a copy of `docs/research/results.json`; only the v3 figures (11–13) are copied to `public/research/`. `ImprovementTable`, `V3Section`, `V4Section`, `RelatedWork` and `MethodComparison` read named keys from it; v1/v2 detail is no longer shown. `method_comparison` rates are percentages (0–100), NDCG is 0–1. Never put mock data in `src/research.json`: test with Playwright route interception instead.

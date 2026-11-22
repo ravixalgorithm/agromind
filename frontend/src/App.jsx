@@ -1375,9 +1375,7 @@ function V3Section({ v, served, failed }) {
                 <a href={src} target="_blank" rel="noreferrer" title="Open full size">
                   <img src={src} alt={f.caption} loading="lazy" />
                 </a>
-                <figcaption>
-                  <strong>Fig. {i + 1}:</strong> {f.caption}
-                </figcaption>
+                <figcaption className="fcap">{f.caption}</figcaption>
               </figure>
             );
           })}
@@ -1568,6 +1566,400 @@ function V4Section({ v }) {
   );
 }
 
+/* ── Results: related work and method comparison ───────── */
+
+// Gap codes used in research.json.related_work[].gaps. A cell shows ✗ when the paper has the shortcoming, ✓ when it avoids it.
+const GAPS = {
+  KAGGLE_ONLY: 'Kaggle table only',
+  RANDOM_SPLIT_ONLY: 'Random split only',
+  NO_YIELD: 'No yield outcome',
+  NO_UNCERTAINTY: 'No uncertainty',
+  SINGLE_REGION: 'Single region',
+  NO_STAT_TEST: 'No significance test',
+  LEAKAGE: 'Leakage risk',
+  NOT_REPRODUCIBLE: 'Not reproducible',
+};
+const isOursEntry = (p) => p?.ours === true;
+const paperShort = (p) =>
+  `${
+    String(p.authors ?? '')
+      .split(/,| and | et al/)[0]
+      .trim() || p.key
+  }${/et al|,| and /.test(p.authors ?? '') ? ' et al.' : ''} ${p.year ?? ''}`.trim();
+
+function reported(p) {
+  const v = p.reported_value;
+  if (typeof v !== 'number') return v ?? '—';
+  const rate = /acc|f1|top|hit|precision|recall/i.test(p.reported_metric ?? '');
+  const shown = rate ? `${(v <= 1 ? v * 100 : v).toFixed(2)}%` : v.toLocaleString('en-IN');
+  return `${p.reported_metric ? `${p.reported_metric} ` : ''}${shown}`;
+}
+
+function RelatedWork({ papers, ours }) {
+  const codes = Object.keys(GAPS).filter((c) => papers.some((p) => p.gaps?.includes(c)) || ours);
+  const rows = ours ? [...papers, ours] : papers;
+  return (
+    <>
+      <div>
+        <p className="tcap">
+          Recent crop-recommendation studies
+          <span className="tcap-note">Reported numbers are on their own data and splits, not comparable to ours.</span>
+        </p>
+        <div className="table-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th scope="col">Paper</th>
+                <th scope="col">Dataset</th>
+                <th scope="col">Method</th>
+                <th scope="col" className="num">
+                  Reported result
+                </th>
+                <th scope="col">Protocol</th>
+              </tr>
+            </thead>
+            <tbody>
+              {papers.map((p) => (
+                <tr key={p.key}>
+                  <th scope="row">
+                    {p.url ? (
+                      <a href={p.url} target="_blank" rel="noreferrer">
+                        {p.title}
+                      </a>
+                    ) : (
+                      p.title
+                    )}
+                    <span className="paper-meta">
+                      {p.authors}
+                      {p.year ? ` · ${p.year}` : ''}
+                      {p.venue ? ` · ${p.venue}` : ''}
+                    </span>
+                  </th>
+                  <td>
+                    {p.dataset ?? '—'}
+                    {typeof p.n_rows === 'number' && <span className="paper-meta">{p.n_rows.toLocaleString('en-IN')} rows</span>}
+                  </td>
+                  <td>{p.method ?? '—'}</td>
+                  <td className="num">{reported(p)}</td>
+                  <td>{p.protocol ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="sub-section">
+        <p className="tcap">
+          Where each study falls short
+          <span className="tcap-note">✗ the study has this shortcoming · ✓ it avoids it{ours ? '. The last row is this project.' : ''}</span>
+        </p>
+        <div className="table-wrap">
+          <table className="data gap-matrix">
+            <thead>
+              <tr>
+                <th scope="col">Study</th>
+                {codes.map((c) => (
+                  <th key={c} scope="col" className="c wrap">
+                    {GAPS[c]}
+                  </th>
+                ))}
+                <th scope="col" className="num">
+                  Gaps
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((p) => {
+                const has = new Set(p.gaps ?? []);
+                const n = codes.filter((c) => has.has(c)).length;
+                return (
+                  <tr key={p.key} className={isOursEntry(p) ? 'is-highlight' : undefined}>
+                    <th scope="row">{isOursEntry(p) ? 'AgroMind (ours)' : paperShort(p)}</th>
+                    {codes.map((c) => (
+                      <td key={c} className={`c ${has.has(c) ? 'off' : 'ok'}`} aria-label={`${GAPS[c]}: ${has.has(c) ? 'yes' : 'no'}`}>
+                        {has.has(c) ? '✗' : '✓'}
+                      </td>
+                    ))}
+                    <td className="num">
+                      {n} / {codes.length}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {ours?.note && <p className="note">{ours.note}</p>}
+        {papers.some((p) => p.gap_text) && (
+          <ul className="gap-notes">
+            {papers
+              .filter((p) => p.gap_text)
+              .map((p) => (
+                <li key={p.key}>
+                  <strong>{paperShort(p)}:</strong> {p.gap_text}
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+}
+
+// Split keys come as strings or {key, label}; colours follow the split, never its rank (validated: blue, orange, aqua on white, all pairs).
+const SPLIT_COLORS = ['#2a78d6', '#eb6834', '#1baf7a'];
+const pctP = (v) => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—'); // method_comparison rates are already percentages
+const isChosen = (m, chosen) => m.source === 'ours' || m.name === chosen;
+const SPLIT_NAMES = { random: 'Random split', 'leave-states-out': 'Unseen states', 'leave-years-out': 'Future years' };
+const splitList = (splits, labels = {}) =>
+  (splits ?? []).map((s, i) => ({ key: s.key ?? s, label: labels[s.key ?? s] ?? s.label ?? SPLIT_NAMES[s.key ?? s] ?? s.key ?? s, color: SPLIT_COLORS[i] })).slice(0, 3);
+
+function sourceLabel(src, papers) {
+  if (!src || src === 'ours' || src === 'baseline') return null;
+  const p = papers.find((x) => x.key === src);
+  return p ? paperShort(p) : String(src);
+}
+
+function HitDotPlot({ methods, splits, chosen, papers }) {
+  const [active, setActive] = useState(null); // index of the row whose readout is open
+  const sortKey = (splits.find((s) => /state/.test(s.key)) ?? splits[0])?.key;
+  const rows = [...methods].sort((a, b) => (b.hit1?.[sortKey] ?? -1) - (a.hit1?.[sortKey] ?? -1));
+  const values = rows.flatMap((m) => splits.map((s) => m.hit1?.[s.key])).filter((v) => typeof v === 'number');
+  const top = Math.min(100, Math.ceil((Math.max(...values, 10) + 2) / 10) * 10);
+  const ticks = Array.from({ length: top / 10 + 1 }, (_, i) => i * 10).filter((t, i, all) => all.length <= 6 || i % 2 === 0);
+  const x = (v) => `${(v / top) * 100}%`;
+  const offset = (i) => (i - (splits.length - 1) / 2) * 7; // separate the three dots a little vertically
+  const describe = (m) => `${m.name}: ${splits.map((s) => `${s.label} ${pctP(m.hit1?.[s.key])}`).join(', ')}`;
+
+  return (
+    <figure className="dotplot">
+      <figcaption className="fcap">
+        Hit@1 of each method on the three test splits{sortKey ? `, sorted by ${splits.find((s) => s.key === sortKey)?.label.toLowerCase()}` : ''}
+        <span className="tcap-note">Hover or focus a row for its values; the selection table below lists them all.</span>
+      </figcaption>
+      <ul className="dp-legend" aria-label="Splits">
+        {splits.map((s) => (
+          <li key={s.key}>
+            <span className="dp-key" style={{ background: s.color }} aria-hidden="true" />
+            {s.label}
+          </li>
+        ))}
+      </ul>
+      <div className="dp-body">
+        {rows.map((m, r) => {
+          const ours = isChosen(m, chosen);
+          const cite = sourceLabel(m.source, papers);
+          const shown = splits.map((s) => m.hit1?.[s.key]).filter((v) => typeof v === 'number');
+          // One hit target per row: close dots would otherwise overlap each other's hover area on narrow screens.
+          return (
+            <div
+              key={m.name}
+              className={`dp-row${ours ? ' is-ours' : ''}${active === r ? ' is-active' : ''}`}
+              tabIndex={0}
+              role="group"
+              aria-label={describe(m)}
+              onMouseEnter={() => setActive(r)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(r)}
+              onBlur={() => setActive(null)}
+            >
+              <div className="dp-label">
+                {m.name}
+                {cite && <span className="dp-cite">{cite}</span>}
+              </div>
+              <div className="dp-track" aria-hidden="true">
+                {ticks.map((t) => (
+                  <span key={t} className="dp-grid" style={{ left: x(t) }} />
+                ))}
+                {splits.map((s, i) =>
+                  typeof m.hit1?.[s.key] === 'number' ? (
+                    <span key={s.key} className="dp-dot" style={{ left: x(m.hit1[s.key]), top: `calc(50% + ${offset(i)}px)`, background: s.color }} />
+                  ) : null,
+                )}
+                {ours && typeof m.hit1?.[sortKey] === 'number' && active !== r && (
+                  <span className="dp-value" style={{ left: x(m.hit1[sortKey]) }}>
+                    {pctP(m.hit1[sortKey])}
+                  </span>
+                )}
+                {active === r && shown.length > 0 && (
+                  <span className="dp-tip" style={{ left: `clamp(0px, calc(${x(Math.max(...shown))} - 4.75rem), calc(100% - 9.5rem))` }}>
+                    {splits.map((s) =>
+                      typeof m.hit1?.[s.key] === 'number' ? (
+                        <span key={s.key}>
+                          <strong>{pctP(m.hit1[s.key])}</strong>
+                          <i style={{ background: s.color }} />
+                          {s.label}
+                        </span>
+                      ) : null,
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <div className="dp-row dp-axis" aria-hidden="true">
+          <div className="dp-label" />
+          <div className="dp-track">
+            {ticks.map((t) => (
+              <span key={t} className="dp-tick" style={{ left: x(t) }}>
+                {t}%
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </figure>
+  );
+}
+
+const yesNo = (v) => (v === true ? 'yes' : v === false ? 'no' : (v ?? '—'));
+const ms = (v) => (typeof v !== 'number' ? '—' : v < 1 ? v.toFixed(2) : v.toLocaleString('en-IN', { maximumFractionDigits: 1 }));
+
+function MethodComparison({ mc, papers }) {
+  const splits = splitList(mc.splits, mc.split_labels);
+  const methods = mc.methods ?? [];
+  const sortKey = (splits.find((s) => /state/.test(s.key)) ?? splits[0])?.key;
+  const rows = [...methods].sort((a, b) => (b.hit1?.[sortKey] ?? -1) - (a.hit1?.[sortKey] ?? -1));
+  const ablation = Array.isArray(mc.ablation) ? mc.ablation.filter((a) => a && typeof a === 'object') : [];
+  const pSplit = sortKey;
+  const conf = (c) => (c && typeof c.cov === 'number' ? `${c.cov.toFixed(1)}% · ${typeof c.size === 'number' ? c.size.toFixed(2) : '—'}` : '—');
+
+  return (
+    <>
+      {splits.length > 0 && methods.length > 0 && <HitDotPlot methods={methods} splits={splits} chosen={mc.chosen} papers={papers} />}
+
+      {methods.length > 0 && (
+        <div className="sub-section">
+          <p className="tcap">
+            Selection table
+            <span className="tcap-note">
+              Hit@1 per split. Cold start = unseen-states queries where some candidate crop has no yield history. p = paired Wilcoxon test against the chosen method on
+              {` ${splits.find((s) => s.key === pSplit)?.label.toLowerCase() ?? 'the main split'}`}. Conformal = 90% set coverage · average set size.
+            </span>
+          </p>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Method</th>
+                  <th scope="col" className="hide-sm">
+                    Family
+                  </th>
+                  {splits.map((s) => (
+                    <th key={s.key} scope="col" className="num wrap">
+                      {s.label}
+                    </th>
+                  ))}
+                  <th scope="col" className="num wrap">
+                    Cold start
+                  </th>
+                  <th scope="col" className="num">
+                    p
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Train (s)
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Infer (ms)
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Conformal
+                  </th>
+                  <th scope="col" className="wrap hide-sm">
+                    Interpretability
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((m) => (
+                  <tr key={m.name} className={isChosen(m, mc.chosen) ? 'is-highlight' : undefined}>
+                    <th scope="row">
+                      {m.name}
+                      {sourceLabel(m.source, papers) && <span className="paper-meta">after {sourceLabel(m.source, papers)}</span>}
+                    </th>
+                    <td className="hide-sm">{m.family ?? '—'}</td>
+                    {splits.map((s) => (
+                      <td key={s.key} className="num">
+                        {pctP(m.hit1?.[s.key])}
+                      </td>
+                    ))}
+                    <td className="num">{pctP(m.hit1_cold)}</td>
+                    <td className="num">{isChosen(m, mc.chosen) ? '—' : pval(typeof m.p_vs_ours === 'object' ? m.p_vs_ours?.[pSplit] : m.p_vs_ours)}</td>
+                    <td className="num">{ms(m.train_s)}</td>
+                    <td className="num">{ms(m.infer_ms)}</td>
+                    <td className="num">{conf(m.conformal)}</td>
+                    <td className="hide-sm">{typeof m.interpretable === 'string' ? m.interpretable : yesNo(m.interpretable)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {ablation.length > 0 && (
+        <div className="sub-section">
+          <p className="tcap">Ablation of {mc.chosen ?? 'the chosen method'}: what each component contributes</p>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Variant</th>
+                  <th scope="col" className="hide-sm">
+                    Removed
+                  </th>
+                  {splits.map((s) => (
+                    <th key={s.key} scope="col" className="num wrap">
+                      Hit@1 {s.label.toLowerCase()}
+                    </th>
+                  ))}
+                  <th scope="col" className="num wrap">
+                    NDCG@3 {splits.find((s) => s.key === pSplit)?.label.toLowerCase()}
+                  </th>
+                  <th scope="col" className="num">
+                    Conformal
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {ablation.map((a, r) => (
+                  <tr key={a.name ?? r}>
+                    <th scope="row">
+                      {a.name}
+                      {a.note && <span className="paper-meta">{a.note}</span>}
+                    </th>
+                    <td className="hide-sm">{a.removed ?? '—'}</td>
+                    {splits.map((s) => (
+                      <td key={s.key} className="num">
+                        {pctP(a.hit1?.[s.key])}
+                      </td>
+                    ))}
+                    <td className="num">{typeof a.ndcg3?.[pSplit] === 'number' ? a.ndcg3[pSplit].toFixed(3) : '—'}</td>
+                    <td className="num">{conf(a.conformal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(mc.why) && mc.why.length > 0 && (
+        <div className="sub-section">
+          <h3 className="why-h">Why {mc.chosen ?? 'this method'}</h3>
+          <ul className="why">
+            {mc.why.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
+  );
+}
+
 function ResultsPage({ t }) {
   const [info, setInfo] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -1607,6 +1999,18 @@ function ResultsPage({ t }) {
       {research.v4?.metrics?.main && (
         <Section id="r-v4" title="Improved method (v4): YieldRank and conformal prediction sets" className="numbered">
           <V4Section v={research.v4} />
+        </Section>
+      )}
+
+      {Array.isArray(research.related_work) && research.related_work.length > 0 && (
+        <Section id="r-related" title="Recent work and where it falls short" className="numbered">
+          <RelatedWork papers={research.related_work} ours={research.related_work_ours ? { key: 'agromind', ours: true, ...research.related_work_ours } : null} />
+        </Section>
+      )}
+
+      {research.method_comparison?.methods?.length > 0 && (
+        <Section id="r-methods" title={`Method comparison: why we chose ${research.method_comparison.chosen ?? 'YieldRank'}`} className="numbered">
+          <MethodComparison mc={research.method_comparison} papers={research.related_work ?? []} />
         </Section>
       )}
     </div>

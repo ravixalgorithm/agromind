@@ -503,13 +503,20 @@ dd.off {
 /* Results: numbered sections and table captions */
 
 .results {
-  counter-reset: sec tbl;
+  counter-reset: sec tbl fig;
 }
 
 .results .numbered .sec-head h2::before {
   counter-increment: sec;
   content: counter(sec) '. ';
   color: var(--green);
+}
+
+.results .fcap::before {
+  counter-increment: fig;
+  content: 'Fig. ' counter(fig) ': ';
+  font-weight: 700;
+  color: var(--navy-ink);
 }
 
 .results .tcap::before {
@@ -539,6 +546,237 @@ dd.off {
 .figure figcaption {
   margin-top: 6px;
   font-size: 0.85rem;
+}
+
+/* Related work and method comparison */
+
+.paper-meta {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.gap-matrix td.c {
+  min-width: 64px;
+}
+
+.gap-matrix thead th.wrap {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  vertical-align: bottom;
+}
+
+.gap-matrix tbody th,
+.gap-matrix thead th:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.gap-matrix thead th:first-child {
+  background: var(--tint);
+  z-index: 1;
+}
+
+.gap-matrix tr.is-highlight th {
+  background: var(--green-tint);
+}
+
+.gap-notes,
+.why {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.86rem;
+}
+
+.gap-notes li,
+.why li {
+  margin-bottom: 4px;
+}
+
+.why-h {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.dotplot {
+  margin: 0 0 4px;
+}
+
+.dotplot .fcap {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+}
+
+.dp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.dp-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dp-key {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dp-body {
+  border-top: 1px solid var(--rule);
+}
+
+.dp-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 230px) minmax(0, 1fr);
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+}
+
+.dp-row.is-ours {
+  background: var(--green-tint);
+}
+
+.dp-label {
+  padding: 6px 10px 6px 0;
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.dp-row.is-ours .dp-label {
+  font-weight: 700;
+}
+
+.dp-cite {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.dp-track {
+  position: relative;
+  height: 40px;
+  margin: 0 28px 0 14px;
+}
+
+.dp-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--rule);
+}
+
+.dp-row:not(.dp-axis) {
+  cursor: default;
+}
+
+.dp-row:not(.dp-axis):hover,
+.dp-row.is-active {
+  background: var(--tint);
+}
+
+.dp-row.is-ours:hover,
+.dp-row.is-ours.is-active {
+  background: var(--green-tint);
+}
+
+.dp-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.dp-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.dp-row:hover .dp-dot,
+.dp-row.is-active .dp-dot {
+  box-shadow: 0 0 0 2px var(--tint);
+}
+
+.dp-row.is-ours .dp-dot {
+  box-shadow: 0 0 0 2px var(--green-tint);
+}
+
+.dp-value {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.dp-tip {
+  position: absolute;
+  bottom: calc(100% - 4px);
+  width: 9.5rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  background: var(--bg);
+  border: 1px solid var(--rule-strong);
+  pointer-events: none;
+}
+
+.dp-tip span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+
+.dp-tip strong {
+  min-width: 3.2em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.dp-tip i {
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+}
+
+.dp-axis {
+  border-bottom: 0;
+}
+
+.dp-axis .dp-track {
+  height: 22px;
+}
+
+.dp-tick {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 /* ── Advisory ── */
@@ -932,6 +1170,18 @@ input[type='number'] {
 }
 
 @media (max-width: 640px) {
+  .dp-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dp-label {
+    padding-bottom: 0;
+  }
+
+  .dp-axis .dp-label {
+    display: none;
+  }
+
   .header-inner {
     align-items: flex-start;
   }
