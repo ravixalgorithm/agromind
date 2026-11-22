@@ -1387,6 +1387,7 @@ const SUBTITLES = {
   data: 'Data',
   task: 'Task',
   meta: 'Run details',
+  project_md_claim: 'Figures stated in PROJECT.md',
 };
 const label = (k) => {
   const [base, sub] = k.split(':');
@@ -1407,7 +1408,7 @@ const cell = (v, key = '') => {
   if (/_pct$|%/.test(key)) return `${v.toFixed(1)}%`;
   if (/^p_/.test(key)) return v < 0.0001 ? '< 0.0001' : v.toFixed(4);
   if (RATE.test(key) && Math.abs(v) <= 1) return `${(v * 100).toFixed(2)}%`;
-  return Number.isInteger(v) ? v.toLocaleString('en-IN') : v.toFixed(v >= 100 ? 1 : 4);
+  return Number.isInteger(v) ? v.toLocaleString('en-IN') : String(Number(v.toFixed(v >= 100 ? 1 : 4)));
 };
 const meanStd = (mean, std, key) => {
   if (mean === null || mean === undefined) return '—';
