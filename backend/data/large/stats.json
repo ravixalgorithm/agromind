@@ -21,6 +21,18 @@
     "random500_found_pct": 97.2,
     "random500_match_pct": 97.0
   },
+  "datagov_check": {
+    "resource": "https://api.data.gov.in/resource/35be999b-0208-4354-b557-f6ca9a5355de",
+    "resource_rows": 246091,
+    "sampled": 500,
+    "years_sampled": "1997-98..2015-16",
+    "found_in_des_pct": 95.2,
+    "area_and_production_match_pct": 94.4,
+    "sampled_crop_in_des_report": 479,
+    "in_scope_found_pct": 99.37,
+    "in_scope_match_pct": 98.54,
+    "in_scope_found_but_different": 4
+  },
   "rows": 400379,
   "states": 37,
   "districts_apy": 748,
@@ -47,22 +59,22 @@
   "row_coverage_pct": {
     "centroid": 100.0,
     "climate": 100.0,
-    "soil_any": 99.97,
-    "soil_soilgrids": 91.51,
-    "soil_state_median": 8.46,
-    "wrb_class": 91.37
+    "soil_any": 99.98,
+    "soil_soilgrids": 99.81,
+    "soil_state_median": 0.16,
+    "wrb_class": 99.64
   },
-  "soil_points_cached": 653,
-  "soil_points_with_data": 649,
+  "soil_points_cached": 742,
+  "soil_points_with_data": 737,
   "recommend_rows": 96411,
-  "train_rows": 96369,
+  "train_rows": 96370,
   "train_crops": 49,
   "train_soil_classes": {
-    "Loamy": 54980,
-    "Black": 27842,
-    "Red": 5714,
-    "Alluvial": 5575,
-    "Clay": 1423,
+    "Loamy": 54215,
+    "Black": 28412,
+    "Red": 6013,
+    "Alluvial": 5470,
+    "Clay": 1425,
     "Sandy": 835
   }
 }

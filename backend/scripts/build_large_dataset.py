@@ -1,7 +1,8 @@
 """Build AgroMind's large, real India dataset (district x year x season x crop).
 
 Joins three public sources:
-  crop records  DES / MoA&FW district-wise season-wise crop area & production (APY), 1997-98..2020-21
+  crop records  DES / MoA&FW district-wise season-wise crop area & production (APY), 1997-98..2022-23,
+                from the official portal data.desagri.gov.in (verified against data.gov.in and a Kaggle mirror)
   climate       NASA POWER monthly point data (T2M, RH2M, PRECTOTCORR) at each district centroid
   soil          ISRIC SoilGrids 2.0 (0-30 cm: phh2o, nitrogen, soc, clay, sand, cec + WRB class)
 
@@ -47,6 +48,12 @@ CACHE = OUT / "cache"
 DES_PAGE = "https://data.desagri.gov.in/website/crops-apy-report-web"
 DES_POST = "https://data.desagri.gov.in/report/crop/horizontal_crop_vertical_year"
 DES_GAP_S = 1.0  # be polite to a government server
+# Open Government Data (GODL-India) copy of the same series, 1997..2014; the key is data.gov.in's
+# published public sample key (10 rows per call), used only for the spot check.
+DATAGOV_URL = (
+    "https://api.data.gov.in/resource/35be999b-0208-4354-b557-f6ca9a5355de"
+    "?api-key=579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b&format=json&limit=1&offset={offset}"
+)
 LE_ROOT_YR = {
     "url": "https://letsencrypt.org/certs/gen-y/root-yr.pem",
     "sha256": "d8a34bfb5df6b4a0592b0a9cd6b3b9a9335bd431cb2ac32243ab298cba24cbf2",
@@ -571,6 +578,43 @@ def load_mirror() -> pd.DataFrame:
     return df.drop_duplicates(KEY)
 
 
+def check_datagov(des: pd.DataFrame, n: int = 500) -> dict:
+    """Spot-check n random rows of the official data.gov.in APY resource (GODL) against DES."""
+    d = CACHE / "datagov"
+    d.mkdir(parents=True, exist_ok=True)
+    first = cached_json(d / "offset_0.json", DATAGOV_URL.format(offset=0))
+    offsets = random.Random(0).sample(range(int(first["total"])), n)
+    recs = []
+    for i, off in enumerate(offsets):
+        recs += cached_json(d / f"offset_{off}.json", DATAGOV_URL.format(offset=off))["records"]
+        if i % 100 == 0:
+            log(f"  data.gov.in spot check {i + 1}/{n}")
+    g = pd.DataFrame(recs).rename(columns={"state_name": "state", "district_name": "district",
+                                           "area_": "area_ha", "production_": "production"})
+    g["crop_year"] = [f"{int(y)}-{(int(y) + 1) % 100:02d}" for y in g.crop_year]
+    g = g.assign(**{c: g[c].map(norm) for c in ("state", "district", "season", "crop")}, i=range(len(g)))
+    # DES now files these districts' whole history under the new name
+    g["district"] = g.district.replace({"BARDHAMAN": "PURBABARDHAMAN", "OSMANABAD": "DHARASHIV",
+                                        "AHMEDNAGAR": "AHILYANAGAR", "NORTHDISTRICT": "MANGAN"})
+    k = des.assign(**{c: des[c].map(norm) for c in ("state", "district", "season", "crop")})
+    # same district may be filed under another state in DES (Telangana vs AP); prefer same state
+    m = g.merge(k, on=KEY[1:], how="left", suffixes=("_g", ""))
+    m = m.assign(same=m.state_g == m.state).sort_values("same", ascending=False).drop_duplicates("i")
+    num = lambda s: pd.to_numeric(s, errors="coerce")
+    close = lambda a, b: ((a - b).abs() <= 0.5 + 1e-3 * b.abs()) | (a.isna() & b.isna())  # resource rounds to units
+    found = m.area_ha.notna() | m.production.notna()
+    ok = found & close(num(m.area_ha_g), m.area_ha) & close(num(m.production_g), m.production)
+    # data.gov.in also carries horticulture and aggregates (Mango, Pulses total...) the DES APY report has not
+    scope = m.crop.isin(set(k.crop))
+    pct = lambda s: round(100 * s.mean(), 2)
+    return {"datagov_check": {"resource": DATAGOV_URL.split("?")[0], "resource_rows": int(first["total"]),
+                              "sampled": len(g), "years_sampled": f"{g.crop_year.min()}..{g.crop_year.max()}",
+                              "found_in_des_pct": pct(found), "area_and_production_match_pct": pct(ok),
+                              "sampled_crop_in_des_report": int(scope.sum()),
+                              "in_scope_found_pct": pct(found[scope]), "in_scope_match_pct": pct(ok[scope]),
+                              "in_scope_found_but_different": int((found & ~ok & scope).sum())}}
+
+
 def check_mirror(des: pd.DataFrame) -> dict:
     """Compare the Kaggle/GitHub mirror with the official DES rows for the years both cover."""
     m = load_mirror()
@@ -644,6 +688,8 @@ def main():
 
     apy, stats = load_des()
     stats.update(check_mirror(apy))
+    stats.update(check_datagov(apy))
+    log(json.dumps(stats["datagov_check"]))
     log(json.dumps(stats["mirror_check"]))
     geo = load_centroids()
     match = match_districts(apy[["state", "district"]].drop_duplicates(), geo)
