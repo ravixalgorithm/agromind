@@ -136,7 +136,7 @@ def cite(*ns):
 UNIV = "Harcourt Butler Technical University (HBTU), Kanpur"
 DEPT = "Department of Computer Science and Engineering"
 PROGRAMME = "B.Tech, Computer Science and Engineering · Semester VII · Academic session 2026–27"
-SUPERVISOR = ("Dr. Imran Khan", "Dept. of CSE, HBTU Kanpur")
+SUPERVISOR = ("Prof. (Dr.) Imran Khan", "Professor, Dept. of CSE, HBTU Kanpur")
 TEAM = [("Rajat Patel", "230104046"), ("Harshit Jain", "230104023"), ("Sanyam Jain", "230104055"), ("Ravi Pratap Singh", "230104047")]
 CONTACT = ("230104047@hbtu.ac.in", "Ravi Pratap Singh")
 TEAM_HTML = "\n".join(f"    <div><b>{n}</b>Roll No. {r}</div>" for n, r in TEAM)

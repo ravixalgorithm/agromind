@@ -1,6 +1,13 @@
-leave-states-out f0 Crop prior                             Hit@1  17.0%  Hit@3  50.0%  NDCG@3 0.723  cold  15.0%  cov90  76.7% size 4.59  train    0.0s  infer 0.006 ms/q
-leave-states-out f0 Persistence                            Hit@1  51.0%  Hit@3  83.4%  NDCG@3 0.902  cold  42.0%  cov90  88.9% size 3.42  train    0.0s  infer 0.007 ms/q
-leave-states-out f0 Gaussian NB                            Hit@1  24.6%  Hit@3  56.4%  NDCG@3 0.741  cold  23.7%  cov90  84.3% size 4.85  train    0.0s  infer 0.005 ms/q
-leave-states-out f0 Random Forest                          Hit@1  33.4%  Hit@3  67.3%  NDCG@3 0.816  cold  30.0%  cov90  73.2% size 3.66  train    4.1s  infer 0.047 ms/q
-leave-states-out f0 XGBoost                                Hit@1  34.4%  Hit@3  69.1%  NDCG@3 0.829  cold  31.0%  cov90  78.1% size 3.78  train   45.9s  infer 0.031 ms/q
-leave-states-out f0 MLP                                    Hit@1  35.0%  Hit@3  68.8%  NDCG@3 0.809  cold  31.1%  cov90  73.5% size 3.49  train    3.5s  infer 0.008 ms/q
+leave-states-out f0 Crop prior                             Hit@1  13.9%  Hit@3  53.1%  NDCG@3 0.712  cold  13.4%  cov90  76.3% size 4.53  train    0.1s  infer 0.011 ms/q
+leave-states-out f0 Persistence                            Hit@1  50.5%  Hit@3  83.6%  NDCG@3 0.900  cold  40.7%  cov90  88.4% size 3.34  train    0.0s  infer 0.017 ms/q
+leave-states-out f0 Gaussian NB                            Hit@1  25.4%  Hit@3  57.6%  NDCG@3 0.745  cold  24.3%  cov90  81.5% size 4.57  train    0.1s  infer 0.010 ms/q
+leave-states-out f0 Random Forest                          Hit@1  32.3%  Hit@3  67.7%  NDCG@3 0.815  cold  28.9%  cov90  70.2% size 3.41  train    7.6s  infer 0.036 ms/q
+leave-states-out f0 XGBoost                                Hit@1  34.0%  Hit@3  67.7%  NDCG@3 0.823  cold  31.6%  cov90  76.0% size 3.71  train   92.5s  infer 0.051 ms/q
+leave-states-out f0 MLP                                    Hit@1  34.3%  Hit@3  68.3%  NDCG@3 0.806  cold  30.1%  cov90  73.0% size 3.42  train    3.4s  infer 0.010 ms/q
+leave-states-out f0 XGBoost (Dey 2024)                     Hit@1  33.7%  Hit@3  70.2%  NDCG@3 0.829  cold  30.6%  cov90  80.6% size 3.89  train  173.1s  infer 0.070 ms/q
+leave-states-out f0 Random Forest (Dey 2024)               Hit@1  22.2%  Hit@3  58.3%  NDCG@3 0.772  cold  20.2%  cov90  73.8% size 4.15  train    0.1s  infer 0.011 ms/q
+leave-states-out f0 SVM (Dey 2024)                         Hit@1  12.0%  Hit@3  51.4%  NDCG@3 0.730  cold  11.4%  cov90  86.1% size 5.24  train   11.8s  infer 1.365 ms/q
+leave-states-out f0 k-NN (Dey 2024)                        Hit@1  21.2%  Hit@3  54.6%  NDCG@3 0.743  cold  20.2%  cov90  80.5% size 4.52  train    0.0s  infer 0.043 ms/q
+leave-states-out f0 Decision Tree (Dey 2024)               Hit@1  21.7%  Hit@3  56.1%  NDCG@3 0.755  cold  20.3%  cov90  77.4% size 4.42  train    0.1s  infer 0.005 ms/q
+leave-states-out f0 RFXG hard vote (Afzal 2025)            Hit@1  27.9%  Hit@3  64.4%  NDCG@3 0.794  cold  26.3%  cov90  80.3% size 4.08  train    0.9s  infer 0.007 ms/q
+leave-states-out f0 Stacking KNN+RF+NB->LR (Ahmed 2025)    Hit@1  26.2%  Hit@3  58.1%  NDCG@3 0.764  cold  26.0%  cov90  68.3% size 3.92  train    8.6s  infer 0.114 ms/q

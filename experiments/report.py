@@ -130,7 +130,10 @@ def main():
     ax.scatter(x, 100 * st.iid, s=10, label="i.i.d. calibration", color="#c62828")
     ax.scatter(x, 100 * st.grp, s=10, label="held-out-state calibration", color="#2e7d32", marker="s")
     ax.axhline(90, color="grey", ls="--", lw=0.8)
-    ax.set_xticks(x, [s[:10] for s in st.index], rotation=90, fontsize=5)
+    ABBR = {"Uttar Pradesh": "UP", "Madhya Pradesh": "MP", "Andhra Pradesh": "AP", "Himachal Pradesh": "HP", "Arunachal Pradesh": "Arunachal",
+            "West Bengal": "W Bengal", "Tamil Nadu": "TN", "Jammu and Kashmir": "J&K", "Dadra and Nagar Haveli": "DNH",
+            "Andaman and Nicobar Islands": "A&N Islands", "Chhattisgarh": "Chhattisgarh", "Uttarakhand": "Uttarakhand"}
+    ax.set_xticks(x, [ABBR.get(s, s) for s in st.index], rotation=90, fontsize=5)
     ax.set_ylabel("Coverage (%)", fontsize=7)
     ax.tick_params(axis="y", labelsize=7)
     ax.legend(fontsize=6, frameon=False, loc="lower left")
@@ -204,6 +207,11 @@ def main():
         mac |= {f"RFCov{ab}Mean": f"{np.mean(v):.1f}", f"RFCov{ab}Min": f"{min(v):.1f}", f"RFCov{ab}Max": f"{max(v):.1f}"}
     for m, k in (("RandomForest [8,21]", "RF"), ("XGBoost [11,22]", "XGB")):
         mac[f"{k}SizeGRPLSO"] = f"{conf_mean(met['leave-states-out'][m], 'conformal_group_cal', 'LAC@0.9', 'size'):.2f}"
+    for p_, ab in zip(PROTO, ("R", "LSO", "LYO")):
+        for m, k in (("LGBM pointwise", "Point"), ("LambdaMART (v4 listwise)", "List")):
+            if m in met[p_]:
+                mac[f"{k}Hit{ab}"] = f"{100*met[p_][m]['mean']['hit@1']:.1f}"
+                mac[f"{k}P{ab}"] = fp(met[p_][m]["wilcoxon_vs_ours_hit@1"]["p"])
     pw = met["leave-states-out"]["LGBM pointwise"]
     mac |= {"PointHitLSO": f"{100*pw['mean']['hit@1']:.1f}", "PointNDCGLSO": f"{pw['mean']['ndcg@3']:.3f}",
             "PointPLSO": fp(pw['wilcoxon_vs_ours_hit@1']['p']),
@@ -247,16 +255,17 @@ def main():
                 mac[f"CC{meth}Cov{ab}"] = f"{100*np.mean([f['conformal_crossgroup'][meth+'@0.9']['coverage'] for f in X[p]]):.1f}"
                 mac[f"CC{meth}Size{ab}"] = f"{np.mean([f['conformal_crossgroup'][meth+'@0.9']['size'] for f in X[p]]):.2f}"
             mac[f"CCHit{ab}"] = f"{100*np.mean([f['hit@1'] for f in X[p]]):.1f}"
-            for mk_, nm in (("mondrian_ncand", "MN"), ("mondrian_region", "MR")):
+            for mk_, nm in (("mondrian_ncand", "MN"), ("mondrian_region", "MR"), ("state_robust", "SR")):
                 mac[f"CC{nm}Cov{ab}"] = f"{100*np.mean([f[mk_]['coverage'] for f in X[p]]):.1f}"
                 mac[f"CC{nm}Size{ab}"] = f"{np.mean([f[mk_]['size'] for f in X[p]]):.2f}"
         Cq = pd.read_parquet(RES / "crossconf_query_main.parquet")
         lso = Cq[Cq.protocol == "leave-states-out"]
-        cst = lso.groupby("state")[["cov_LAC", "cov_Mncand", "cov_Mregion", "size_LAC", "size_Mncand"]].mean()
+        cst = lso.groupby("state")[["cov_LAC", "cov_Mncand", "cov_Mregion", "cov_SR", "size_LAC", "size_Mncand", "size_SR"]].mean()
         cst["n"] = lso.groupby("state").size()
         cst = cst[cst.n >= 30]
-        for col, nm in (("cov_LAC", "CC"), ("cov_Mncand", "MN"), ("cov_Mregion", "MR")):
+        for col, nm in (("cov_LAC", "CC"), ("cov_Mncand", "MN"), ("cov_Mregion", "MR"), ("cov_SR", "SR")):
             mac |= {f"{nm}StatesBelow": int((cst[col] < 0.85).sum()), f"{nm}WorstCov": f"{100*cst[col].min():.1f}",
+                    f"{nm}MedianCov": f"{100*cst[col].median():.1f}", f"{nm}StatesBelowNinety": int((cst[col] < 0.9).sum()),
                     f"{nm}WorstState": cst[col].idxmin(), f"{nm}TelanganaCov": f"{100*cst[col].get('Telangana', float('nan')):.1f}"}
         mac["MNAtCCWorst"] = f"{100*cst.loc[cst.cov_LAC.idxmin(), 'cov_Mncand']:.1f}"
         cst.to_csv(RES / "crossconf_coverage_by_state_main.csv")
@@ -265,7 +274,8 @@ def main():
                  ("LAC, 20\\% held-out states", 100 * cs_["conformal_group_cal"]["LAC@0.9"]["coverage"], cs_["conformal_group_cal"]["LAC@0.9"]["size"], (st.grp < .85).sum(), 100 * st.grp.min()),
                  ("LAC, cross-group (all states)", float(mac["CCLACCovLSO"]), float(mac["CCLACSizeLSO"]), mac["CCStatesBelow"], float(mac["CCWorstCov"])),
                  ("Mondrian by \\#candidates", float(mac["CCMNCovLSO"]), float(mac["CCMNSizeLSO"]), mac["MNStatesBelow"], float(mac["MNWorstCov"])),
-                 ("Mondrian by region", float(mac["CCMRCovLSO"]), float(mac["CCMRSizeLSO"]), mac["MRStatesBelow"], float(mac["MRWorstCov"]))]
+                 ("Mondrian by region", float(mac["CCMRCovLSO"]), float(mac["CCMRSizeLSO"]), mac["MRStatesBelow"], float(mac["MRWorstCov"])),
+                 ("\\textbf{State-robust (final)}", float(mac["CCSRCovLSO"]), float(mac["CCSRSizeLSO"]), mac["SRStatesBelow"], float(mac["SRWorstCov"]))]
         (PAPER / "tables/conformal_lso.tex").write_text("\n".join([r"\begin{tabular}{lcccc}", r"\toprule",
             r"Calibration & Cov.\% & Size & States $<$85\% & Worst state \\", r"\midrule",
             *[f"{a} & {b:.1f} & {c:.2f} & {d}/{len(cst)} & {e:.1f} \\\\" for a, b, c, d, e in rows_], r"\bottomrule", r"\end{tabular}"]) + "\n")
@@ -300,11 +310,35 @@ def export_v4(mac, S, mc=None):
         "crossconf": json.load(open(RES / "crossconf_main.json")),
         "coverage_by_state_leave_states_out": json.loads(cs.to_json(orient="index")),
     }
+    n = {k: str(v) for k, v in mac.items()}
+    H = lambda label, key, unit, split: dict(label=label, value=n.get(key, "--"), unit=unit, split=split)
+    R["final"] = dict(
+        version="v4", name="AgroMind v4 (final)", model="YieldRank v4 (final)",
+        method="Blend, per district-season, of a listwise ranker (XGBoost rank:ndcg) and a pointwise yield-percentile regressor "
+               "(LightGBM) on (district-season, crop) pairs, plus 0.25 x last-year persistence; chosen on held-out training "
+               "states/years. Recommendations carry a 90% conformal set with a state-robust threshold.",
+        headline=[H("Best crop ranked first, unseen states", "OursHitLSO", "%", "leave-states-out"),
+                  H("Best literature classifier, unseen states", "BaseHitLSO", "%", "leave-states-out"),
+                  H("Last-year persistence, unseen states", "PersHitLSO", "%", "leave-states-out"),
+                  H("Best crop ranked first, unseen years", "OursHitLYO", "%", "leave-years-out"),
+                  H("Best crop ranked first, random split", "OursHitR", "%", "random"),
+                  H("NDCG@3, unseen states", "OursNDCGLSO", "", "leave-states-out"),
+                  H("Cold-start cases, ours vs persistence", "OursHitColdLSO", "%", "leave-states-out"),
+                  H("90% set coverage, unseen states (state-robust)", "CCSRCovLSO", "%", "leave-states-out"),
+                  H("90% set size, unseen states (state-robust)", "CCSRSizeLSO", "crops", "leave-states-out"),
+                  H("Worst state coverage (state-robust)", "SRWorstCov", "%", "leave-states-out")],
+        numbers=n,
+        note="Numbers are generated by experiments/report.py (same strings as paper/tables/numbers.tex). Data: DES APY 1997-98..2022-23, "
+             "NASA POWER, SoilGrids (India only).")
     if mc:
         R["method_comparison"] = mc
     rw = ROOT.parent / "docs/research/related_work.json"
     if rw.exists():
         R["related_work"] = json.loads(rw.read_text())
+        R["related_work_ours"] = dict(gaps=[], note=(
+            "Real Government APY data (not Kaggle); leave-states-out and leave-years-out splits; best-yielding crop as target; "
+            "90% conformal sets; paired Wilcoxon tests; no leakage (history uses strictly earlier years, state_group grouping); "
+            "code in experiments/. Caveat: one country (India), no field trial."))
     path.write_text(json.dumps(R, indent=2) + "\n")
 
 

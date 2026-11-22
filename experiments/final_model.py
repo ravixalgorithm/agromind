@@ -62,7 +62,9 @@ def load(path=ART_PATH):
 def _query_rows(art, state, district, season, env=None):
     """Candidate rows for next season: crops grown in this district-season in its last 5 recorded years."""
     d = art["data"]
-    m = (d.state == state) & (d.district == district) & ((d.season == season) | (d.season_app == season.lower()))
+    low = lambda x: str(x).strip().lower()
+    m = (d.state.str.lower() == low(state)) & (d.district.str.lower() == low(district)) & \
+        ((d.season.str.lower() == low(season)) | (d.season_app == low(season)))
     h = d[m]
     if h.empty:
         raise ValueError(f"no crop records for {state} / {district} / {season}")
@@ -98,7 +100,7 @@ def predict(art, state, district, season, k=None, env=None):
     out = []
     for r, i in enumerate(order[:k] if k else order, 1):
         c = rows.crop_slug[i]
-        key = (state, district, season_raw, c)
+        key = (rows.state[i], rows.district[i], season_raw, c)
         hrow = hist.loc[key] if key in hist.index else None
         out.append(dict(crop=c, rank=r, score=float(s[i]), probability=float(p[i]), in_set=bool(in_set[i]),
                         median_yield=float(hrow.median_yield) if hrow is not None else float(art["crop_median"].get(c, np.nan)),
@@ -106,23 +108,32 @@ def predict(art, state, district, season, k=None, env=None):
                         years_grown=int(hrow.years_grown) if hrow is not None else 0,
                         last_year=int(hrow.last_year) if hrow is not None else None,
                         no_history_last_year=bool(np.isnan(rows.lag1_pct[i]))))
-    return dict(state=state, district=district, season=season_raw, based_on_year=y0, crops=out,
+    return dict(state=rows.state[0], district=rows.district[0], season=season_raw, based_on_year=y0, crops=out,
                 set_size=int(in_set.sum()), cold_start=bool(rows.lag1_pct.isna().any()),
                 coverage_target=1 - art["alpha"], model=art["final"]["name"])
 
 
-if __name__ == "__main__":
-    art = train()
-    print("saved", save(art), "T", round(art["T"], 3), "qhat", round(art["qhat"], 4), "calibration states", art["n_cal_states"])
+def self_check(art):
     r = predict(art, "Punjab", "LUDHIANA", "Rabi")
     assert r["crops"] and r["crops"][0]["rank"] == 1 and 1 <= r["set_size"] <= len(r["crops"]), r
     assert abs(sum(c["probability"] for c in r["crops"]) - 1) < 1e-6
     assert any(c["crop"] == "wheat" for c in r["crops"][:3]), r["crops"][:3]  # Ludhiana rabi: wheat must be near the top
+    assert all(c["in_set"] for c in r["crops"][:r["set_size"]])  # the set is a prefix of the ranking
     try:
         predict(art, "Punjab", "NO SUCH DISTRICT", "Rabi")
         raise AssertionError("expected ValueError")
     except ValueError:
         pass
+    return r
+
+
+if __name__ == "__main__":
+    import sys
+    art = load() if "--load" in sys.argv and ART_PATH.exists() else train()
+    if "--load" not in sys.argv:
+        print("saved", save(art), "T", round(art["T"], 3), "qhat", round(art["qhat"], 4), "calibration states", art["n_cal_states"])
+    r = self_check(art)
+    print("self-check passed")
     print({k: v for k, v in r.items() if k != "crops"})
     for c in r["crops"]:
         print(c)

@@ -14,6 +14,7 @@ const SITE = {
     ['Ravi Pratap Singh', '230104047'],
   ],
   guide: 'Dr. Imran Khan',
+  guideTitle: 'Professor, Dept. of CSE, HBTU Kanpur',
   contact: ['Ravi Pratap Singh', '230104047@hbtu.ac.in'],
   session: '2026–27',
   repo: 'https://github.com/ravixalgorithm/agromind',
@@ -2316,7 +2317,7 @@ function PaperPage() {
         <p className="authors">
           {AUTHORS.join(', ')}
           <br />
-          Department of {SITE.department}, {SITE.college} · Supervisor: {SITE.guide}
+          Department of {SITE.department}, {SITE.college} · Supervisor: {SITE.guide}, {SITE.guideTitle}
         </p>
         {facts.length > 0 && <p className="paper-facts">{facts.join(' · ')}</p>}
       </header>
@@ -2465,8 +2466,8 @@ function AboutPage() {
             ))}
             <tr>
               <th scope="row">{SITE.guide}</th>
-              <td className="num">—</td>
-              <td>Supervisor, {SITE.short}</td>
+              <td />
+              <td>Professor &amp; Project Supervisor, {SITE.short}</td>
             </tr>
           </tbody>
         </table>
