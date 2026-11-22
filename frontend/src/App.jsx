@@ -2789,14 +2789,15 @@ function PaperPage() {
 /* ── About ────────────────────────────────────────────── */
 
 const DATA_SOURCES = [
+  // Wording for the four district-data rows follows docs/research/DATA_PROVENANCE.md.
   [
-    'District-wise, season-wise crop production statistics (APY), Directorate of Economics & Statistics, Ministry of Agriculture & Farmers Welfare: official DES portal data.desagri.gov.in',
+    'Crop area & production: Directorate of Economics & Statistics, Ministry of Agriculture & Farmers Welfare, Govt. of India — APY district-wise season-wise statistics, 1997-98 to 2022-23, data.desagri.gov.in',
     'District mode and the v3/v4 benchmark: crops grown, area, production and yield',
-    'Government of India open data (GODL – India); a Kaggle mirror (CC BY-NC-SA 4.0) was used only to cross-check',
+    'Reproduced with acknowledgement under the DES copyright policy',
   ],
-  ['NASA POWER (monthly temperature, humidity, rainfall)', 'v3, v4 climate at district centroids', 'NASA open data, no restrictions; cite POWER'],
-  ['ISRIC SoilGrids 2.0 (pH, nitrogen, organic carbon, texture, CEC)', 'v3, v4 soil at district centroids', 'CC BY 4.0 (Poggio et al. 2021)'],
-  ['datta07/INDIAN-SHAPEFILES (district boundaries)', 'District centroids', 'MIT'],
+  ['Climate: NASA POWER (power.larc.nasa.gov), 1997–2023', 'Season temperature, humidity and rainfall at district centres', 'NASA open data, no restrictions; cite POWER'],
+  ['Soil: ISRIC SoilGrids 2.0', 'District soil profile (context only)', 'CC BY 4.0'],
+  ['District boundaries: datta07/INDIAN-SHAPEFILES', 'District centres', 'MIT'],
   ['Kaggle Crop Recommendation dataset (2,200 rows)', 'v1 model; part of v2 training data', 'As listed on the Kaggle dataset page'],
   [
     'Multi-state India crop records (8,000 rows) and Tamil Nadu field records (57,000 rows)',
