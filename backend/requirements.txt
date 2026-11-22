@@ -9,3 +9,4 @@ joblib>=1.4
 python-multipart>=0.0.19
 pyarrow>=15            # reads backend/data/large/*.parquet (v3)
 lightgbm>=4.3             # v4 YieldRank ranker
+xgboost>=2.0              # v4 final blend (experiments/final_model.py)
