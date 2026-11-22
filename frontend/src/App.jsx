@@ -14,7 +14,7 @@ const SITE = {
     ['Ravi Pratap Singh', '230104047'],
   ],
   guide: 'Dr. Imran Khan',
-  contact: ['Ravi Pratap Singh', '11aravipratapsingh@gmail.com'],
+  contact: ['Ravi Pratap Singh', '230104047@hbtu.ac.in'],
   session: '2026–27',
   repo: 'https://github.com/ravixalgorithm/agromind',
 };
@@ -2267,7 +2267,7 @@ const NOTEBOOKS = [
 function PaperPage() {
   const numbers = research.v4?.numbers ?? {};
   const [copied, setCopied] = useState(false);
-  const authors = AUTHORS.join(' and ');
+  const authors = AUTHORS.map((n) => n.replace(/^Dr\.\s*/, '')).join(' and '); // no titles in BibTeX author fields
   const bibtex = `@misc{agromind2026,
   title        = {${PAPER_TITLE.replace('%', '\\%')}},
   author       = {${authors}},
