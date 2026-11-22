@@ -81,7 +81,7 @@ secondary **soil-test (N-P-K) mode**.
 | Features | season-window `temperature`, `humidity`, `rainfall` + district centroid `lat`, `lon` + one-hot `season_app`, `state` |
 | Target | `recommend == 1` rows (96,411): the top-3 crops by within-crop yield percentile per district-year-season, 49 crops |
 | Not a model input | soil. It is returned for context and is editable in the UI, but the v3 study found no measurable gain from it |
-| Grouped validation (results.json `v3`) | unseen districts hit@1 **72.66 %**, hit@3 **93.53 %** (popularity baseline 61.69 % / 88.26 %); future years 2015-2022 hit@1 65.20 %; unseen states hit@1 40.40 %; adding district soil does not help (70.95 % vs 72.24 %) |
+| Grouped validation (results.json `v3`) | unseen districts hit@1 **72.66 %**, hit@3 **93.53 %** (popularity baseline 61.69 % / 88.26 %); future years 2015-2022 hit@1 65.20 %; unseen states hit@1 40.40 %; adding district soil does not help (71.14 % with vs 72.26 % without, 43,901 queries with their own SoilGrids point) |
 | Training | in memory, ~2 s on a free CPU, started in a background thread at API startup so `/health` and the v2 endpoints answer at once. There is no joblib cache, because one would be ~400 MB. `/v3/predict` waits for training if it is called during warm-up |
 
 ---
