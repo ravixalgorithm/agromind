@@ -2009,8 +2009,8 @@ function AboutPage() {
       <header className="page-head">
         <h1>About</h1>
         <p className="lede">
-          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). It recommends crops for Indian fields from soil tests, climate,
-          season and location, and studies how such recommenders hold up on states and years they have never seen.
+          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). It recommends crops for Indian districts from the season and its
+          climate and the district's location, and studies how such recommenders hold up on states and years they have never seen.
         </p>
       </header>
 
