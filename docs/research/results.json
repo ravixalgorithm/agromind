@@ -789,8 +789,8 @@
       "crops_app": 49,
       "coverage_pct": {
         "climate_%": 100.0,
-        "soil_any_%": 99.97,
-        "soil_soilgrids_point_%": 91.51
+        "soil_any_%": 99.98,
+        "soil_soilgrids_point_%": 99.81
       }
     },
     "task": {
@@ -960,18 +960,18 @@
       }
     },
     "soil_subset": {
-      "queries": 40249,
-      "districts": 650,
+      "queries": 43901,
+      "districts": 737,
       "soil_source": {
-        "soilgrids_centroid": 40249
+        "soilgrids_centroid": 43901
       },
       "RF: + state + lat/lon": {
-        "hit1_mean": 0.7224,
-        "hit3_mean": 0.9287
+        "hit1_mean": 0.7226,
+        "hit3_mean": 0.9331
       },
       "RF: + state + lat/lon + soil": {
-        "hit1_mean": 0.7095,
-        "hit3_mean": 0.9222
+        "hit1_mean": 0.7114,
+        "hit3_mean": 0.9251
       }
     },
     "summary": [
@@ -1012,7 +1012,7 @@
       "python": "3.12.14",
       "sklearn": "1.9.1",
       "seed": 42,
-      "runtime_seconds": 226.7,
+      "runtime_seconds": 388.9,
       "doc": "hit1 = top-ranked crop is one of the recommend==1 crops of the district-year-season query; hit3 = any of the top 3 is; recall3 = share of recommended crops in the top 3. leave_districts_out = GroupKFold(5) by state|district; leave_states_out = GroupKFold(5) by state (state feature dropped); leave_years_out = train <=2014, test >=2015."
     }
   },
