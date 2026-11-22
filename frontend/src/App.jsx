@@ -105,7 +105,7 @@ const NEWS = [
 const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const round = (n) => (Math.abs(n) >= 20 ? String(Math.round(n)) : fmt(n));
 const withUnit = (text, unit) => (unit ? `${text}${unit === 'mm' ? ' ' : ''}${unit}` : text);
-const prob = (p) => `${(p * 100).toFixed(1)}%`;
+const prob = (p) => (p > 0 && p < 0.0005 ? '<0.1%' : `${(p * 100).toFixed(1)}%`);
 const range = (lo, hi, unit) => withUnit(round(lo) === round(hi) ? round(lo) : `${round(lo)}–${round(hi)}`, unit);
 const longDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 const formKey = (form) => JSON.stringify(form);
@@ -662,19 +662,18 @@ function Advisory({ meta, t }) {
     };
   }, [form, complete, meta]);
 
-  // Rows: the model's top-k crops by probability (the API returns only these), then other crops of the same season ranked by how many readings fit.
+  // Rows: the model's pick plus the other crops of the same season, ranked by model probability.
   const pick = result?.data.top_recommendations[0];
   const rows = [];
   if (result) {
     const basis = result.form;
-    const ranked = result.data.top_recommendations.filter((r) => meta.crops[r.crop]);
-    rows.push(...ranked.map((r) => ({ ...assess(meta, r.crop, basis), confidence: r.confidence })));
+    const probs = new Map(result.data.top_recommendations.map((r) => [r.crop, r.confidence]));
     rows.push(
       ...Object.keys(meta.crops)
-        .filter((id) => !ranked.some((r) => r.crop === id) && meta.crops[id].season === basis.season)
-        .map((id) => assess(meta, id, basis))
-        .sort((a, b) => b.inRange - a.inRange || a.distance - b.distance)
-        .slice(0, Math.max(0, MAX_ROWS - ranked.length)),
+        .filter((id) => id === pick.crop || meta.crops[id].season === basis.season)
+        .map((id) => ({ ...assess(meta, id, basis), confidence: probs.get(id) }))
+        .sort((a, b) => (b.confidence ?? -1) - (a.confidence ?? -1) || b.inRange - a.inRange || a.distance - b.distance)
+        .slice(0, MAX_ROWS),
     );
   }
   const top = rows[0];
@@ -927,7 +926,7 @@ function Advisory({ meta, t }) {
                     </tbody>
                   </table>
                 </div>
-                <p className="muted small">Model probability is the classifier's predicted probability; the server returns it for its top {rows.filter((r) => r.confidence !== undefined).length} crops only, so other {seasonName} crops show — and are ordered by readings in range. ✓ inside the crop's typical range (10th–90th percentile), ✗ outside.</p>
+                <p className="muted small">✓ inside the crop's typical range (10th–90th percentile), ✗ outside.</p>
               </Panel>
 
               <Panel title={`${t('readings')} — ${selected.crop.name}`}>
