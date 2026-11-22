@@ -31,6 +31,7 @@ Every number in this document is in `backend/data/large/stats.json`, written by 
 | `backend/data/large/district_centroids.csv` | 791 boundary-district centroids | small |
 | `backend/data/large/unmatched_districts.csv` | DES names with no centroid (currently empty) | small |
 | `backend/data/large/mirror_check_mismatches.csv.gz` | rows where the Kaggle mirror and DES disagree or don't pair | 0.8 MB |
+| `backend/data/large/msp_crop_year.csv` | CACP minimum support price (sugarcane: FRP) per crop × crop year, 2010-11 … 2026-27, joinable on (`crop_slug`, `crop_year`); see DATA_PROVENANCE.md S7 for caveats | small |
 | `backend/data/large/stats.json` | all counts, coverage and verification percentages | small |
 
 ---
@@ -110,6 +111,7 @@ Large table (`agromind_india_large.*`):
 | `wrb_class` | most probable WRB reference soil group at the point |
 | `soil_class` | app soil bucket: Vertisols → Black; Fluvisols/Gleysols → Alluvial; Ferralsols/Plinthosols → Laterite; Acrisols/Lixisols/Nitisols → Red; Arenosols → Sandy; Solonchaks/Solonetz → Saline; any other group (or none) → texture: sand ≥ 70 % Sandy, clay ≥ 40 % Clay, silt ≥ 60 % Silty, else Loamy; `state_median` rows take the most common class among the state's districts that have their own soil; no soil at all → Other |
 | `soil_source` | `soilgrids_centroid`, `state_median`, or null |
+| `state_group` | `state`, except Jammu and Kashmir + Ladakh and the Dadra & Nagar Haveli / Daman & Diu UTs (old and 2020-merged) are one group each. **Use it, not `state`, for leave-states-out**: Kargil, Leh, Dadra & Nagar Haveli, Daman and Diu appear under two state labels (5 centroids, 668 rows); grouped by `state_group` no centroid is shared (`stats.json → leave_states_out_leak_check`) |
 
 Season windows (crop year Y = Y-07 … Y+1-06): Kharif Jun–Oct Y · Autumn Apr–Aug Y · Rabi
 Nov Y–Mar Y+1 · Winter Oct Y–Jan Y+1 · Summer Mar–Jun Y+1 · Whole Year Jun Y–May Y+1.
@@ -138,7 +140,7 @@ yield_pct, soil_source` for grouping/weighting.
 - `season` can be `whole_year`, which the app's form does not offer.
 - One district-year-season contributes up to 3 rows with identical features and different crops,
   so evaluate with top-k / multi-label metrics and split by district (rows in one district share
-  climate and soil), e.g. GroupKFold on `state + district`, or by year.
+  climate and soil), e.g. GroupKFold on `state_group + district`, on `state_group` for unseen states, or by year.
 
 ---
 
