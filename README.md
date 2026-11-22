@@ -176,7 +176,7 @@ Department of Computer Science and Engineering, Harcourt Butler Technical Univer
 | Sanyam Jain | 230104055 |
 | Ravi Pratap Singh | 230104047 |
 
-**Supervisor:** Dr. Imran Khan, Department of CSE, HBTU Kanpur.
+**Supervisor:** Prof. (Dr.) Imran Khan, Professor & Project Supervisor, Department of CSE, HBTU Kanpur.
 
 **Contact:** Ravi Pratap Singh, 230104047@hbtu.ac.in
 
