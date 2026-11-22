@@ -5,7 +5,7 @@ An **academic research tool**: clean white page, navy and green accents, serif h
 ## Hard rules
 
 - The site never claims to be an official Government of India service. The one-line footer and the About disclaimer say so.
-- College, department, team, guide and contact live only in `SITE` at the top of `src/App.jsx`.
+- University, department, programme, team (name, roll no.), supervisor and contact live only in `SITE` at the top of `src/App.jsx`; `AUTHORS` (students, then the supervisor) feeds the Paper page and BibTeX. No university logo or emblem.
 - No shadows, gradients or rounded cards. Structure comes from 1px rules (`--rule`) and whitespace.
 
 ## Pages (hash routes)
