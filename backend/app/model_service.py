@@ -206,7 +206,7 @@ class CropModelService:
             "crop": crop,
         }
 
-    def predict_top_k(self, payload: dict, k: int = 3) -> tuple[str, list[dict[str, float | str]]]:
+    def predict_top_k(self, payload: dict, k: int | None = 3) -> tuple[str, list[dict[str, float | str]]]:
         if self.model is None:
             self.load_or_train()
 
