@@ -98,8 +98,10 @@ def model_info() -> dict:
     """The final model (v4) at the top level; v3 and v1/v2 as history."""
     v3_info, v4_info = v3.info(), v4.info()
     # all APY rows /dataset serves, next to the v4 training subset (rows with a crop slug and yield percentile)
+    train = v4_info["data"]
     v4_info["data"] = {"records": v3_info["rows"], "districts": v3_info["districts"], "locations": v3_info["locations"],
-                       **v4_info["data"]}
+                       "states": v3_info["states"], **{k: v for k, v in train.items() if k != "states"},
+                       "training_states": train.get("states")}
     return {**v4_info, "history": {"v3": {k: v3_info[k] for k in ("model", "rows", "training_rows", "crops", "states",
                                                                        "districts", "locations", "years", "metrics")},
                                      **v3.history()}}

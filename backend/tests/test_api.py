@@ -58,6 +58,7 @@ def test_other_endpoints() -> None:
         info = client.get("/model-info").json()
         assert info["model"].startswith("AgroMind v4") and info["holdout_check"]["coverage"] > 0.85
         assert info["data"]["records"] == page["total_rows_in_dataset"] and info["data"]["districts"] >= info["data"]["locations"]
+        assert info["data"]["states"] >= info["data"]["training_states"]
         assert info["metrics"]["leave_states_out"]["hit1"] > info["metrics"]["leave_states_out"]["baseline_hit1"]
         assert info["history"]["v3"]["metrics"]["leave_districts_out"]["hit1_mean"] > 0.5
         assert info["history"]["v2"]["cv5_accuracy"] > 0.9

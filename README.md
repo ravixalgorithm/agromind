@@ -164,6 +164,26 @@ agromind/
 
 ---
 
+## Team
+
+Final-year project, B.Tech in Computer Science and Engineering (Semester VII, academic session 2026–27),
+Department of Computer Science and Engineering, Harcourt Butler Technical University (HBTU), Kanpur.
+
+| Name | Roll no. |
+|------|----------|
+| Rajat Patel | 230104046 |
+| Harshit Jain | 230104023 |
+| Sanyam Jain | 230104055 |
+| Ravi Pratap Singh | 230104047 |
+
+**Supervisor:** Dr. Imran Khan, Department of CSE, HBTU Kanpur.
+
+**Contact:** Ravi Pratap Singh, 11aravipratapsingh@gmail.com
+
+This is an academic project. It is not an official Government of India service.
+
+---
+
 ## License & attribution
 
 Application code is for education and demonstration.
