@@ -387,19 +387,25 @@ function getJSON(path) {
   return jsonCache[path];
 }
 
-// Size of the district dataset, live from /model-info with results.json as a fallback.
-function useV3Stats() {
+// The served district model's metadata (/model-info v3). Every count and year shown for district mode comes from here.
+function useV3Info() {
   const [v3, setV3] = useState(null);
   useEffect(() => {
     getJSON('/model-info')
       .then((d) => setV3(d.v3 ?? null))
       .catch(() => setV3(null));
   }, []);
-  const fallback = research.v3?.data;
-  const rows = v3?.rows ?? fallback?.rows;
-  if (!rows) return null;
-  const years = v3?.years;
-  return `${rows.toLocaleString('en-IN')} records · ${v3?.districts ?? fallback?.districts} districts · ${v3?.states ?? fallback?.states} states${years ? ` · ${years[0]}–${years[1] + 1}` : ''}`;
+  return v3;
+}
+
+// Crop years start in years[0] and end in the year after years[1] (e.g. 1997-98 … 2020-21 → 1997–2021).
+const yearSpan = (years) => (years ? `${years[0]}–${years[1] + 1}` : '');
+const districtCount = (v3) => `${v3.districts} districts${v3.locations ? ` (${v3.locations} locations)` : ''}`;
+
+function useV3Stats() {
+  const v3 = useV3Info();
+  if (!v3?.rows) return null;
+  return [`${v3.rows.toLocaleString('en-IN')} records`, districtCount(v3), `${v3.states} states`, yearSpan(v3.years)].filter(Boolean).join(' · ');
 }
 
 function Advisory({ meta, metaFailed, retryMeta, t }) {
@@ -973,7 +979,8 @@ function V3DataBrowser() {
   };
   const stateOpt = options?.states.find((s) => s.state === filters.state);
   const cols = payload?.columns.filter((c) => c !== 'crop_slug') ?? [];
-  const years = Array.from({ length: 24 }, (_, i) => 1997 + i);
+  const v3 = useV3Info();
+  const years = v3?.years ? Array.from({ length: v3.years[1] - v3.years[0] + 1 }, (_, i) => v3.years[0] + i) : [];
   const first = payload && payload.total ? (payload.page - 1) * payload.page_size + 1 : 0;
   const last = payload ? Math.min(payload.page * payload.page_size, payload.total) : 0;
 
@@ -2587,7 +2594,7 @@ function ResultsPage({ t }) {
                 <tr>
                   <th scope="row">Coverage</th>
                   <td>
-                    {info.v3.crops} crops · {info.v3.states} states · {info.v3.districts} districts · {info.v3.years ? `${info.v3.years[0]}–${info.v3.years[1] + 1}` : ''}
+                    {info.v3.crops} crops · {info.v3.states} states · {districtCount(info.v3)} · {yearSpan(info.v3.years)}
                   </td>
                 </tr>
               </tbody>
