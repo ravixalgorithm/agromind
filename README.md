@@ -178,7 +178,7 @@ Department of Computer Science and Engineering, Harcourt Butler Technical Univer
 
 **Supervisor:** Dr. Imran Khan, Department of CSE, HBTU Kanpur.
 
-**Contact:** Ravi Pratap Singh, 11aravipratapsingh@gmail.com
+**Contact:** Ravi Pratap Singh, 230104047@hbtu.ac.in
 
 This is an academic project. It is not an official Government of India service.
 
