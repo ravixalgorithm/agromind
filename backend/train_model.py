@@ -1,28 +1,24 @@
-"""Train the district crop model on the large DES table and print its size and grouped metrics.
+"""Build the served model artifact and print what it is.
 
     python train_model.py
 
-The API trains the same model in memory at startup (a few seconds), so running this is only a check.
+Trains AgroMind v4 (YieldRank + 90 % conformal sets) on backend/data/large and writes
+backend/models/v4_yieldrank.{txt,json}; the API loads that file at startup (and trains in the
+background if it is missing or belongs to another build of the data). The v3 fallback model trains
+in memory at startup in a few seconds, so it has no artifact.
 """
 
-from app.v3_service import V3Service
+from app.v4_service import ARTIFACT, V4Service
 
 
 def main() -> None:
-    v3 = V3Service()
-    v3.model  # trains
-    info = v3.info()
-    print(f"Rows     : {info['rows']:,} ({info['training_rows']:,} labelled)")
-    print(f"Coverage : {info['states']} states, {info['districts']} districts ({info['locations']} locations), "
-          f"years {info['years'][0]}-{info['years'][1]}, {info['crops']} crops")
-    print(f"Trained  : {info['train_seconds']} s")
-    for name, key in (("unseen districts", "leave_districts_out"), ("unseen states", "leave_states_out")):
-        m = info["metrics"].get(key) or {}
-        if m:
-            print(f"{name:16s} hit@1 {m['hit1_mean']:.2%}  hit@3 {m['hit3_mean']:.2%}  (grouped CV, results.json)")
-    m = info["metrics"].get("leave_years_out") or {}
-    if m:
-        print(f"future years     hit@1 {m['hit1']:.2%}  hit@3 {m['hit3']:.2%}  (train <=2014, test >=2015)")
+    v4 = V4Service()
+    m = v4.train(save=True)
+    c = m["check"]
+    print(f"Artifact : {ARTIFACT} ({m['train_seconds']} s)")
+    print(f"Training : {m['rows']:,} candidate rows, {m['queries']:,} district-season-year queries, {len(m['crops'])} crops")
+    print(f"Softmax T: {m['T']:.3f}   conformal 90% threshold: {m['qhat']:.4f}")
+    print(f"Held-out : {c['queries']:,} queries  hit@1 {c['hit1']:.2%}  coverage {c['coverage']:.2%}  mean set size {c['set_size']:.2f}")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # AgroMind
 
-**District-level crop recommendation for India**: pick a state, district and season, and get every crop ranked by how likely it is to be among the best-yielding crops there. Learned from 26 years of official Government of India crop statistics.
+**District-level crop recommendation for India**: pick a state, district and season, and get the district's crops ranked by expected relative yield, with a 90 % conformal shortlist and expected yields. Learned from 26 years of official Government of India crop statistics.
 
 <p align="center">
   <img src="docs/dashboard.png" alt="AgroMind dashboard — crop analysis with confidence, ranking, and field readings" width="100%" />
@@ -22,39 +22,48 @@ AgroMind recommends crops for a **real Indian district and season**. The data ar
 **4,00,379 official district-wise crop records** from the Government of India's Directorate of
 Economics & Statistics (APY reports, data.desagri.gov.in, crop years 1997-98 to 2022-23, 37 states/UTs,
 748 districts). Each record is joined with NASA POWER season climate and ISRIC SoilGrids soil at the
-district centroid. An ExtraTrees model learns which crops end up among the top-3 by relative yield in
-each district-season.
+district centroid.
 
-The validation is honest: every split is grouped, so test districts, states or years are never seen in training.
+The served model, **AgroMind v4**, has two parts:
+- **YieldRank** (LightGBM LambdaMART) ranks the crops a district actually grows by their expected relative
+  yield next season. It uses climate, soil and the district's own crop history.
+- **A 90 % conformal set** is a short list that contains the best-yielding crop about 90 % of the time.
 
-| Test | hit@1 | hit@3 | Popularity baseline hit@1 |
-|------|-------|-------|---------------------------|
-| Unseen districts | **72.66 %** | **93.53 %** | 61.69 % |
-| Unseen states | 41.80 % | 70.70 % | 30.46 % |
-| Future years (2015–2022) | 65.34 % | 87.80 % | 55.49 % |
+Every crop comes with its expected and historical yield in that district.
+
+Paper results (`docs/research/results.json` → `v4`). hit@1 = the top-ranked crop is the best-yielding one:
+
+| Protocol | YieldRank hit@1 | Best classifier baseline | 90 % set coverage / mean size |
+|----------|-----------------|--------------------------|-------------------------------|
+| Unseen states | **55.6 %** | 38.5 % (MLP) | 89.6 % / 2.82 crops |
+| Future years | **57.8 %** | 52.1 % (XGBoost) | 89.7 % / 2.71 crops |
+| Random 5-fold | **59.7 %** | 57.5 % (Random Forest) | 90.1 % / 2.64 crops |
 
 **Docs:** [Project documentation](docs/PROJECT.md) · [Dataset](docs/research/DATASET.md) · [Data provenance](docs/research/DATA_PROVENANCE.md) · [UI design system](frontend/DESIGN.md)
 
 | Layer | Stack |
 |-------|--------|
 | Frontend | React 18, Vite |
-| Backend | FastAPI, scikit-learn, pandas, pyarrow |
-| Model | ExtraTrees (300 trees) on season climate + district location + season + state |
+| Backend | FastAPI, LightGBM, scikit-learn, pandas, pyarrow |
+| Model | AgroMind v4: YieldRank + split-conformal sets (`backend/app/v4_service.py`, artifact in `backend/models/`) |
 | Data | `backend/data/large/agromind_india_large.parquet` (DES APY × NASA POWER × SoilGrids) |
 
-> **Note:** "Recommended" means "among the top-3 crops by relative yield in that district-season" in the
-> official statistics. It is not profit or agronomy advice. Treat outputs as a demonstration for education.
+> **Note:** the ranking is by *relative yield* (a crop's yield percentile among the districts growing it),
+> over crops the district already grows. It is not profit, price or agronomy advice. Treat outputs as a
+> demonstration for education.
 
-### Research history: v1 → v2 → v3
+### Research history: v1 → v2 → v3 → v4
 
 | Version | Data | Result |
 |---------|------|--------|
 | v1 | Kaggle `Crop_recommendation.csv` (2,200 rows, 22 crops) | 98 % reported, but the one-vs-rest decoding was flawed and a min–max lookup already gets 88 % on that set |
 | v2 | 3 merged CSVs (67,200 rows, 74 crops) | 94.3 % in random 5-fold CV, but only 7–13 % on a source held out, because the sources disagree. Retired |
-| v3 (live) | official DES APY + climate + soil (4,00,379 rows) | the grouped results above |
+| v3 | official DES APY + climate (4,00,379 rows) | ExtraTrees top-3 classifier: unseen districts hit@1 72.66 % vs 61.69 % popularity baseline. Now only the `/predict` fallback for 65 of 2,654 district-seasons with no yield records |
+| **v4 (live)** | same + soil + district crop history | YieldRank + conformal sets, the results above |
 
-All of it is reproducible in Colab: `notebooks/AgroMind_v2_Research.ipynb` (v1 → v2) and
-`notebooks/AgroMind_v3_LargeScale.ipynb` (v3). Numbers are in `docs/research/results.json`.
+All of it is reproducible in Colab: `notebooks/AgroMind_v2_Research.ipynb` (v1 → v2),
+`notebooks/AgroMind_v3_LargeScale.ipynb` (v3) and `notebooks/AgroMind_v4_Novel_Method.ipynb` (v4).
+Numbers are in `docs/research/results.json`.
 
 ---
 
@@ -72,7 +81,7 @@ start_all.bat
 ```
 
 This opens the backend and frontend in separate terminals. The first run creates `backend/.venv` and
-installs dependencies. The model trains in memory in a few seconds each time the API starts.
+installs dependencies. The API loads the trained v4 model from `backend/models/` at startup (about a second).
 
 Then open **http://127.0.0.1:5173**
 
@@ -104,7 +113,7 @@ Checks:
 ```bash
 cd backend
 python -m pytest tests -q     # every endpoint
-python train_model.py         # trains once, prints coverage + grouped metrics
+python train_model.py         # rebuilds the v4 artifact, prints held-out hit@1 / coverage / set size
 ```
 
 ---
@@ -118,8 +127,10 @@ season averages (`GET /district` returns the defaults).
 { "state": "Punjab", "district": "Ludhiana", "season": "rabi" }
 ```
 
-The response ranks all 49 crops (wheat first for Ludhiana rabi), each with its probability and its
-historical median yield in that district. Full shapes: [docs/PROJECT.md §5](docs/PROJECT.md#5-api).
+The response lists the crops Ludhiana grows in rabi, ranked by YieldRank: wheat first (probability
+0.59), then sunflower, barley, mustard and others. The 90 % set is {wheat, sunflower}. Each crop has its
+expected and historical median yield (t/ha), years grown and a cold-start flag. Full shapes:
+[docs/PROJECT.md §5](docs/PROJECT.md#5-api).
 
 ---
 
@@ -130,13 +141,15 @@ agromind/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py           # FastAPI routes
-│   │   ├── v3_service.py     # district model: data, training, prediction, browse
+│   │   ├── v4_service.py     # AgroMind v4: YieldRank + conformal sets (/predict)
+│   │   ├── v3_service.py     # data lookups (/options, /district, /dataset) + v3 fallback model
 │   │   ├── schemas.py        # /predict request model
 │   │   ├── india_ref.py      # crop names, types, curated calendars
 │   │   └── data_loader.py    # v2 CSV merge (used by the v2 research notebook only)
 │   ├── data/large/           # DES APY × NASA POWER × SoilGrids table (+ build stats)
 │   ├── data/*.csv            # v1/v2 research CSVs
 │   ├── scripts/build_large_dataset.py
+│   ├── models/               # v4_yieldrank.{txt,json}: trained v4 artifact
 │   ├── tests/test_api.py
 │   └── train_model.py
 ├── frontend/                 # React UI (see DESIGN.md)

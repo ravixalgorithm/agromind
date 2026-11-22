@@ -17,6 +17,17 @@ a row in table 2. `backend/scripts/build_large_dataset.py` downloads, caches and
 | S5 | Soil 0–30 cm: `phh2o, nitrogen, soc, clay, sand, cec` + most probable WRB group | ISRIC — World Soil Information, SoilGrids 2.0 (Poggio et al. 2021) | REST `https://rest.isric.org/soilgrids/v2.0/properties/query` and `/classification/query`, one point per centroid, cached in `cache/soil/` | CC BY 4.0 | 2026-11-22 | static | `soil_*`, `wrb_class`, `soil_class` | values used as delivered (unit conversion by the API's `d_factor`) |
 | S6 | District boundaries → centroids | `datta07/INDIAN-SHAPEFILES` (GitHub), national file commit `1ebf207` (SHA-256 `8acd68e3…d4ec35c`) + Karnataka state file commit `7b003e3` | <https://github.com/datta07/INDIAN-SHAPEFILES> | MIT | 2026-11-22 | current boundaries | `geo_state`, `geo_district`, `lat`, `lon`, `match_method` | every non-exact name match listed with score in `district_match.csv` |
 
+| S7 | Minimum Support Prices (MSP) and sugarcane Fair & Remunerative Price (FRP), ₹/quintal, per crop year — in `msp_crop_year.csv`, a separate join table | Commission for Agricultural Costs & Prices (CACP), Dept. of Agriculture & Farmers Welfare, MoA&FW, Govt. of India | Table “Minimum Support / Fair & Remunerative Prices Recommended by CACP and Fixed by Government (Crop Year)”, <https://cacp.da.gov.in/Home/MSP>; the page loads its data from `https://cacp.da.gov.in/json.json` (cached as `cache/cacp_msp.json`) | CACP Website Policies §1 (<https://cacp.da.gov.in/Home/Privacy>): same wording as DES — free reproduction after permission by e-mail, accurate, source acknowledged. **Permission e-mail: not yet requested.** | 2026-11-23 | 2010-11 … 2026-27 (dataset overlap 2010-11 … 2022-23) | 462 rows, 28 commodities, 22 mapped to `crop_slug`; joins 118,973 large-table rows | S8 below |
+| S8 | MSP announcements (verification only) | Press Information Bureau, Govt. of India, release ID 2003184 “Minimum Support Price for various crops”, 6 Feb 2024 | <https://www.pib.gov.in/PressReleasePage.aspx?PRID=2003184> | Government press release | 2026-11-23 | 2021-22, 2022-23 | no rows | **42 of 42** mapped commodity × year values identical to S7 (`stats.json → msp`) |
+
+**MSP caveats.** MSP is a procurement floor, not the price a farmer received, and is enforced
+mainly for a few crops and states; `msp × yield` is a gross-revenue proxy with no cost of
+cultivation or water. Two crops are not the same product in S1 and S7 and are flagged
+`same_product_as_des = False`: rice (S1 reports milled rice, MSP is for paddy) and cotton (S1
+reports lint in 170 kg bales, MSP is for kapas). No conversion factor is applied. Copra is
+priced by calendar year (S7 runs one year ahead of S8 for copra) and S1 counts coconuts in nuts,
+so copra is left unmapped. `qtl_per_des_unit` = 10 for tonnes, 1.8 for jute (180 kg bales).
+
 **Tried, not used.** ICRISAT District Level Database (<http://data.icrisat.org/dld/>): every URL
 (http and https, `/dld/`, `/dld/src/crops.html`, `/services/`) timed out on 2026-11-22, so it is
 not an independent second source here. Soil Health Card portal: no bulk district export.
@@ -69,6 +80,9 @@ and Urad 2020-21 in Uttarakhand (13 rows). **S1 (official portal) values are use
 | `wrb_class` | S5 | |
 | `soil_class` | S5 + fixed lookup | WRB group / texture → app soil bucket |
 | `soil_source` | build step | `soilgrids_centroid` or `state_median` |
+| `state_group` | S1 + fixed lookup `STATE_GROUPS` | merges Jammu and Kashmir + Ladakh, and Dadra & Nagar Haveli + Daman & Diu (+ their 2020 merged UT), so a district never straddles a leave-states-out split |
+| `msp_crop_year.csv`: `msp_rs_qtl`, `cacp_rec_rs_qtl`, `price_type`, `commodity`, `cacp_season` | S7 | as published (fixed and recommended price) |
+| `msp_crop_year.csv`: `crop_slug`, `same_product_as_des`, `qtl_per_des_unit`, `note` | S7 + fixed lookups `MSP_CROPS`, `MSP_NOT_SAME_PRODUCT` | see MSP caveats |
 
 Train file columns are renames of the above: `N` = `soil_n_gkg`, `ph` = `soil_ph`, `soil` =
 `soil_class`, `season` = `season_app`, `crop` = `crop_slug`.
@@ -86,3 +100,7 @@ Train file columns are renames of the above: `N` = `soil_n_gkg`, `ph` = `soil_ph
 [5] L. Poggio, L. M. de Sousa, N. H. Batjes, G. B. M. Heuvelink, B. Kempen, E. Ribeiro, and D. Rossiter, “SoilGrids 2.0: producing soil information for the globe with quantified spatial uncertainty,” *SOIL*, vol. 7, no. 1, pp. 217–240, 2021, doi: 10.5194/soil-7-217-2021.
 
 [6] datta07, “INDIAN-SHAPEFILES,” GitHub repository, commit 1ebf2076e8b43eb51739a847c2911127a70f3b59. [Online]. Available: https://github.com/datta07/INDIAN-SHAPEFILES. Accessed: Nov. 22, 2026.
+
+[7] Commission for Agricultural Costs and Prices, Department of Agriculture and Farmers Welfare, Ministry of Agriculture and Farmers Welfare, Government of India, “Minimum Support / Fair & Remunerative Prices recommended by CACP and fixed by Government (crop year),” 2026. [Online]. Available: https://cacp.da.gov.in/Home/MSP. Accessed: Nov. 23, 2026.
+
+[8] Press Information Bureau, Government of India, “Minimum Support Price for various crops,” Release ID 2003184, Feb. 6, 2024. [Online]. Available: https://www.pib.gov.in/PressReleasePage.aspx?PRID=2003184. Accessed: Nov. 23, 2026.
