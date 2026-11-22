@@ -709,7 +709,8 @@ function Advisory({ meta, t }) {
   };
   const remove = (id) => {
     setSaved((list) => list.filter((s) => s.id !== id));
-    setCurrent((c) => (c.id === id ? { ...c, id: null } : c));
+    // Deleting the open analysis also clears the form; otherwise autosave would save it straight back.
+    if (current.id === id) startNew();
     try {
       if (localStorage.getItem(ACTIVE_KEY) === id) localStorage.removeItem(ACTIVE_KEY);
     } catch {
