@@ -82,11 +82,19 @@
 
   .quote { border-left: 3px solid var(--green); padding: 1mm 0 1mm 3mm; font-style: italic; color: var(--muted); margin: 2mm 0; text-align: left; }
   .team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; text-align: center; font-size: 8.6pt; }
-  .team div { border: .6px solid var(--rule); padding: 2mm 1mm; }
+  .team div { border: .6px solid var(--rule); padding: 1.4mm 1mm; }
   .team b { display: block; font-size: 9pt; }
-  .refs { font-size: 6.9pt; line-height: 1.25; column-count: 3; column-gap: 5mm; hyphens: auto; text-align: left; }
+  .refs { font-size: 6.8pt; line-height: 1.22; column-count: 3; column-gap: 5mm; hyphens: auto; text-align: left; }
   .refs p { overflow-wrap: anywhere; margin: 0 0 1mm; padding-left: 6mm; text-indent: -6mm; break-inside: avoid; }
   .foot { margin-top: 3mm; border-top: 3px double var(--maroon); padding-top: 1.5mm; font-size: 7.6pt; color: var(--muted); text-align: center; }
+  table.kr th, table.kr td { font-size: 8.2pt; padding: .9mm 1.4mm; }
+  table.kr tbody th { font-weight: 700; color: var(--maroon); width: 22%; }
+  table.kr small { color: var(--muted); font-size: 7pt; }
+  tr.best td { font-weight: 700; }
+  .fw { font-size: 8.8pt; text-align: left; } .fw ul { margin: 0; } .fw li { break-inside: avoid; }
+  .note { font-size: 7.6pt; color: var(--muted); margin: 1.5mm 0 0; text-align: left; }
+  code { font-size: .92em; }
+  .inissue-row { margin-top: 3mm; padding-top: 1.5mm; border-top: 1px solid var(--rule); font-size: 8.4pt; color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
@@ -104,57 +112,49 @@
   </header>
   <div class="dateline"><span>Vol. 1 · Issue 1</span><span>Final-Year Project Edition</span><span>November 2026</span></div>
 
-  <h2 class="lead">Teaching a crop advisor which state it is farming in</h2>
-  <p class="standfirst">AgroMind recommends crops from soil nutrients, climate, soil type, season and state. This
-    issue covers how the model was built, how it was tested beyond the usual random split, and what the
-    research literature says about the problem.</p>
+  <h2 class="lead">From 98% on paper to an honest 73% on real districts</h2>
+  <p class="standfirst">Three versions of a crop advisor, each tested harder than the one before. This issue
+    explains why AgroMind's headline accuracy went <i>down</i> as the project got better, and why
+    that is the result we are proudest of.</p>
 
   <div class="cols">
     <p class="drop">Choosing what to sow is one of the most consequential decisions an Indian farmer makes
       each season. Published crop recommenders mostly learn a mapping from soil nitrogen (N), phosphorus (P),
       potassium (K), pH, temperature, humidity and rainfall to a crop name, and many report accuracies close to
-      99% <span class="cite">[8], [11], [12]</span>. Most of those numbers come from a single public dataset whose
-      Kaggle page says it was built by <i>augmenting</i> Indian rainfall, climate and fertiliser data
-      <span class="cite">[31]</span>. It has exactly 100 rows per crop and no record of where or when each row
-      was measured.</p>
-    <p>AgroMind asks a harder question: does a recommendation still hold when the model must also respect the
-      state, the season and the soil class, and when it is tested on data from a source it has never seen?</p>
-
-    <h3>What we built</h3>
-    <p>A Random Forest <span class="cite">[21]</span> trained on <b>67,200 rows</b>, merged from three sources:
-      the Kaggle agronomy set, a 16-state India set and Tamil Nadu field records. It covers <b>74 crops</b> across
-      <b>16 states</b>. State, season and soil type are model inputs, not just display labels. A FastAPI backend
-      serves ranked recommendations with confidence, sowing calendars and crop profiles to a React dashboard.</p>
-
-    <h3>Why it matters</h3>
-    <p>The inputs line up with what a farmer's Soil Health Card reports <span class="cite">[24], [25]</span>, so
-      a card can be typed straight into the app. Ranked alternatives within the same season reflect how
-      farmers actually choose among several workable crops.</p>
+      99% <span class="cite">[8], [11], [12]</span>. Most of those numbers come from one public Kaggle dataset
+      that, by its own description, was built by <i>augmenting</i> Indian data <span class="cite">[31]</span>.</p>
+    <p><b>v1</b> was such a model: 2,200 Kaggle rows, 22 crops, a reported 98.00% accuracy. Re-running it, we
+      found a decoding flaw, and that a simple box-lookup rule already scores 88% on that data.
+      <b>v2</b> merged three sources into 67,200 rows covering 74 crops, and added soil type, season and state as
+      inputs. It scores 94.33% on a 5-fold test and 99.18% when the right crop only has to appear in its top three.
+      But trained on two sources and tested on the third, its accuracy collapses to 7–13%.</p>
+    <p><b>v3</b> starts again from official records: 3,44,539 district–season–year crop production rows published
+      by the Government of India <span class="cite">[30], [36]</span>, joined with NASA POWER climate
+      <span class="cite">[29]</span> and SoilGrids soil data <span class="cite">[27]</span>. On districts it has
+      never seen, its first suggestion is one of that district's best-yielding crops 72.90% of the time, and
+      one of its top three is 93.50% of the time. That beats a strong "what does this state usually grow this
+      season" baseline.</p>
   </div>
 
-  <hr class="sep">
-
-  <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:6mm;align-items:start">
-    <div class="box" id="key-results">
-      <div class="box-title">Key Results</div>
-      <!--KEY_RESULTS-->
-    </div>
-    <div>
-      <div class="box inissue">
-        <div class="box-title">In this issue</div>
-        <ol>
-          <li>Lead story: a state-aware crop advisor</li>
-          <li>Key results, v1 → v2 → v3</li>
-          <li>Methodology and data pipeline</li>
-          <li>From the literature</li>
-          <li>Testing beyond the random split</li>
-          <li>Future work · Team · References</li>
-        </ol>
-      </div>
-      <p class="quote" style="margin-top:4mm">"A recommendation is only as useful as the honesty of its
-        confidence figure."</p>
-    </div>
+  <div class="box" style="margin-top:3mm">
+    <div class="box-title">Key Results · v1 → v2 → v3</div>
+    <table class="kr">
+      <thead><tr><th></th><th>v1 (original)</th><th>v2 (merged)</th><th>v3 (Govt. records)</th></tr></thead>
+      <tbody>
+        <tr><th>Training data</th><td>2,200 rows · 22 crops<br>Kaggle only</td><td>67,200 rows · 74 crops<br>3 merged sources</td><td>3,44,539 APY rows · 49 crops<br>792 districts · 24 crop years</td></tr>
+        <tr><th>Inputs</th><td>7 numeric</td><td>7 numeric + soil, season, state</td><td>NASA POWER climate, season, state, location (+ soil)</td></tr>
+        <tr><th>Headline score</th><td class="num">98.00%<br><small>one 75/25 split, as reported</small></td><td class="num">94.33 ± 0.12%<br><small>5-fold accuracy</small></td><td class="num">72.90%<br><small>hit@1, unseen districts</small></td></tr>
+        <tr><th>Top-3</th><td class="num">not reported</td><td class="num">99.18%</td><td class="num">93.50%<br><small>hit@3, unseen districts</small></td></tr>
+        <tr><th>Simple baseline</th><td class="num">88%<br><small>box-lookup rule</small></td><td class="num">—</td><td class="num">62.90% / 88.30%<br><small>state × season popularity</small></td></tr>
+        <tr class="best"><th>Hardest honest test</th><td class="num">86.91%<br><small>GaussianNB exact match (97.09% reported)</small></td><td class="num">7.0–12.9%<br><small>leave-one-source-out</small></td><td class="num">39.47% / 66.06%<br><small>unseen states / future years</small></td></tr>
+      </tbody>
+    </table>
+    <p class="note">All figures from <code>docs/research/results.json</code>. v1 to v3 answer increasingly hard
+      questions, so the headline numbers are not directly comparable; the bottom row is the fair one to read.</p>
   </div>
+
+  <div class="inissue-row"><b>In this issue:</b> Key results · Methodology · From the literature ·
+    What the tests showed · Coming next: v4 · Team · References</div>
 </div>
 
 <!-- ============ PAGE 2 ============ -->
@@ -162,34 +162,31 @@
   <div class="runhead"><span>AgroMind Bulletin</span><span>Methodology</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
 
   <p class="kicker">Methodology</p>
-  <h2>From three spreadsheets to one model</h2>
+  <h2>Three datasets, three questions</h2>
   <div class="cols">
-    <h3>1. Data sources</h3>
+    <h3>v1 and v2: soil–climate tables</h3>
+    <p>v1 trained on the Kaggle Crop Recommendation set <span class="cite">[31]</span>: 2,200 rows of N, P, K,
+      pH, temperature, humidity and rainfall, exactly 100 per crop. v2 merges it with an 8,000-row, 16-state India
+      set and 57,000 Tamil Nadu field records. Thirty-four free-text soil descriptions are folded into 10 soil
+      classes, and spelling variants (<i>bengalgram</i> → chickpea, <i>gingely</i> → sesame) reduce 100+ crop
+      labels to 74. The deployed model is a 300-tree Random Forest <span class="cite">[21]</span> with one-hot
+      soil, season and state, built in scikit-learn <span class="cite">[34]</span>.</p>
+    <h3>v3: official district records</h3>
+    <p>The Directorate of Economics and Statistics publishes area and production for every district, season,
+      year and crop <span class="cite">[30]</span>. Our v3 dataset uses 1997–98 to 2020–21
+      <span class="cite">[36]</span>: 3,44,539 rows across 36 states and union territories and 792 districts.
+      Each district is matched to its centre point to attach seasonal temperature, humidity and rainfall from
+      NASA POWER <span class="cite">[29]</span> and topsoil pH, nitrogen and texture from SoilGrids 2.0
+      <span class="cite">[27]</span>. A crop is labelled "recommended" for a district, season and year if it is
+      among that query's top three by yield percentile, giving 38,261 queries over 49 crops.</p>
+    <h3>How we test</h3>
     <ul>
-      <li><b>Kaggle Crop Recommendation</b> <span class="cite">[31]</span>: 2,200 rows, 22 crops, N-P-K, pH, climate; no location.</li>
-      <li><b>India multi-state set</b>: 8,000 rows over 16 states with soil, season and climate.</li>
-      <li><b>Tamil Nadu field records</b>: 57,000 rows with free-text soil descriptions and month-level sowing and harvest dates.</li>
-      <!--V3_SOURCE-->
+      <li><b>Stratified 5-fold cross-validation</b> with accuracy, macro-F1 and top-3 accuracy, comparing 10 models including XGBoost <span class="cite">[22]</span> and LightGBM <span class="cite">[35]</span>.</li>
+      <li><b>Leave-one-source-out</b> (v2): train on two sources, test on the third, as grouped validation requires <span class="cite">[18]</span>.</li>
+      <li><b>Unseen districts, unseen states and future years</b> (v3): whole districts or states are held out, or the model trains up to 2014 and is tested on 2015–2020.</li>
+      <li><b>Calibration</b>: reliability diagram and Expected Calibration Error <span class="cite">[20]</span>, <span class="cite">[33]</span>; McNemar's test for paired comparisons <span class="cite">[32]</span>.</li>
     </ul>
-    <h3>2. Normalisation</h3>
-    <p>All sources are mapped to one schema (N, P, K, temperature, humidity, pH, rainfall, soil, season, state,
-      crop). Thirty-four free-text soil strings are folded into 10 canonical classes. Crop spelling variants
-      (<i>bengalgram</i> → chickpea, <i>gingely</i> → sesame, <i>redgram</i> → pigeon pea) reduce 100+ raw
-      labels to 74 crops. Kaggle rows, which carry no location, go into an <i>Unspecified</i> state bucket that
-      the app never offers.</p>
-    <h3>3. Model</h3>
-    <p>A 300-tree Random Forest <span class="cite">[21]</span> with one-hot encoded soil, season and state.
-      Tree ensembles are strong on tabular agronomic data <span class="cite">[3], [17]</span> and need little
-      tuning. XGBoost <span class="cite">[22]</span> serves as a comparison baseline.</p>
-    <h3>4. Evaluation</h3>
-    <p>Beyond the usual stratified 80/20 split we report <b>top-3 accuracy</b>, a <b>leave-one-source-out</b>
-      (LOSO) test that trains on two sources and tests on the third, following the grouped-validation advice of
-      Roberts et&nbsp;al. <span class="cite">[18]</span>, and <b>probability calibration</b> (reliability curves,
-      Expected Calibration Error), since tree ensembles are known to give distorted probabilities
-      <span class="cite">[20]</span>.</p>
   </div>
-
-  <!--FIG_PAGE2-->
 
   <hr class="sep">
 
@@ -201,9 +198,11 @@
       location <span class="cite">[7], [9]</span>. Recent work on the Kaggle dataset reports 98–99.6% accuracy
       with XGBoost and Bayesian classifiers <span class="cite">[11], [12]</span>. Explainable systems such as
       XAI-CROP and AgroXAI attach SHAP and LIME explanations <span class="cite">[14], [15], [23]</span>.</p>
-    <p>Studies on real district-level Indian data paint a different picture. On 20 years of data from 247 rice
-      districts, the best out-of-sample R² was 0.82 <span class="cite">[16]</span>. The one crop-recommendation study with a time-ordered split saw Random Forest fall from 99.96% to 78.55% <span class="cite">[37]</span>. The gap between
-      near-perfect benchmark scores and real-world skill is the main motivation for AgroMind's evaluation design.</p>
+    <p>Studies on real Indian data paint a different picture. On 20 years of data from 247 rice districts, the
+      best out-of-sample R² was 0.82 <span class="cite">[16]</span>. The one crop-recommendation study with a
+      time-ordered split saw Random Forest fall from 99.96% to 78.55% <span class="cite">[37]</span>. None of the
+      studies in the table below tests on unseen states or districts, and none reports whether its confidence
+      figures can be trusted.</p>
   </div>
   <table class="lit avoid" style="margin-top:2mm">
     <thead><tr><th>Ref</th><th>Study</th><th>Data</th><th>Method</th><th>Reported</th><th>Gap AgroMind targets</th></tr></thead>
@@ -222,31 +221,76 @@
 
 <!-- ============ PAGE 3 ============ -->
 <div class="page">
-  <div class="runhead"><span>AgroMind Bulletin</span><span>Results &amp; Outlook</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
+  <div class="runhead"><span>AgroMind Bulletin</span><span>Results</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
 
   <p class="kicker">Evaluation</p>
-  <h2>Testing beyond the random split</h2>
-  <!--RESULTS_BODY-->
-
-  <hr class="sep">
+  <h2>What the tests showed</h2>
 
   <div class="cols">
-    <p class="kicker">Research gaps addressed</p>
-    <ul>
-      <li><b>Location-blind models</b> <span class="cite">[11]–[13]</span> → state, season and soil as model inputs.</li>
-      <li><b>Single, near-synthetic source</b> <span class="cite">[11], [31]</span> → a three-source merge plus a real-data v3.</li>
-      <li><b>Random splits overstate skill</b> <span class="cite">[18], [19], [37]</span> → leave-one-source-out test.</li>
-      <li><b>Uncalibrated confidence</b> <span class="cite">[20]</span> → reliability curves and ECE.</li>
-      <li><b>Top-1 only</b> → top-3 accuracy and ranked same-season alternatives.</li>
-    </ul>
+    <h3>1. v1's 98% had a hidden flaw</h3>
+    <p>v1 trained one yes/no classifier per crop and took the strongest. We reproduced its reported scores exactly,
+      but on up to 3.09% of test rows no classifier said yes, and on up to 13.09% several did. Those rows were
+      silently assigned to the first crop, <i>apple</i>. GaussianNB's reported 97.09% falls to 86.91% when each
+      row must have exactly one answer. Retrained as a proper multiclass model, Random Forest reaches
+      99.50 ± 0.30% on the Kaggle data, where a fixed lookup table already gets 88%.</p>
+    <h3>2. v2 learns its sources, not agronomy</h3>
+    <p>On the merged data the deployed Random Forest is the best of 10 models: 94.33 ± 0.12% accuracy, 92.15%
+      macro-F1 and 99.18% top-3. Season is the most important input (shuffling it costs 55 points of accuracy).
+      Adding soil, season and state raises accuracy on the multi-state rows from 32.22% to 71.50%. But when one
+      whole source is held out, accuracy falls to 7.0–12.9%, close to chance. The three sources describe the same
+      crops so differently that a model fitted to one tells us little about the others.</p>
+  </div>
 
-    <p class="kicker" style="margin-top:3mm">Future work</p>
+  <div class="figrow">
+    <figure><img src="../research/figures/01_v1_decode_flaw.png" alt="Bar chart of v1 test rows where no or several crop classifiers fire, and confusion matrix with errors collected in the apple column">
+      <figcaption><b>Fig. 1.</b> v1's one-vs-rest decoding: rows with no answer or several answers, and errors piling into class 0 (apple).</figcaption></figure>
+    <figure><img src="../research/figures/07_loso.png" alt="Bar chart comparing in-distribution accuracy of 0.71 to 0.99 with leave-one-source-out accuracy of 0.07 to 0.14">
+      <figcaption><b>Fig. 2.</b> Leave-one-source-out: in-distribution accuracy (blue) versus accuracy on a source the model never saw.</figcaption></figure>
+  </div>
+
+  <div class="cols">
+    <h3>3. v3 holds up on districts it has never seen</h3>
+    <p>With whole districts held out, the best model's first suggestion is a top-yielding crop 72.90% of the time
+      (93.50% within its top three), against 62.90% / 88.30% for a baseline that simply recommends what the state
+      grows most that season. The advantage persists for future years (66.06% vs 57.72% when trained up to 2014
+      and tested on 2015–2020) and for states it has never seen (39.47% vs 31.26% for a season-popularity baseline). These are lower numbers than
+      v2's, but they answer the question a farmer actually asks.</p>
+    <h3>4. Confidence is under-stated</h3>
+    <p>The deployed v2 model's average confidence is 87.04%, but it is right 94.62% of the time (Expected
+      Calibration Error 0.076). It is therefore <i>under</i>-confident, consistent with what is known about Random
+      Forest probabilities <span class="cite">[20]</span>. A recalibration step would make the percentage
+      shown in the app match how often it is right.</p>
+  </div>
+
+  <div class="figrow">
+    <figure><img src="../research/figures/13_v3_generalisation.png" alt="v3 hit@1 for unseen districts 0.73, unseen states 0.39 and future years 0.66 against popularity baselines, and hit@1 per held-out state">
+      <figcaption><b>Fig. 3.</b> v3 on real Government records: hit@1 for unseen districts, unseen states and future years against the best popularity baseline, and per held-out state.</figcaption></figure>
+    <figure><img src="../research/figures/10_calibration.png" alt="Reliability diagram showing the model's accuracy above its stated confidence in every bin, ECE 0.076">
+      <figcaption><b>Fig. 4.</b> Calibration of the deployed v2 model: observed accuracy sits above stated confidence in every bin.</figcaption></figure>
+  </div>
+
+  <div class="box" style="margin-top:1mm">
+    <div class="box-title">Coming next: v4</div>
+      <p>The next version changes the question from "which crop is this?" to "which crops grow best here?". It
+        ranks crops by expected yield for a district and season, learned from the same Government records, and
+        returns a <b>prediction set</b>: a short list of crops built with conformal prediction, so that the list
+        contains a top-yielding crop with a guaranteed probability. When conditions are unusual, the list grows
+        instead of the model guessing confidently. Results will appear in the next issue.</p>
+    </div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <div class="runhead"><span>AgroMind Bulletin</span><span>Outlook · Team · References</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
+
+  <p class="kicker">Future work</p>
+  <div class="cols fw">
     <ul>
-      <li>Read Soil Health Card PDFs directly <span class="cite">[25]</span> to pre-fill N, P, K and pH.</li>
-      <li>Replace seasonal averages with IMD gridded rainfall <span class="cite">[26]</span> and NASA POWER climate <span class="cite">[29]</span> at district level.</li>
+      <li>Finish the SoilGrids fill: today 21.52% of v3 rows have a district-level soil point, the rest a state median.</li>
+      <li>Pre-fill N, P, K and pH from a farmer's Soil Health Card <span class="cite">[24], [25]</span>.</li>
+      <li>Recalibrate the app's confidence figure.</li>
       <li>Add SHAP explanations <span class="cite">[23]</span> for each recommendation.</li>
-      <li>Field validation with Krishi Vigyan Kendra (KVK) extension staff before any advisory use.</li>
-      <li>Hindi and regional-language interfaces.</li>
+      <li>Field validation with Krishi Vigyan Kendra staff, and Hindi and regional-language interfaces.</li>
     </ul>
   </div>
 
@@ -262,43 +306,33 @@
   <p style="margin-top:2mm;font-size:8.4pt;text-align:center">Head of Department: <b>[HoD Name]</b> · Project
     Coordinator: <b>[Coordinator Name]</b> · Contact: [email@college.edu]</p>
   <p style="font-size:8pt;color:var(--muted);text-align:center"><i>Disclaimer:</i> AgroMind is an academic
-    project trained on public and partly synthetic datasets. Its recommendations are for education and
-    demonstration only and are not validated agronomic advice.</p>
-</div>
+    project. v1 and v2 are trained on public and partly synthetic datasets; v3 uses official production statistics
+    with interim soil data. Recommendations are for education and demonstration only and are not validated
+    agronomic advice.</p>
 
-<!-- ============ PAGE 4 ============ -->
-<div class="page">
-  <div class="runhead"><span>AgroMind Bulletin</span><span>References</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
+  <hr class="sep">
+
   <p class="kicker">References</p>
+  <p class="note" style="margin-bottom:1.5mm">Numbers follow the full literature review
+    (<code>docs/research/LITERATURE.md</code>, 37 sources); only works cited in this issue are listed.</p>
   <div class="refs">
-    <p>[1] K. G. Liakos, P. Busato, D. Moshou, S. Pearson, and D. Bochtis, &quot;Machine learning in agriculture: A review,&quot; <i>Sensors</i>, vol. 18, no. 8, p. 2674, 2018, doi: 10.3390/s18082674.</p>
-    <p>[2] A. Sharma, A. Jain, P. Gupta, and V. Chowdary, &quot;Machine learning applications for precision agriculture: A comprehensive review,&quot; <i>IEEE Access</i>, vol. 9, pp. 4843–4873, 2021, doi: 10.1109/ACCESS.2020.3048415.</p>
-    <p>[3] T. van Klompenburg, A. Kassahun, and C. Catal, &quot;Crop yield prediction using machine learning: A systematic literature review,&quot; <i>Comput. Electron. Agric.</i>, vol. 177, p. 105709, 2020, doi: 10.1016/j.compag.2020.105709.</p>
-    <p>[4] K. Patel and H. B. Patel, &quot;A state-of-the-art survey on recommendation system and prospective extensions,&quot; <i>Comput. Electron. Agric.</i>, vol. 178, p. 105779, 2020, doi: 10.1016/j.compag.2020.105779.</p>
-    <p>[5] R. Kumar, M. P. Singh, P. Kumar, and J. P. Singh, &quot;Crop selection method to maximize crop yield rate using machine learning technique,&quot; in <i>Proc. Int. Conf. Smart Technol. Manage. Comput., Commun., Controls, Energy Mater. (ICSTM)</i>, 2015, pp. 138–145, doi: 10.1109/ICSTM.2015.7225403.</p>
     <p>[6] S. Pudumalar, E. Ramanujam, R. H. Rajashree, C. Kavya, T. Kiruthika, and J. Nisha, &quot;Crop recommendation system for precision agriculture,&quot; in <i>Proc. 8th Int. Conf. Advanced Computing (ICoAC)</i>, 2017, pp. 32–36, doi: 10.1109/ICoAC.2017.7951740.</p>
     <p>[7] Z. Doshi, S. Nadkarni, R. Agrawal, and N. Shah, &quot;AgroConsultant: Intelligent crop recommendation system using machine learning algorithms,&quot; in <i>Proc. 4th Int. Conf. Computing Communication Control and Automation (ICCUBEA)</i>, 2018, pp. 1–6, doi: 10.1109/ICCUBEA.2018.8697349.</p>
     <p>[8] N. H. Kulkarni, G. N. Srinivasan, B. M. Sagar, and N. K. Cauvery, &quot;Improving crop productivity through a crop recommendation system using ensembling technique,&quot; in <i>Proc. 3rd Int. Conf. Computational Systems and Information Technology for Sustainable Solutions (CSITSS)</i>, 2018, pp. 114–119, doi: 10.1109/CSITSS.2018.8768790.</p>
     <p>[9] A. Priyadharshini, S. Chakraborty, A. Kumar, and O. R. Pooniwala, &quot;Intelligent crop recommendation system using machine learning,&quot; in <i>Proc. 5th Int. Conf. Computing Methodologies and Communication (ICCMC)</i>, 2021, pp. 843–848, doi: 10.1109/ICCMC51019.2021.9418375.</p>
-    <p>[10] Y. Akkem, S. K. Biswas, and A. Varanasi, &quot;Streamlit application for advanced ensemble learning methods in crop recommendation systems – A review and implementation,&quot; <i>Indian J. Sci. Technol.</i>, vol. 16, no. 48, pp. 4688–4702, 2023, doi: 10.17485/IJST/v16i48.2850.</p>
     <p>[11] B. Dey, J. Ferdous, and R. Ahmed, &quot;Machine learning based recommendation of agricultural and horticultural crop farming in India under the regime of NPK, soil pH and three climatic variables,&quot; <i>Heliyon</i>, vol. 10, no. 3, p. e25112, 2024, doi: 10.1016/j.heliyon.2024.e25112.</p>
     <p>[12] E. Elbasi et al., &quot;Crop prediction model using machine learning algorithms,&quot; <i>Appl. Sci.</i>, vol. 13, no. 16, p. 9288, 2023, doi: 10.3390/app13169288.</p>
-    <p>[13] C. Musanase, A. Vodacek, D. Hanyurwimfura, A. Uwitonze, and I. Kabandana, &quot;Data-driven analysis and machine learning-based crop and fertilizer recommendation system for revolutionizing farming practices,&quot; <i>Agriculture</i>, vol. 13, no. 11, p. 2141, 2023, doi: 10.3390/agriculture13112141.</p>
     <p>[14] M. Y. Shams, S. A. Gamel, and F. M. Talaat, &quot;Enhancing crop recommendation systems with explainable artificial intelligence: A study on agricultural decision-making,&quot; <i>Neural Comput. Appl.</i>, vol. 36, no. 11, pp. 5695–5714, 2024, doi: 10.1007/s00521-023-09391-2.</p>
     <p>[15] Ö. Turgut, İ. Kök, and S. Özdemir, &quot;AgroXAI: Explainable AI-driven crop recommendation system for Agriculture 4.0,&quot; in <i>Proc. IEEE Int. Conf. Big Data (BigData)</i>, 2024, pp. 7208–7217, doi: 10.1109/BigData62323.2024.10825771.</p>
     <p>[16] D. De Clercq and A. Mahdi, &quot;Feasibility of machine learning-based rice yield prediction in India at the district level using climate reanalysis and remote sensing data,&quot; <i>Agric. Syst.</i>, vol. 220, p. 104099, 2024, doi: 10.1016/j.agsy.2024.104099.</p>
-    <p>[17] U. Nikhil, A. Pandiyan, S. Raja, and Z. Stamenkovic, &quot;Machine learning-based crop yield prediction in South India: Performance analysis of various models,&quot; <i>Computers</i>, vol. 13, no. 6, p. 137, 2024, doi: 10.3390/computers13060137.</p>
     <p>[18] D. R. Roberts et al., &quot;Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure,&quot; <i>Ecography</i>, vol. 40, no. 8, pp. 913–929, 2017, doi: 10.1111/ecog.02881.</p>
-    <p>[19] H. Meyer, C. Reudenbach, S. Wöllauer, and T. Nauss, &quot;Importance of spatial predictor variable selection in machine learning applications – Moving from data reproduction to spatial prediction,&quot; <i>Ecol. Model.</i>, vol. 411, p. 108815, 2019, doi: 10.1016/j.ecolmodel.2019.108815.</p>
     <p>[20] A. Niculescu-Mizil and R. Caruana, &quot;Predicting good probabilities with supervised learning,&quot; in <i>Proc. 22nd Int. Conf. Machine Learning (ICML)</i>, 2005, pp. 625–632, doi: 10.1145/1102351.1102430.</p>
     <p>[21] L. Breiman, &quot;Random forests,&quot; <i>Mach. Learn.</i>, vol. 45, no. 1, pp. 5–32, 2001, doi: 10.1023/A:1010933404324.</p>
     <p>[22] T. Chen and C. Guestrin, &quot;XGBoost: A scalable tree boosting system,&quot; in <i>Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining</i>, 2016, pp. 785–794, doi: 10.1145/2939672.2939785.</p>
     <p>[23] S. Lundberg and S.-I. Lee, &quot;A unified approach to interpreting model predictions,&quot; in <i>Advances in Neural Information Processing Systems 30 (NeurIPS)</i>, 2017; arXiv:1705.07874, doi: 10.48550/arXiv.1705.07874.</p>
     <p>[24] A. A. Reddy, &quot;Impact study of Soil Health Card scheme,&quot; National Institute of Agricultural Extension Management (MANAGE), Hyderabad, India, 2020, doi: 10.31220/osf.io/n3d2m.</p>
     <p>[25] Department of Agriculture and Farmers Welfare, Government of India, &quot;Soil Health Card portal.&quot; [Online]. Available: https://soilhealth.dac.gov.in/ (accessed Nov. 22, 2026).</p>
-    <p>[26] D. S. Pai, M. Rajeevan, O. P. Sreejith, B. Mukhopadhyay, and N. S. Satbha, &quot;Development of a new high spatial resolution (0.25° × 0.25°) long period (1901–2010) daily gridded rainfall data set over India and its comparison with existing data sets over the region,&quot; <i>MAUSAM</i>, vol. 65, no. 1, pp. 1–18, 2014, doi: 10.54302/mausam.v65i1.851.</p>
     <p>[27] L. Poggio et al., &quot;SoilGrids 2.0: Producing soil information for the globe with quantified spatial uncertainty,&quot; <i>SOIL</i>, vol. 7, no. 1, pp. 217–240, 2021, doi: 10.5194/soil-7-217-2021.</p>
-    <p>[28] A. H. Sparks, &quot;nasapower: A NASA POWER global meteorology, surface solar energy and climatology data client for R,&quot; <i>J. Open Source Softw.</i>, vol. 3, no. 30, p. 1035, 2018, doi: 10.21105/joss.01035.</p>
     <p>[29] NASA Langley Research Center, &quot;POWER: Prediction Of Worldwide Energy Resources.&quot; [Online]. Available: https://power.larc.nasa.gov/ (accessed Nov. 22, 2026).</p>
     <p>[30] Directorate of Economics and Statistics, MoA&amp;FW, Government of India, &quot;District-wise, season-wise crop production statistics from 1997,&quot; Open Government Data (OGD) Platform India. [Online]. Available: https://www.data.gov.in/resource/district-wise-season-wise-crop-production-statistics-1997 (accessed Nov. 22, 2026).</p>
     <p>[31] A. Ingle, &quot;Crop Recommendation Dataset,&quot; Kaggle, 2020. [Online]. Available: https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset (accessed Nov. 22, 2026).</p>
@@ -310,7 +344,7 @@
     <p>[37] S. Sam and S. M. D&#x27;Abreo, &quot;Crop recommendation with machine learning: Leveraging environmental and economic factors for optimal crop selection,&quot; arXiv:2505.21201, 2025, doi: 10.48550/arXiv.2505.21201.</p>
   </div>
   <div class="foot">AgroMind Bulletin · [College Name], Department of [Department Name] · Vol. 1, Issue 1 · November 2026<br>
-    Full literature review: docs/research/LITERATURE.md · Code and notebook: AgroMind project repository</div>
+    Literature review, notebooks and results: AgroMind project repository</div>
 </div>
 
 </body>
