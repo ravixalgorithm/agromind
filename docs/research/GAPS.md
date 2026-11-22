@@ -114,7 +114,7 @@ not that the paper did not do it.
 ## 3. Chosen gaps and how we test them
 
 **G1 (a + b): yield-grounded ranking evaluated out-of-region and out-of-time.**
-On the DES district × season × year production table (1997–2020, CC4's
+On the DES district × season × year production table (1997-98 to 2022-23, CC4's
 `backend/data/large/`), each query is a district-season-year; the candidates are the crops
 actually grown there, and their relevance is realised yield percentile. We compare a
 LambdaMART ranker with the literature's classifiers (NB, RF, XGBoost, MLP), plus naive
@@ -172,8 +172,8 @@ have a number that can move (NDCG/hit@k vs baselines; coverage vs the nominal le
 
 ---
 
-## 6. Outcome (see `paper/main.pdf`, numbers in `docs/research/results.json` → `v4`)
+## 6. Outcome (see `paper/main.pdf`; canonical numbers in `docs/research/results.json` → `v4.numbers`)
 
-- **G1 confirmed, measurable win.** On held-out states the literature classifiers' Hit@1 falls by up to 23 points relative to random splits and ends up below a last-year persistence rule. YieldRank is +15 points over the best classifier, but only slightly above persistence overall; its clear gain over persistence is on cold-start queries.
-- **G2: honest partial result.** Marginal 90% coverage holds for YieldRank on unseen states. Classifiers need held-out-state calibration to reach it. Per-state coverage fails in 3 of 32 states; Mondrian-by-#candidates calibration narrows but does not close this.
-- **New finding:** climate and soil features alone barely transfer across states, and state-median soil *raises* random-split scores while *lowering* out-of-state ones (Meyer et al. [19]).
+- **G1 confirmed, measurable win.** On held-out states the literature classifiers lose up to ~20 points of Hit@1 compared with random splits (`ClfDropMax`) and end up below a last-year persistence rule. YieldRank is about +16 points over the best classifier (`GainHitLSO`) but only slightly above persistence overall. Its clear gain over persistence is on cold-start queries (`OursHitColdLSO` vs `PersHitColdLSO`).
+- **G2: honest partial result.** Marginal 90% coverage holds for YieldRank on unseen states. Classifiers need held-out-state calibration to reach it. Per-state coverage still fails in a few states (`StatesBelowIID`); Mondrian-by-#candidates calibration narrows this but does not close it.
+- **New finding:** climate and soil features alone barely transfer across states. District-level soil *raises* random-split scores while *lowering* out-of-state ones (Meyer et al. [19]).

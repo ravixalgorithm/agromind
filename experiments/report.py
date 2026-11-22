@@ -258,6 +258,7 @@ def main():
         for col, nm in (("cov_LAC", "CC"), ("cov_Mncand", "MN"), ("cov_Mregion", "MR")):
             mac |= {f"{nm}StatesBelow": int((cst[col] < 0.85).sum()), f"{nm}WorstCov": f"{100*cst[col].min():.1f}",
                     f"{nm}WorstState": cst[col].idxmin(), f"{nm}TelanganaCov": f"{100*cst[col].get('Telangana', float('nan')):.1f}"}
+        mac["MNAtCCWorst"] = f"{100*cst.loc[cst.cov_LAC.idxmin(), 'cov_Mncand']:.1f}"
         cst.to_csv(RES / "crossconf_coverage_by_state_main.csv")
         cs_ = S["leave-states-out"]["conformal"]
         rows_ = [("LAC, i.i.d.\\ calibration", 100 * cs_["conformal_iid_cal"]["LAC@0.9"]["coverage"], cs_["conformal_iid_cal"]["LAC@0.9"]["size"], (st.iid < .85).sum(), 100 * st.iid.min()),

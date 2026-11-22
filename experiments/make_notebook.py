@@ -13,7 +13,7 @@ md(f"""# AgroMind v4: yield-grounded crop ranking + conformal prediction sets
 **Research question.** Published crop recommenders report ~99% accuracy, mostly on the Kaggle crop table split at random.
 How good are they on **real Government of India data**, in **states and years the model has never seen**, and can we do better?
 
-* **Data:** DES district × season × year crop statistics (1997–2020) + NASA POWER climate + SoilGrids soil (built by `backend/scripts/build_large_dataset.py`).
+* **Data:** DES district × season × year crop statistics (1997-98 to 2022-23, official DES portal) + NASA POWER climate + SoilGrids soil (built by `backend/scripts/build_large_dataset.py`).
 * **Task:** for each district-season-year, rank the crops grown there by realised yield percentile. The "best crop" is the top-yielding one.
 * **Baselines (as in the literature):** Gaussian NB, Random Forest, XGBoost, MLP classifiers, plus naive *crop prior* and *last-year persistence*.
 * **Ours (YieldRank):** LightGBM LambdaMART ranker on (district-season, crop) pairs, and **split-conformal prediction sets** with a 90% coverage target, calibrated on **held-out states**.

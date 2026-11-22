@@ -260,7 +260,9 @@ Environmental features alone thus carry little \emph{transferable} signal about 
 yields best, and history does most of the work. Dropping soil does the opposite of what
 random splits suggest: it lowers random-split Hit@1 (RF \NSRFHitR\% vs \RFHitR\%) but raises
 it on held-out states (RF \NSRFHitLSO\% vs \RFHitLSO\%; XGBoost \NSXGBHitLSO\% vs
-\XGBHitLSO\%). \SOILSENTENCE
+\XGBHitLSO\%). Soil here is one fixed SoilGrids point per district, so it acts as a
+location fingerprint that the classifiers overfit, as Meyer et al.\ warn \cite{meyer2019}.
+YieldRank is unaffected (\NSOursHitLSO\% vs \OursHitLSO\%).
 
 \begin{table}[t]
 \caption{YieldRank on held-out states: 90\% LAC sets under different calibration schemes
@@ -282,11 +284,12 @@ then its sets are much larger than YieldRank's at similar coverage (\RFSizeGRPLS
 more informative sets. Marginal
 coverage hides state-level failures, though (Fig.~\ref{fig:cov}). The median state is covered
 at \MedianStateCovIID\%, but \StatesBelowIID{} of \StatesN{} states fall below 85\%, worst
-\WorstState{} (\WorstIID\%). \WORSTSENTENCE Table~\ref{tab:conflso} compares remedies. Pooling all training states through cross-group calibration (out-of-fold
+\WorstState{} (\WorstIID\%). \WorstState{} has \WorstCand{} candidate crops per query against
+\MeanCand{} on average, so its queries are harder than the calibration pool. Table~\ref{tab:conflso} compares remedies. Pooling all training states through cross-group calibration (out-of-fold
 scores from rankers that never saw the state) keeps marginal coverage at \CCLACCovLSO\% but
 leaves \CCWorstState{} at \CCWorstCov\%. A Mondrian threshold per number of candidate crops,
-which is known before predicting, lifts the worst state to \MNWorstCov\% (Telangana
-\MNTelanganaCov\%) and leaves \MNStatesBelow{} states below 85\%. The cost is larger sets
+which is known before predicting, lifts the worst state to \MNWorstCov\% (\CCWorstState{}
+\MNAtCCWorst\%) and leaves \MNStatesBelow{} states below 85\%. The cost is larger sets
 (\CCMNSizeLSO{} vs \CCLACSizeLSO{} crops). Region-wise Mondrian helps less (worst
 \MRWorstCov\%). State-conditional coverage remains open.
 
@@ -318,7 +321,7 @@ which is known before predicting, lifts the worst state to \MNWorstCov\% (Telang
 
 \textbf{What the benchmark changes.} On the near-synthetic Kaggle table, the question ``which
 model is best?'' has an answer near 99\% that says little about deployment. On real district
-data, two choices matter more than the classifier family. The first is the evaluation protocol:
+data, three choices matter more than the classifier family. The first is the evaluation protocol:
 random splits overstate the classifiers' Hit@1 by up to
 \ClfDropMax{} points (YieldRank: \OursDrop) relative to unseen states. The second is the problem formulation: ranking
 (query, crop) pairs by realised yield is consistently better than predicting a crop label.
