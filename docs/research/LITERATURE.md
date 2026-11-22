@@ -1,7 +1,7 @@
 # AgroMind — Literature Review
 
 Related work for AgroMind, a state-aware Random Forest crop recommender for Indian fields.
-References are numbered [1]–[37] in IEEE style; [`references.bib`](references.bib) lists the same
+References are numbered [1]–[38] in IEEE style; [`references.bib`](references.bib) lists the same
 entries in the same order.
 
 **How citations were checked (2026-11-22).** Every DOI was looked up in Crossref (DataCite for the
@@ -82,7 +82,7 @@ cards with nutrient advice. MANAGE's impact study [24] evaluates the scheme, and
 Pai et al. [26]. SoilGrids 2.0 [27] maps global soil properties at 250 m with uncertainty. NASA
 POWER [29] provides daily climate for any location, for example through the `nasapower` client
 [28]. District-wise crop production statistics from the Directorate of Economics and Statistics
-(MoA&FW) are published on India's Open Government Data platform [30]; a community-compiled Kaggle copy extends them to 2020–21 [36].
+(MoA&FW) are published on India's Open Government Data platform [30]; the DES APY report portal [38] covers 1997–98 to 2022–23, and a community-compiled Kaggle copy [36] serves as a cross-check.
 
 ---
 
@@ -120,7 +120,7 @@ benchmark to beat.
 | Gap | Evidence | AgroMind's response |
 |-----|----------|---------------------|
 | **G1. Location-blind models.** Most Kaggle-based recommenders use only N, P, K, pH, temperature, humidity and rainfall, so a reading gets the same answer in Punjab and in Kerala. | [11]–[13]; location appears in only a few systems [7], [9] | **State-aware features.** State, season and soil type are one-hot model inputs, not just UI labels. |
-| **G2. Single-source, near-synthetic training data.** Results come from one dataset, often the augmented Kaggle set. | [11], [12], [31] | **Multi-source merge.** Kaggle (2,200 rows), the India multi-state set (8,000) and Tamil Nadu field records (57,000) are normalised into one schema: 67,200 rows, 74 crops, 16 states. A v3 dataset joins district-season-year production statistics [30], [36] with NASA POWER climate [29] and SoilGrids soil [27]. |
+| **G2. Single-source, near-synthetic training data.** Results come from one dataset, often the augmented Kaggle set. | [11], [12], [31] | **Multi-source merge.** Kaggle (2,200 rows), the India multi-state set (8,000) and Tamil Nadu field records (57,000) are normalised into one schema: 67,200 rows, 74 crops, 16 states. A v3 dataset joins district-season-year production statistics [30], [38] with NASA POWER climate [29] and SoilGrids soil [27]. |
 | **G3. Random splits overstate accuracy.** Random cross-validation on grouped data leaks structure between train and test. | [18], [19], [37]; none of [6]–[15] report a grouped test, and [37] holds out time but not states | **Leave-one-source-out (LOSO) test.** Train on two sources, test on the third, and report the drop next to the random-split score. |
 | **G4. Uncalibrated confidence.** Recommenders show a "confidence %", but tree-ensemble probabilities are distorted. | [20]; no calibration reported in [8]–[15] | **Calibration.** Reliability diagrams and Expected Calibration Error for the Random Forest [21], with isotonic or sigmoid calibration. |
 | **G5. Top-1 accuracy only.** Farmers choose among several viable crops, and a single label hides the alternatives. | [6]–[13] report top-1 only | **Ranked output.** Top-3 accuracy, plus same-season alternatives in the UI. |
@@ -204,3 +204,5 @@ benchmark to beat.
 [36] pyatakov, "India Agriculture Crop Production: District-wise crop area and production 1997–2021 (updated Feb. 2023)," Kaggle. [Online]. Available: https://www.kaggle.com/datasets/pyatakov/india-agriculture-crop-production (accessed Nov. 22, 2026).
 
 [37] S. Sam and S. M. D'Abreo, "Crop recommendation with machine learning: Leveraging environmental and economic factors for optimal crop selection," arXiv:2505.21201, 2025, doi: 10.48550/arXiv.2505.21201.
+
+[38] Directorate of Economics and Statistics, MoA&FW, Government of India, "Area, Production & Yield (APY) – Reports." [Online]. Available: https://data.desagri.gov.in/website/crops-apy-report-web (accessed Nov. 22, 2026).
