@@ -154,7 +154,7 @@
   </div>
 
   <div class="inissue-row"><b>In this issue:</b> Key results · Methodology · From the literature ·
-    What the tests showed · Coming next: v4 · Team · References</div>
+    What the tests showed · v4 · Team · References</div>
 </div>
 
 <!-- ============ PAGE 2 ============ -->
@@ -239,16 +239,6 @@
       Adding soil, season and state raises accuracy on the multi-state rows from 32.22% to 71.50%. But when one
       whole source is held out, accuracy falls to 7.0–12.9%, only a few points above chance. The three sources describe the same
       crops so differently that a model fitted to one tells us little about the others.</p>
-  </div>
-
-  <div class="figrow">
-    <figure><img src="../research/figures/01_v1_decode_flaw.png" alt="Bar chart of v1 test rows where no or several crop classifiers fire, and confusion matrix with errors collected in the apple column">
-      <figcaption><b>Fig. 1.</b> v1's one-vs-rest decoding: rows with no answer or several answers, and errors piling into class 0 (apple).</figcaption></figure>
-    <figure><img src="../research/figures/07_loso.png" alt="Bar chart comparing in-distribution accuracy of 0.71 to 0.99 with leave-one-source-out accuracy of 0.07 to 0.14">
-      <figcaption><b>Fig. 2.</b> Leave-one-source-out: in-distribution accuracy (blue) versus accuracy on a source the model never saw.</figcaption></figure>
-  </div>
-
-  <div class="cols">
     <h3>3. v3 holds up on districts it has never seen</h3>
     <p>With whole districts held out, the best model's first suggestion is a top-yielding crop 72.90% of the time
       (93.50% within its top three), against 62.90% / 88.30% for a baseline that simply recommends what the state
@@ -263,20 +253,43 @@
   </div>
 
   <div class="figrow">
+    <figure><img src="../research/figures/07_loso.png" alt="Bar chart comparing in-distribution accuracy of 0.71 to 0.99 with leave-one-source-out accuracy of 0.07 to 0.14">
+      <figcaption><b>Fig. 1.</b> Leave-one-source-out: in-distribution accuracy (blue) versus accuracy on a source the model never saw.</figcaption></figure>
     <figure><img src="../research/figures/13_v3_generalisation.png" alt="v3 hit@1 for unseen districts 0.73, unseen states 0.39 and future years 0.66 against popularity baselines, and hit@1 per held-out state">
-      <figcaption><b>Fig. 3.</b> v3 on real Government records: hit@1 for unseen districts, unseen states and future years against the best popularity baseline, and per held-out state.</figcaption></figure>
-    <figure><img src="../research/figures/10_calibration.png" alt="Reliability diagram showing the model's accuracy above its stated confidence in every bin, ECE 0.076">
-      <figcaption><b>Fig. 4.</b> Calibration of the deployed v2 model: observed accuracy sits above stated confidence in every bin.</figcaption></figure>
+      <figcaption><b>Fig. 2.</b> v3 on real Government records: hit@1 for unseen districts, unseen states and future years against the best popularity baseline, and per held-out state.</figcaption></figure>
   </div>
 
-  <div class="box" style="margin-top:1mm">
-    <div class="box-title">Coming next: v4</div>
-      <p>The next version changes the question from "which crop is this?" to "which crops grow best here?". It
-        ranks crops by expected yield for a district and season, learned from the same Government records, and
-        returns a <b>prediction set</b>: a short list of crops built with conformal prediction, so that the list
-        contains a top-yielding crop with a guaranteed probability. When conditions are unusual, the list grows
-        instead of the model guessing confidently. Results will appear in the next issue.</p>
+  <div class="box" style="margin-top:1mm;font-size:8.8pt;line-height:1.36">
+    <div class="box-title">v4 · Ranking crops by real yield, with an honest shortlist</div>
+    <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:5mm;align-items:start">
+      <div>
+        <p>v4 asks "which crops yield best here?" instead of "which crop is this?". <b>YieldRank</b>, a
+          learning-to-rank model (LightGBM LambdaMART <span class="cite">[35]</span>), orders the 49 crops for each
+          district, season and year in 227,451 Government records (1997–2020, 38,068 queries). Here hit@1 means
+          the top-ranked crop is <i>the</i> best-yielding one, a stricter test than v3's. On states it has never seen,
+          YieldRank's first pick is the best crop 54.2% of the time against 38.8% for XGBoost
+          (+15.4 points, p&nbsp;&lt;&nbsp;10<sup>−300</sup>).</p>
+        <p>It also returns a <b>conformal prediction set</b>: a shortlist meant to contain the best crop 90% of the time.
+          On unseen states, with i.i.d. calibration, the sets achieve 90.1% coverage with 2.95 crops on average, but only 69.4% in the worst state
+          (Telangana). For a Random Forest on unseen states, calibrating on held-out training states instead of i.i.d. data lifts coverage from 73.6% to 88.8%.</p>
+        <p><b>The honest caveat:</b> simply repeating last year's best crop scores 53.7%, almost as high.
+          YieldRank's clear advantage is on the 41.1% of cases with no usable history: 45.9% against 41.8%.</p>
+      </div>
+      <div>
+        <table class="kr">
+          <thead><tr><th>Unseen states</th><th class="num">Hit@1</th><th class="num">NDCG@3</th></tr></thead>
+          <tbody>
+            <tr class="best"><td>YieldRank (ours)</td><td class="num">54.2%</td><td class="num">0.917</td></tr>
+            <tr><td>XGBoost</td><td class="num">38.8%</td><td class="num">0.842</td></tr>
+            <tr><td>Last-year persistence</td><td class="num">53.7%</td><td class="num">0.906</td></tr>
+          </tbody>
+        </table>
+        <p class="note">Leave-states-out, 38,068 district–season–years. For contrast, a Random Forest scores 99.5% on a random split of the Kaggle set.</p>
+        <p class="note" style="margin-top:2mm"><b>Paper in preparation:</b> "Beyond 99%: Yield-Grounded Crop Ranking with
+          Conformal Prediction Sets, Evaluated on Unseen Indian States and Years", targeting IATMSI-2027 (IEEE).</p>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- ============ PAGE 4 ============ -->
