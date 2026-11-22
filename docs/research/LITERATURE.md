@@ -1,7 +1,7 @@
 # AgroMind — Literature Review
 
 Related work for AgroMind, a state-aware Random Forest crop recommender for Indian fields.
-References are numbered [1]–[35] in IEEE style; [`references.bib`](references.bib) lists the same
+References are numbered [1]–[36] in IEEE style; [`references.bib`](references.bib) lists the same
 entries in the same order.
 
 **How citations were checked (2026-11-22).** Every DOI was looked up in Crossref (DataCite for the
@@ -82,7 +82,7 @@ cards with nutrient advice. MANAGE's impact study [24] evaluates the scheme, and
 Pai et al. [26]. SoilGrids 2.0 [27] maps global soil properties at 250 m with uncertainty. NASA
 POWER [29] provides daily climate for any location, for example through the `nasapower` client
 [28]. District-wise crop production statistics from the Directorate of Economics and Statistics
-(MoA&FW) are published on India's Open Government Data platform [30].
+(MoA&FW) are published on India's Open Government Data platform [30]; a community-compiled Kaggle copy extends them to 2020–21 [36].
 
 ---
 
@@ -119,7 +119,7 @@ benchmark to beat.
 | Gap | Evidence | AgroMind's response |
 |-----|----------|---------------------|
 | **G1. Location-blind models.** Most Kaggle-based recommenders use only N, P, K, pH, temperature, humidity and rainfall, so a reading gets the same answer in Punjab and in Kerala. | [11]–[13]; location appears in only a few systems [7], [9] | **State-aware features.** State, season and soil type are one-hot model inputs, not just UI labels. |
-| **G2. Single-source, near-synthetic training data.** Results come from one dataset, often the augmented Kaggle set. | [11], [12], [31] | **Multi-source merge.** Kaggle (2,200 rows), the India multi-state set (8,000) and Tamil Nadu field records (57,000) are normalised into one schema: 67,200 rows, 74 crops, 16 states. A v3 dataset joins district-season-year production statistics [30] with NASA POWER climate [29] and SoilGrids soil [27]. |
+| **G2. Single-source, near-synthetic training data.** Results come from one dataset, often the augmented Kaggle set. | [11], [12], [31] | **Multi-source merge.** Kaggle (2,200 rows), the India multi-state set (8,000) and Tamil Nadu field records (57,000) are normalised into one schema: 67,200 rows, 74 crops, 16 states. A v3 dataset joins district-season-year production statistics [30], [36] with NASA POWER climate [29] and SoilGrids soil [27]. |
 | **G3. Random splits overstate accuracy.** Random cross-validation on grouped data leaks structure between train and test. | [18], [19]; none of [6]–[15] report a grouped test | **Leave-one-source-out (LOSO) test.** Train on two sources, test on the third, and report the drop next to the random-split score. |
 | **G4. Uncalibrated confidence.** Recommenders show a "confidence %", but tree-ensemble probabilities are distorted. | [20]; no calibration reported in [8]–[15] | **Calibration.** Reliability diagrams and Expected Calibration Error for the Random Forest [21], with isotonic or sigmoid calibration. |
 | **G5. Top-1 accuracy only.** Farmers choose among several viable crops, and a single label hides the alternatives. | [6]–[13] report top-1 only | **Ranked output.** Top-3 accuracy, plus same-season alternatives in the UI. |
@@ -188,7 +188,7 @@ benchmark to beat.
 
 [29] NASA Langley Research Center, "POWER: Prediction Of Worldwide Energy Resources." [Online]. Available: https://power.larc.nasa.gov/ (accessed Nov. 22, 2026).
 
-[30] National Informatics Centre, Government of India, "Open Government Data (OGD) Platform India — district-wise crop production statistics (Directorate of Economics and Statistics, MoA&FW)." [Online]. Available: https://www.data.gov.in/ (accessed Nov. 22, 2026).
+[30] Directorate of Economics and Statistics, MoA&FW, Government of India, "District-wise, season-wise crop production statistics from 1997," Open Government Data (OGD) Platform India. [Online]. Available: https://www.data.gov.in/resource/district-wise-season-wise-crop-production-statistics-1997 (accessed Nov. 22, 2026).
 
 [31] A. Ingle, "Crop Recommendation Dataset," Kaggle, 2020. [Online]. Available: https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset (accessed Nov. 22, 2026).
 
@@ -199,3 +199,5 @@ benchmark to beat.
 [34] F. Pedregosa et al., "Scikit-learn: Machine learning in Python," *J. Mach. Learn. Res.*, vol. 12, no. 85, pp. 2825–2830, 2011. [Online]. Available: https://www.jmlr.org/papers/v12/pedregosa11a.html
 
 [35] G. Ke et al., "LightGBM: A highly efficient gradient boosting decision tree," in *Advances in Neural Information Processing Systems 30 (NIPS)*, 2017. [Online]. Available: https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html
+
+[36] pyatakov, "India Agriculture Crop Production: District-wise crop area and production 1997–2021 (updated Feb. 2023)," Kaggle. [Online]. Available: https://www.kaggle.com/datasets/pyatakov/india-agriculture-crop-production (accessed Nov. 22, 2026).
