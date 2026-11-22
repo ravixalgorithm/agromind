@@ -781,201 +781,209 @@
       }
     ],
     "data": {
-      "rows": 344539,
-      "states": 36,
-      "districts": 792,
-      "crop_years": 24,
-      "crops_raw": 55,
+      "rows": 400379,
+      "states": 37,
+      "districts": 748,
+      "crop_years": 26,
+      "crops_raw": 54,
       "crops_app": 49,
       "coverage_pct": {
         "climate_%": 100.0,
-        "soil_any_%": 97.75,
-        "soil_soilgrids_point_%": 21.52
+        "soil_any_%": 99.97,
+        "soil_soilgrids_point_%": 91.51
       }
     },
     "task": {
-      "labelled_rows": 84253,
-      "queries": 38261,
+      "labelled_rows": 96411,
+      "queries": 43998,
       "crops": 49,
       "positives_per_query": {
-        "1": 11462,
-        "2": 7606,
-        "3": 19193
+        "1": 13484,
+        "2": 8615,
+        "3": 21899
       }
     },
     "leave_districts_out": {
       "baseline: season popularity": {
-        "hit1_mean": 0.3473,
-        "hit1_std": 0.022,
-        "hit3_mean": 0.6175,
-        "hit3_std": 0.017,
-        "recall3_mean": 0.3933
+        "hit1_mean": 0.3413,
+        "hit1_std": 0.0108,
+        "hit3_mean": 0.6124,
+        "hit3_std": 0.0058,
+        "recall3_mean": 0.3914
       },
       "baseline: state x season popularity": {
-        "hit1_mean": 0.629,
-        "hit1_std": 0.0108,
-        "hit3_mean": 0.883,
-        "hit3_std": 0.0051,
-        "recall3_mean": 0.6432
+        "hit1_mean": 0.6169,
+        "hit1_std": 0.0144,
+        "hit3_mean": 0.8826,
+        "hit3_std": 0.0087,
+        "recall3_mean": 0.6458
       },
       "RF: climate + season": {
-        "hit1_mean": 0.539,
-        "hit1_std": 0.0065,
-        "hit3_mean": 0.7949,
-        "hit3_std": 0.003,
-        "recall3_mean": 0.5634
+        "hit1_mean": 0.5321,
+        "hit1_std": 0.0079,
+        "hit3_mean": 0.789,
+        "hit3_std": 0.0067,
+        "recall3_mean": 0.5595
       },
       "RF: + state": {
-        "hit1_mean": 0.6831,
-        "hit1_std": 0.0051,
-        "hit3_mean": 0.91,
-        "hit3_std": 0.0036,
-        "recall3_mean": 0.687
+        "hit1_mean": 0.6792,
+        "hit1_std": 0.0061,
+        "hit3_mean": 0.9088,
+        "hit3_std": 0.0044,
+        "recall3_mean": 0.6869
       },
       "RF: + state + lat/lon": {
-        "hit1_mean": 0.7268,
-        "hit1_std": 0.005,
-        "hit3_mean": 0.9337,
-        "hit3_std": 0.0023,
-        "recall3_mean": 0.7242
+        "hit1_mean": 0.7231,
+        "hit1_std": 0.0044,
+        "hit3_mean": 0.9344,
+        "hit3_std": 0.0042,
+        "recall3_mean": 0.7254
       },
       "ExtraTrees: + state + lat/lon": {
-        "hit1_mean": 0.729,
-        "hit1_std": 0.0033,
-        "hit3_mean": 0.935,
-        "hit3_std": 0.003,
-        "recall3_mean": 0.7273
+        "hit1_mean": 0.7266,
+        "hit1_std": 0.0109,
+        "hit3_mean": 0.9353,
+        "hit3_std": 0.0044,
+        "recall3_mean": 0.7275
       },
       "KNN (k=25): + state + lat/lon": {
-        "hit1_mean": 0.7003,
-        "hit1_std": 0.0069,
-        "hit3_mean": 0.9211,
-        "hit3_std": 0.0025,
-        "recall3_mean": 0.7013
+        "hit1_mean": 0.6973,
+        "hit1_std": 0.0051,
+        "hit3_mean": 0.9195,
+        "hit3_std": 0.0057,
+        "recall3_mean": 0.7026
       },
       "LogisticRegression: + state + lat/lon": {
-        "hit1_mean": 0.6035,
-        "hit1_std": 0.0048,
-        "hit3_mean": 0.8748,
-        "hit3_std": 0.0033,
+        "hit1_mean": 0.6053,
+        "hit1_std": 0.01,
+        "hit3_mean": 0.8739,
+        "hit3_std": 0.0096,
         "recall3_mean": 0.6313
       }
     },
     "leave_states_out": {
       "baseline: season popularity": {
-        "hit1_mean": 0.3126,
-        "hit1_std": 0.065,
-        "hit3_mean": 0.5539
+        "hit1_mean": 0.3046,
+        "hit1_std": 0.0589,
+        "hit3_mean": 0.5544
       },
       "RF: climate + season + lat/lon": {
-        "hit1_mean": 0.3947,
-        "hit1_std": 0.0498,
-        "hit3_mean": 0.6867
+        "hit1_mean": 0.404,
+        "hit1_std": 0.0586,
+        "hit3_mean": 0.7045
       }
     },
     "leave_states_out_per_state_hit1": {
-      "Uttar Pradesh": 0.4916,
-      "Bihar": 0.2433,
-      "Madhya Pradesh": 0.3346,
-      "Karnataka": 0.4446,
-      "West Bengal": 0.3451,
-      "Gujarat": 0.3941,
-      "Maharashtra": 0.2783,
-      "Rajasthan": 0.3851,
-      "Assam": 0.2936,
-      "Tamil Nadu": 0.5506,
-      "Odisha": 0.2911,
-      "Haryana": 0.7278,
-      "Andhra Pradesh": 0.5559,
-      "Punjab": 0.6514,
-      "Kerala": 0.6352,
-      "Arunachal Pradesh": 0.3039,
-      "Uttarakhand": 0.2006,
-      "Chhattisgarh": 0.1084,
-      "Jharkhand": 0.2132,
-      "Meghalaya": 0.2663,
-      "Nagaland": 0.262,
-      "Himachal Pradesh": 0.2672,
-      "Manipur": 0.1518,
-      "Jammu and Kashmir": 0.2561,
-      "Tripura": 0.4565,
-      "Telangana": 0.6186,
-      "Puducherry": 0.3793,
-      "Mizoram": 0.2994,
-      "Sikkim": 0.8361,
-      "Goa": 0.3627,
-      "Andaman and Nicobar Islands": 0.3607,
-      "Dadra and Nagar Haveli": 0.2653,
-      "Delhi": 0.8298,
-      "Chandigarh": 0.8,
+      "Uttar Pradesh": 0.5026,
+      "Bihar": 0.2541,
+      "Madhya Pradesh": 0.3418,
+      "Karnataka": 0.4875,
+      "West Bengal": 0.2899,
+      "Gujarat": 0.3666,
+      "Tamil Nadu": 0.5456,
+      "Maharashtra": 0.4276,
+      "Rajasthan": 0.4555,
+      "Assam": 0.2855,
+      "Odisha": 0.3082,
+      "Haryana": 0.6941,
+      "Punjab": 0.6772,
+      "Kerala": 0.6298,
+      "Andhra Pradesh": 0.528,
+      "Telangana": 0.4908,
+      "Arunachal Pradesh": 0.3823,
+      "Jharkhand": 0.1977,
+      "Uttarakhand": 0.3333,
+      "Chhattisgarh": 0.0725,
+      "Meghalaya": 0.2211,
+      "Nagaland": 0.2231,
+      "Himachal Pradesh": 0.2624,
+      "Tripura": 0.491,
+      "Manipur": 0.0914,
+      "Jammu and Kashmir": 0.2533,
+      "Puducherry": 0.364,
+      "Mizoram": 0.2299,
+      "Sikkim": 0.1825,
+      "Goa": 0.3299,
+      "Andaman and Nicobar Islands": 0.2727,
+      "Dadra and Nagar Haveli": 0.2157,
+      "Chandigarh": 0.7576,
+      "Delhi": 0.8148,
+      "Ladakh": 0.6667,
+      "The Dadra & Nagar Haveli and Daman and Diu": 0.0,
       "Daman and Diu": 0.0
     },
     "leave_years_out": {
       "baseline: season popularity": {
-        "hit1": 0.3215,
-        "hit3": 0.5808,
-        "recall3": 0.3641,
+        "hit1": 0.3146,
+        "hit3": 0.5677,
+        "recall3": 0.359,
         "hit1_by_year": {
-          "2015": 0.3621,
-          "2016": 0.3195,
+          "2015": 0.3619,
+          "2016": 0.3206,
           "2017": 0.3158,
           "2018": 0.3112,
-          "2019": 0.3029,
-          "2020": 0.3243
+          "2019": 0.3032,
+          "2020": 0.3101,
+          "2021": 0.3048,
+          "2022": 0.2939
         }
       },
       "baseline: state x season popularity": {
-        "hit1": 0.5772,
-        "hit3": 0.8432,
-        "recall3": 0.5977,
+        "hit1": 0.5549,
+        "hit3": 0.8368,
+        "recall3": 0.5957,
         "hit1_by_year": {
-          "2015": 0.6182,
-          "2016": 0.588,
-          "2017": 0.5783,
-          "2018": 0.5651,
-          "2019": 0.5443,
-          "2020": 0.4324
+          "2015": 0.6178,
+          "2016": 0.5859,
+          "2017": 0.5811,
+          "2018": 0.5636,
+          "2019": 0.5482,
+          "2020": 0.5304,
+          "2021": 0.5203,
+          "2022": 0.4995
         }
       },
       "RF: + state + lat/lon": {
-        "hit1": 0.6606,
-        "hit3": 0.8903,
-        "recall3": 0.67,
+        "hit1": 0.652,
+        "hit3": 0.8858,
+        "recall3": 0.6659,
         "hit1_by_year": {
-          "2015": 0.7196,
-          "2016": 0.6907,
-          "2017": 0.6658,
-          "2018": 0.6383,
-          "2019": 0.5997,
-          "2020": 0.4865
+          "2015": 0.7209,
+          "2016": 0.6864,
+          "2017": 0.67,
+          "2018": 0.6405,
+          "2019": 0.6054,
+          "2020": 0.6419,
+          "2021": 0.6337,
+          "2022": 0.6264
         }
       }
     },
     "soil_subset": {
-      "queries": 8186,
-      "districts": 170,
+      "queries": 40249,
+      "districts": 650,
       "soil_source": {
-        "soilgrids_centroid": 8186
+        "soilgrids_centroid": 40249
       },
       "RF: + state + lat/lon": {
-        "hit1_mean": 0.6158,
-        "hit3_mean": 0.8675
+        "hit1_mean": 0.7224,
+        "hit3_mean": 0.9287
       },
       "RF: + state + lat/lon + soil": {
-        "hit1_mean": 0.5987,
-        "hit3_mean": 0.8594
+        "hit1_mean": 0.7095,
+        "hit3_mean": 0.9222
       }
     },
     "summary": [
       {
         "aspect": "Data",
         "v2": "67,200 rows from 3 sources that disagree on the same crop (v2 notebook \u00a72.3)",
-        "v3": "344,539 Government APY rows, 792 districts, 24 crop years"
+        "v3": "400,379 Government APY rows, 748 districts, 26 crop years"
       },
       {
         "aspect": "Labels",
         "v2": "crop name of each row",
-        "v3": "top-3 yield-percentile crops per district-year-season (38,261 queries)"
+        "v3": "top-3 yield-percentile crops per district-year-season (43,998 queries)"
       },
       {
         "aspect": "Validation",
@@ -985,17 +993,17 @@
       {
         "aspect": "Unseen districts, hit@1 / hit@3",
         "v2": "\u2014",
-        "v3": "72.90% / 93.50% (ExtraTrees: + state + lat/lon); baseline 62.90% / 88.30%"
+        "v3": "72.66% / 93.53% (ExtraTrees: + state + lat/lon); baseline 61.69% / 88.26%"
       },
       {
         "aspect": "Unseen states / regions, hit@1",
         "v2": "7\u201313% (leave-one-source-out accuracy)",
-        "v3": "39.47% (baseline 31.26%)"
+        "v3": "40.40% (baseline 30.46%)"
       },
       {
-        "aspect": "Future years (2015\u20132020), hit@1",
+        "aspect": "Future years (2015\u20132022), hit@1",
         "v2": "not testable",
-        "v3": "66.06% (baseline 57.72%)"
+        "v3": "65.20% (baseline 55.49%)"
       }
     ],
     "meta": {
@@ -1004,7 +1012,7 @@
       "python": "3.12.14",
       "sklearn": "1.9.1",
       "seed": 42,
-      "runtime_seconds": 189.0,
+      "runtime_seconds": 226.7,
       "doc": "hit1 = top-ranked crop is one of the recommend==1 crops of the district-year-season query; hit3 = any of the top 3 is; recall3 = share of recommended crops in the top 3. leave_districts_out = GroupKFold(5) by state|district; leave_states_out = GroupKFold(5) by state (state feature dropped); leave_years_out = train <=2014, test >=2015."
     }
   },

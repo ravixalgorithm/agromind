@@ -227,7 +227,7 @@ class V3Service:
                 "source": "docs/research/results.json (notebooks/AgroMind_v3_LargeScale.ipynb)",
                 "note": "hit1/hit3 = share of district-year-season queries whose top-1 / top-3 contains a recommended crop. "
                         "Leave-states-out and leave-years-out were measured with RandomForest on the same features "
-                        "(ExtraTrees matched it within 0.3 points on leave-districts-out).",
+                        "(ExtraTrees matched it within 0.5 points on leave-districts-out).",
             }
         return {
             "model": "ExtraTreesClassifier(300, min_samples_leaf=2), one-hot season + state",
