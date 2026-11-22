@@ -176,6 +176,40 @@ WRB_SOIL = {
     "Ferralsols": "Laterite", "Plinthosols": "Laterite", "Acrisols": "Red", "Lixisols": "Red",
     "Nitisols": "Red", "Arenosols": "Sandy", "Solonchaks": "Saline", "Solonetz": "Saline",
 }
+# Territories reorganised during 1997-2023 whose districts appear under two DES state labels
+# (Kargil/Leh: J&K until 2019-20, Ladakh after; DNH, Daman, Diu: merged UT from 2020). Group by
+# `state_group` for leave-states-out so one district never sits on both sides of a split.
+STATE_GROUPS = {
+    "Jammu and Kashmir": "Jammu and Kashmir + Ladakh", "Ladakh": "Jammu and Kashmir + Ladakh",
+    "Dadra and Nagar Haveli": "Dadra & Nagar Haveli and Daman & Diu",
+    "Daman and Diu": "Dadra & Nagar Haveli and Daman & Diu",
+    "The Dadra & Nagar Haveli and Daman and Diu": "Dadra & Nagar Haveli and Daman & Diu",
+}
+
+# CACP minimum support prices, crop year x commodity, Rs/quintal (sugarcane: FRP).
+CACP_MSP_URL = "https://cacp.da.gov.in/json.json"  # the data behind https://cacp.da.gov.in/Home/MSP
+# CACP commodity -> crop_slug. The main MSP variety per crop; Grade A paddy, Maldandi jowar,
+# long-staple cotton, black soybean and copra (calendar year; DES counts coconuts) are kept unmapped.
+MSP_CROPS = {
+    "Paddy Common": "rice", "Jowar-Hybrid": "jowar", "Bajra": "bajra", "Maize": "maize", "Ragi": "ragi",
+    "Tur (Arhar)": "pigeonpeas", "Moong": "mungbean", "Urad": "blackgram", "Groundnut": "groundnut",
+    "Sunflower Seed": "sunflower", "Soyabean Yellow": "soybean", "Sesamum": "sesame",
+    "Nigerseed": "nigerseed", "Medium Staple Cotton": "cotton", "Wheat": "wheat", "Barley": "barley",
+    "Gram": "chickpea", "Lentil (Masur)": "lentil", "Rapeseed/ Mustard": "mustard",
+    "Safflower": "safflower", "Jute": "jute", "Sugarcane": "sugarcane",
+}
+# Rice is reported as milled rice but MSP is for paddy; cotton is lint bales but MSP is for kapas.
+MSP_NOT_SAME_PRODUCT = {"rice": "DES production is rice (milled), MSP is for paddy",
+                        "cotton": "DES production is lint in 170 kg bales, MSP is for kapas (seed cotton)"}
+# Cross-check: PIB release 2003184 (6 Feb 2024), MSP for crop years 2021-22 and 2022-23.
+PIB_MSP = {
+    "Paddy Common": (1940, 2040), "Jowar-Hybrid": (2738, 2970), "Bajra": (2250, 2350), "Ragi": (3377, 3578),
+    "Maize": (1870, 1962), "Tur (Arhar)": (6300, 6600), "Moong": (7275, 7755), "Urad": (6300, 6600),
+    "Groundnut": (5550, 5850), "Sunflower Seed": (6015, 6400), "Soyabean Yellow": (3950, 4300),
+    "Sesamum": (7307, 7830), "Nigerseed": (6930, 7287), "Medium Staple Cotton": (5726, 6080),
+    "Wheat": (2015, 2125), "Barley": (1635, 1735), "Gram": (5230, 5335), "Lentil (Masur)": (5500, 6000),
+    "Rapeseed/ Mustard": (5050, 5450), "Safflower": (5441, 5650), "Jute": (4500, 4750),
+}
 MIN_AREA_HA = 100  # tiny plots give noisy yields; never labelled recommend
 TOP_K = 3
 
@@ -649,6 +683,30 @@ def check_mirror(des: pd.DataFrame) -> dict:
     }}
 
 
+def build_msp() -> dict:
+    """msp_crop_year.csv: CACP MSP / FRP per crop year, joinable on (crop_slug, crop_year)."""
+    raw = cached_json(CACHE / "cacp_msp.json", CACP_MSP_URL)
+    m = pd.DataFrame(raw).rename(columns={"commodityname": "commodity", "seasonname": "cacp_season"})
+    num = lambda s: pd.to_numeric(s.replace("-", None), errors="coerce")
+    m = m.assign(year=m.financialyear.astype(int), msp_rs_qtl=num(m.fixed_price), cacp_rec_rs_qtl=num(m.reco_price))
+    m = m[m.msp_rs_qtl.notna()]
+    m["crop_year"] = [f"{y}-{(y + 1) % 100:02d}" for y in m.year]
+    m["crop_slug"] = m.commodity.map(MSP_CROPS)
+    m["price_type"] = (m.commodity == "Sugarcane").map({True: "FRP", False: "MSP"})
+    m["same_product_as_des"] = m.crop_slug.notna() & ~m.crop_slug.isin(MSP_NOT_SAME_PRODUCT)
+    m["note"] = m.crop_slug.map(MSP_NOT_SAME_PRODUCT)
+    # quintals per DES production unit: tonnes = 10 q; jute is counted in 180 kg bales
+    m["qtl_per_des_unit"] = m.crop_slug.map({"jute": 1.8}).fillna(10.0).where(m.same_product_as_des)
+    m = m[["crop_slug", "crop_year", "year", "commodity", "cacp_season", "price_type", "msp_rs_qtl",
+           "cacp_rec_rs_qtl", "same_product_as_des", "qtl_per_des_unit", "note"]].sort_values(["commodity", "year"])
+    m.to_csv(OUT / "msp_crop_year.csv", index=False)
+    got = {(r.commodity, r.year): r.msp_rs_qtl for r in m.itertuples()}
+    checks = [got.get((c, y)) == v for c, vs in PIB_MSP.items() for y, v in zip((2021, 2022), vs)]
+    return {"msp": {"source": CACP_MSP_URL, "rows": len(m), "commodities": m.commodity.nunique(),
+                    "crop_slugs": int(m.crop_slug.nunique()), "years": f"{m.crop_year.min()}..{m.crop_year.max()}",
+                    "pib_2003184_checked": len(checks), "pib_2003184_identical": int(sum(checks))}}
+
+
 def label(df: pd.DataFrame) -> pd.DataFrame:
     """recommend = 1 when the crop is in the top-k of its district-season-year by yield
     percentile, where the percentile compares a crop's yield to the same crop's yield in every
@@ -729,10 +787,11 @@ def main():
     df.loc[miss, "soil_class"] = df.loc[miss, "state"].map(own.groupby("state").soil_class.agg(lambda s: s.mode().iloc[0]))
 
     df = label(df)
+    df["state_group"] = df.state.map(STATE_GROUPS).fillna(df.state)
     cols = ["state", "district", "crop_year", "year", "season", "season_app", "crop", "crop_slug",
             "area_ha", "production", "production_unit", "yield", "yield_pct", "recommend",
             "geo_state", "geo_district", "lat", "lon", "match_method", "temperature", "humidity",
-            "rainfall", *soil_cols, "wrb_class", "soil_class", "soil_source"]
+            "rainfall", *soil_cols, "wrb_class", "soil_class", "soil_source", "state_group"]
     df = df[cols].sort_values(["state", "district", "year", "season", "crop"]).reset_index(drop=True)
     df["yield"] = df["yield"].round(4)
     df.to_csv(OUT / "agromind_india_large.csv.gz", index=False)
@@ -747,8 +806,21 @@ def main():
         columns={"soil_n_gkg": "N", "soil_ph": "ph", "crop": "crop_raw"})
     train = train.assign(season=train.season_app, crop=train.crop_slug)[
         ["N", "ph", "temperature", "humidity", "rainfall", "soil_class", "season", "state", "crop",
-         "district", "year", "yield_pct", "soil_source"]].rename(columns={"soil_class": "soil"})
+         "district", "year", "yield_pct", "soil_source", "state_group"]].rename(columns={"soil_class": "soil"})
     train.to_csv(OUT / "agromind_india_train.csv.gz", index=False)
+    stats.update(build_msp())
+
+    # Leave-states-out leak check: a centroid (= identical soil, same climate cell) must not sit in
+    # two groups, or a held-out state shares features with training rows of the "other" state.
+    pk_groups = lambda col: df.groupby("pkey_out")[col].nunique()
+    df["pkey_out"] = df.lat.round(4).astype(str) + "_" + df.lon.round(4).astype(str)
+    shared = pk_groups("state")
+    leak = {"centroids_in_2plus_states": int((shared > 1).sum()),
+            "rows_on_those_centroids": int(df.pkey_out.isin(shared[shared > 1].index).sum()),
+            "centroids_in_2plus_state_groups": int((pk_groups("state_group") > 1).sum()),
+            "district_names_sharing_a_centroid": df.groupby("pkey_out").district.nunique().pipe(
+                lambda s: {k: sorted(df[df.pkey_out == k].district.unique()) for k in s[s > 1].index})}
+    df.drop(columns="pkey_out", inplace=True)
 
     has = lambda c: round(100 * df[c].notna().mean(), 2)
     stats.update({
@@ -767,6 +839,7 @@ def main():
         "recommend_rows": int(df.recommend.sum()),
         "train_rows": len(train), "train_crops": train.crop.nunique(),
         "train_soil_classes": train.soil.value_counts().to_dict(),
+        "leave_states_out_leak_check": leak,
     })
     (OUT / "stats.json").write_text(json.dumps(stats, indent=2, default=str))
     log(json.dumps(stats, indent=2, default=str))
