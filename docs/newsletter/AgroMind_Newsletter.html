@@ -85,7 +85,7 @@
   .team div { border: .6px solid var(--rule); padding: 2mm 1mm; }
   .team b { display: block; font-size: 9pt; }
   .refs { font-size: 7.1pt; line-height: 1.28; column-count: 3; column-gap: 5mm; hyphens: auto; text-align: left; }
-  .refs p { margin: 0 0 1mm; padding-left: 6mm; text-indent: -6mm; break-inside: avoid; }
+  .refs p { overflow-wrap: anywhere; margin: 0 0 1mm; padding-left: 6mm; text-indent: -6mm; break-inside: avoid; }
   .foot { margin-top: 3mm; border-top: 3px double var(--maroon); padding-top: 1.5mm; font-size: 7.6pt; color: var(--muted); text-align: center; }
 </style>
 </head>
@@ -196,7 +196,7 @@
   <p class="kicker">From the Literature</p>
   <h2>What earlier crop recommenders found, and missed</h2>
   <div class="cols">
-    <p>We reviewed 35 sources (all DOIs verified), with an emphasis on Indian work. Early Indian systems used
+    <p>We reviewed 36 sources (all DOIs verified), with an emphasis on Indian work. Early Indian systems used
       majority-vote ensembles over soil data <span class="cite">[6], [8]</span> and added sowing season and
       location <span class="cite">[7], [9]</span>. Recent work on the Kaggle dataset reports 98–99.6% accuracy
       with XGBoost and Bayesian classifiers <span class="cite">[11], [12]</span>. Explainable systems such as
@@ -299,12 +299,13 @@
     <p>[27] L. Poggio et al., &quot;SoilGrids 2.0: Producing soil information for the globe with quantified spatial uncertainty,&quot; <i>SOIL</i>, vol. 7, no. 1, pp. 217–240, 2021, doi: 10.5194/soil-7-217-2021.</p>
     <p>[28] A. H. Sparks, &quot;nasapower: A NASA POWER global meteorology, surface solar energy and climatology data client for R,&quot; <i>J. Open Source Softw.</i>, vol. 3, no. 30, p. 1035, 2018, doi: 10.21105/joss.01035.</p>
     <p>[29] NASA Langley Research Center, &quot;POWER: Prediction Of Worldwide Energy Resources.&quot; [Online]. Available: https://power.larc.nasa.gov/ (accessed Nov. 22, 2026).</p>
-    <p>[30] National Informatics Centre, Government of India, &quot;Open Government Data (OGD) Platform India — district-wise crop production statistics (Directorate of Economics and Statistics, MoA&amp;FW).&quot; [Online]. Available: https://www.data.gov.in/ (accessed Nov. 22, 2026).</p>
+    <p>[30] Directorate of Economics and Statistics, MoA&amp;FW, Government of India, &quot;District-wise, season-wise crop production statistics from 1997,&quot; Open Government Data (OGD) Platform India. [Online]. Available: https://www.data.gov.in/resource/district-wise-season-wise-crop-production-statistics-1997 (accessed Nov. 22, 2026).</p>
     <p>[31] A. Ingle, &quot;Crop Recommendation Dataset,&quot; Kaggle, 2020. [Online]. Available: https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset (accessed Nov. 22, 2026).</p>
     <p>[32] T. G. Dietterich, &quot;Approximate statistical tests for comparing supervised classification learning algorithms,&quot; <i>Neural Comput.</i>, vol. 10, no. 7, pp. 1895–1923, 1998, doi: 10.1162/089976698300017197.</p>
     <p>[33] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, &quot;On calibration of modern neural networks,&quot; in <i>Proc. 34th Int. Conf. Machine Learning (ICML)</i>, 2017; arXiv:1706.04599, doi: 10.48550/arXiv.1706.04599.</p>
     <p>[34] F. Pedregosa et al., &quot;Scikit-learn: Machine learning in Python,&quot; <i>J. Mach. Learn. Res.</i>, vol. 12, no. 85, pp. 2825–2830, 2011. [Online]. Available: https://www.jmlr.org/papers/v12/pedregosa11a.html</p>
     <p>[35] G. Ke et al., &quot;LightGBM: A highly efficient gradient boosting decision tree,&quot; in <i>Advances in Neural Information Processing Systems 30 (NIPS)</i>, 2017. [Online]. Available: https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html</p>
+    <p>[36] pyatakov, &quot;India Agriculture Crop Production: District-wise crop area and production 1997–2021 (updated Feb. 2023),&quot; Kaggle. [Online]. Available: https://www.kaggle.com/datasets/pyatakov/india-agriculture-crop-production (accessed Nov. 22, 2026).</p>
   </div>
   <div class="foot">AgroMind Bulletin · [College Name], Department of [Department Name] · Vol. 1, Issue 1 · November 2026<br>
     Full literature review: docs/research/LITERATURE.md · Code and notebook: AgroMind project repository</div>
