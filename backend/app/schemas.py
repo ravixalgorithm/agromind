@@ -46,3 +46,23 @@ class CropPrediction(BaseModel):
 class CropResponse(BaseModel):
     best_crop: str
     top_recommendations: list[CropPrediction]
+
+
+class V3Overrides(BaseModel):
+    """Optional edits to the district's default climate / soil. Climate feeds the model; soil is context only."""
+
+    temperature: float | None = Field(None, ge=-30, le=50, description="Mean season temperature, °C")
+    humidity: float | None = Field(None, ge=0, le=100, description="Mean season relative humidity, %")
+    rainfall: float | None = Field(None, ge=0, le=10000, description="Season total rainfall, mm")
+    soil_ph: float | None = Field(None, ge=3, le=10)
+    soil_n_gkg: float | None = Field(None, ge=0)
+    soil_soc_gkg: float | None = Field(None, ge=0)
+    soil_clay_pct: float | None = Field(None, ge=0, le=100)
+    soil_sand_pct: float | None = Field(None, ge=0, le=100)
+    soil_cec_cmolkg: float | None = Field(None, ge=0)
+
+
+class V3Request(V3Overrides):
+    state: str
+    district: str
+    season: Literal["kharif", "rabi", "zaid", "whole_year"]
