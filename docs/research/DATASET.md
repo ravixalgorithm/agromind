@@ -105,7 +105,7 @@ Large table (`agromind_india_large.*`):
 | `temperature`, `humidity`, `rainfall` | NASA POWER over the season window: mean T2M (°C), mean RH2M (%), total precipitation (mm = Σ mm/day × days in month) |
 | `soil_ph`, `soil_n_gkg`, `soil_soc_gkg`, `soil_clay_pct`, `soil_sand_pct`, `soil_cec_cmolkg` | SoilGrids, thickness-weighted mean of 0–5/5–15/15–30 cm, converted to pH, g/kg total N, g/kg organic C, % clay, % sand, cmol(c)/kg |
 | `wrb_class` | most probable WRB reference soil group at the point |
-| `soil_class` | app soil bucket: Vertisols → Black; Fluvisols/Gleysols → Alluvial; Ferralsols/Plinthosols → Laterite; Acrisols/Lixisols/Nitisols → Red; Arenosols → Sandy; Solonchaks/Solonetz → Saline; any other group (or none) → texture: sand ≥ 70 % Sandy, clay ≥ 40 % Clay, silt ≥ 60 % Silty, else Loamy; no soil at all → Other |
+| `soil_class` | app soil bucket: Vertisols → Black; Fluvisols/Gleysols → Alluvial; Ferralsols/Plinthosols → Laterite; Acrisols/Lixisols/Nitisols → Red; Arenosols → Sandy; Solonchaks/Solonetz → Saline; any other group (or none) → texture: sand ≥ 70 % Sandy, clay ≥ 40 % Clay, silt ≥ 60 % Silty, else Loamy; `state_median` rows take the most common class among the state's districts that have their own soil; no soil at all → Other |
 | `soil_source` | `soilgrids_centroid`, `state_median`, or null |
 
 Season windows (crop year Y = Y-07 … Y+1-06): Kharif Jun–Oct Y · Autumn Apr–Aug Y · Rabi

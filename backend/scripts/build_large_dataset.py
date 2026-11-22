@@ -492,6 +492,9 @@ def main():
         df.loc[miss, c] = df.loc[miss, "state"].map(medians[c])
     df.loc[miss, "soil_source"] = "state_median"
     df["soil_class"] = [soil_class(w, c, s) for w, c, s in zip(df.wrb_class, df.soil_clay_pct, df.soil_sand_pct)]
+    # median texture is almost always "Loamy"; the state's most common district class is fairer
+    own = df[df.soil_source == "soilgrids_centroid"].drop_duplicates("pkey")
+    df.loc[miss, "soil_class"] = df.loc[miss, "state"].map(own.groupby("state").soil_class.agg(lambda s: s.mode().iloc[0]))
 
     df = label(df)
     cols = ["state", "district", "crop_year", "year", "season", "season_app", "crop", "crop_slug",
