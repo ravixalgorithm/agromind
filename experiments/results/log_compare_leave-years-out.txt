@@ -1,6 +1,6 @@
-leave-years-out f0 Crop prior                             Hit@1  27.9%  Hit@3  68.0%  NDCG@3 0.794  cold  23.9%  cov90  90.4% size 4.47  train    0.0s  infer 0.006 ms/q
-leave-years-out f0 Persistence                            Hit@1  59.9%  Hit@3  89.2%  NDCG@3 0.926  cold  47.9%  cov90  92.2% size 3.12  train    0.0s  infer 0.006 ms/q
-leave-years-out f0 Gaussian NB                            Hit@1  31.1%  Hit@3  72.1%  NDCG@3 0.813  cold  26.0%  cov90  91.0% size 4.46  train    0.0s  infer 0.005 ms/q
-leave-years-out f0 Random Forest                          Hit@1  53.4%  Hit@3  86.4%  NDCG@3 0.903  cold  42.7%  cov90  89.4% size 3.03  train    3.5s  infer 0.025 ms/q
-leave-years-out f0 XGBoost                                Hit@1  54.4%  Hit@3  86.5%  NDCG@3 0.905  cold  42.3%  cov90  89.8% size 3.11  train   45.1s  infer 0.039 ms/q
-leave-years-out f0 MLP                                    Hit@1  52.9%  Hit@3  85.5%  NDCG@3 0.896  cold  42.8%  cov90  90.0% size 3.26  train    2.3s  infer 0.004 ms/q
+leave-years-out f0 Crop prior                             Hit@1  27.9%  Hit@3  67.3%  NDCG@3 0.791  cold  24.1%  cov90  90.3% size 4.47  train    0.1s  infer 0.010 ms/q
+leave-years-out f0 Persistence                            Hit@1  59.8%  Hit@3  89.2%  NDCG@3 0.926  cold  47.6%  cov90  92.4% size 3.18  train    0.0s  infer 0.013 ms/q
+leave-years-out f0 Gaussian NB                            Hit@1  31.1%  Hit@3  71.6%  NDCG@3 0.812  cold  26.3%  cov90  90.6% size 4.45  train    0.1s  infer 0.011 ms/q
+leave-years-out f0 Random Forest                          Hit@1  53.6%  Hit@3  86.2%  NDCG@3 0.903  cold  42.9%  cov90  89.7% size 3.11  train    7.7s  infer 0.068 ms/q
+leave-years-out f0 XGBoost                                Hit@1  54.0%  Hit@3  86.4%  NDCG@3 0.905  cold  43.3%  cov90  90.1% size 3.17  train   93.1s  infer 0.062 ms/q
+leave-years-out f0 MLP                                    Hit@1  51.1%  Hit@3  84.1%  NDCG@3 0.884  cold  41.7%  cov90  89.3% size 3.32  train    4.8s  infer 0.007 ms/q

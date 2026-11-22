@@ -15,9 +15,12 @@
 
 \title{Beyond 99\%: Yield-Grounded Crop Ranking with Conformal Prediction Sets, Evaluated on Unseen Indian States and Years}
 
-\author{\IEEEauthorblockN{Rajat Patel, Harshit Jain, Sanyam Jain, Ravi Pratap Singh\IEEEauthorrefmark{1}, and Dr.\ Imran Khan (Supervisor)}
-\IEEEauthorblockA{Department of Computer Science and Engineering, Harcourt Butler Technical University (HBTU), Kanpur, India\\
-\IEEEauthorrefmark{1}Corresponding author: 230104047@hbtu.ac.in}}
+\author{\IEEEauthorblockN{Rajat Patel, Harshit Jain, Sanyam Jain, and Ravi Pratap Singh\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{Department of Computer Science and Engineering\\Harcourt Butler Technical University (HBTU), Kanpur, India\\
+\IEEEauthorrefmark{1}Corresponding author: 230104047@hbtu.ac.in}
+\and
+\IEEEauthorblockN{Prof.\ (Dr.) Imran Khan}
+\IEEEauthorblockA{Professor, Dept.\ of CSE (Project Supervisor)\\Harcourt Butler Technical University (HBTU), Kanpur, India}}
 
 \maketitle
 
@@ -175,11 +178,18 @@ each candidate in that district, its 3-year mean, and last year's area share. Hi
 strictly earlier years only. We report a history-free ablation too. State identity is
 \emph{not} a feature, because it carries no information about an unseen state.
 
-\textbf{YieldRank.} We train a LightGBM \cite{ke2017} LambdaMART ranker \cite{burges2010} on
-(query, crop) pairs, with crop identity as a categorical feature so that trees can learn
-crop$\times$environment interactions. Relevance is the yield percentile graded into 10 levels,
-and the objective optimises NDCG. A pointwise LightGBM regressor on the percentile serves as an
-ablation.
+\textbf{YieldRank.} All our models score (query, crop) \emph{pairs}, with crop identity as a
+categorical feature so that trees can learn crop$\times$environment interactions, and are trained
+on the yield percentile (graded into 10 levels for ranking losses). The final YieldRank blends
+three scores, each standardised within the query: a listwise ranker (XGBoost \texttt{rank:ndcg}
+\cite{chen2016}, a LambdaMART-style objective \cite{burges2010}), a pointwise LightGBM
+\cite{ke2017} regressor of the yield percentile, and $0.25\times$ the crop's last-year percentile
+in the district (persistence; the crop's mean training percentile when it has no last-year
+record). We chose this configuration, among single LightGBM/XGBoost rankers and regressors (default
+and tuned) and their blends with $w\in\{0,0.25,0.5,1\}\times$persistence, by the mean Hit@1 on
+\emph{validation} queries: the held-out 20\% of training states (or year blocks, or queries) in
+every fold, never the test folds. The earlier LightGBM LambdaMART model and the pointwise
+regressor are reported as ablations.
 
 \textbf{Literature baselines.} Following prior work, the classifiers predict a single crop label
 from query-level features: Gaussian Naive Bayes \cite{pudumalar2017,elbasi2023}, Random Forest
@@ -200,7 +210,12 @@ training states is not exchangeable with an unseen state. We therefore compare
 (i) \emph{i.i.d.\ calibration}: random held-out queries from the training groups; and
 (ii) \emph{held-out-group calibration}: 20\% of training \emph{states} (or year blocks) withheld
 from fitting. If states are exchangeable, (ii) restores a state-level guarantee. All models are
-fitted on the same remaining queries.
+fitted on the same remaining queries. For deployment we also study a \emph{state-robust}
+threshold. Out-of-fold scores come from rankers that never saw the state. For each calibration
+state $s$ we take its own $(1-\alpha)$ LAC quantile $t_s$, then use the
+$\lceil (S+1)\beta\rceil$-th smallest $t_s$ ($\beta=0.9$). If states are exchangeable, a new
+state's threshold is below it with probability $\ge\beta$, so with that probability the state
+itself gets at least $1-\alpha$ coverage.
 
 \textbf{Protocols.} \emph{Random}: 5-fold CV over queries. \emph{Leave-states-out}: 5-fold
 grouped CV over states. \emph{Leave-years-out}: 5 contiguous year blocks. We report mean$\pm$std
@@ -240,15 +255,16 @@ classifier. YieldRank beats it by a small but significant margin overall
 incomplete. On the \ColdShareLSO\% of queries in which at least one candidate crop was not grown
 in that district the previous year, YieldRank reaches \OursHitColdLSO\% against
 \PersHitColdLSO\% for persistence ($p\PersPColdLSO$) and \BaseHitColdLSO\% for \BaseNameLSO.
-On the remaining warm queries persistence is slightly better (\PersHitWarmLSO\% vs
-\OursHitWarmLSO\%, $p\PersPWarmLSO$).
+On the remaining warm queries the two are statistically tied (\OursHitWarmLSO\% vs
+\PersHitWarmLSO\%, $p\PersPWarmLSO$), so blending persistence in costs nothing where history exists.
 
-\textbf{Ablations.} A pointwise LightGBM regressor on the same (query, crop) pairs is
-slightly \emph{better} than the LambdaMART objective on held-out states (\PointHitLSO\% vs
-\OursHitLSO\% Hit@1, $p\PointPLSO$; NDCG@3 \PointNDCGLSO{} vs \OursNDCGLSO). The gain over
-the literature therefore comes from the yield-grounded \emph{pair} formulation, which lets crop
-identity interact with environment and history, not from the listwise loss. Practitioners can
-use the simpler regressor. Without district history, i.e.\ with only the climate-and-soil
+\textbf{Ablations.} On their own, the pointwise regressor and the LightGBM LambdaMART ranker
+reach \PointHitLSO\% and \ListHitLSO\% Hit@1 on held-out states. The blend is higher than both
+($p\PointPLSO$ and $p\ListPLSO$) and is also the best variant on random (\OursHitR\% vs
+\PointHitR\%/\ListHitR\%) and leave-years-out splits (\OursHitLYO\% vs \PointHitLYO\%/\ListHitLYO\%).
+The large gain over the literature comes from the yield-grounded \emph{pair} formulation, which
+lets crop identity interact with environment and history. The choice of loss and the blend add
+less than one point on top. Without district history, i.e.\ with only the climate-and-soil
 features the literature uses, every model collapses on unseen states. Random Forest falls from
 \NHRFHitR\% (random split) to \NHRFHitLSO\%, and YieldRank reaches only \NHOursHitLSO\% (best
 classifier, \NHBaseNameLSO: \NHBaseHitLSO\%), barely above the crop prior
@@ -289,8 +305,12 @@ which is known before predicting, lifts the worst state to \MNWorstCov\% (\CCWor
 \MNAtCCWorst\%) at the cost of larger sets (\CCMNSizeLSO{} vs \CCLACSizeLSO{} crops). It does
 not reduce the number of states below 85\% (\MNStatesBelow{} vs \CCStatesBelow{} for pooled
 calibration). Region-wise Mondrian gives a lower worst-state coverage (\MRWorstCov\%) and
-\MRStatesBelow{} such states. No scheme we tried gives state-conditional coverage, which remains
-open.
+\MRStatesBelow{} such states. The state-robust threshold does best. On unseen states its sets
+cover \CCSRCovLSO\% marginally (median state \SRMedianCov\%, worst \SRWorstState{}
+\SRWorstCov\%). The number of states below 90\% falls from \CCStatesBelowNinety{} to
+\SRStatesBelowNinety{}, and below 85\% from \CCStatesBelow{} to \SRStatesBelow. The price is
+\CCSRSizeLSO{} instead of \CCLACSizeLSO{} crops per set. The deployed model uses this threshold.
+No scheme reaches 90\% in every state, and a per-state guarantee for unseen states remains open.
 
 
 \begin{table}[t]

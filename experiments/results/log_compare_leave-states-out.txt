@@ -1,6 +1,6 @@
-leave-states-out f0 Crop prior                             Hit@1  17.0%  Hit@3  50.0%  NDCG@3 0.723  cold  15.0%  cov90  76.7% size 4.59  train    0.0s  infer 0.006 ms/q
-leave-states-out f0 Persistence                            Hit@1  51.0%  Hit@3  83.4%  NDCG@3 0.902  cold  42.0%  cov90  88.9% size 3.42  train    0.0s  infer 0.007 ms/q
-leave-states-out f0 Gaussian NB                            Hit@1  24.6%  Hit@3  56.4%  NDCG@3 0.741  cold  23.7%  cov90  84.3% size 4.85  train    0.0s  infer 0.005 ms/q
-leave-states-out f0 Random Forest                          Hit@1  33.4%  Hit@3  67.3%  NDCG@3 0.816  cold  30.0%  cov90  73.2% size 3.66  train    4.1s  infer 0.047 ms/q
-leave-states-out f0 XGBoost                                Hit@1  34.4%  Hit@3  69.1%  NDCG@3 0.829  cold  31.0%  cov90  78.1% size 3.78  train   45.9s  infer 0.031 ms/q
-leave-states-out f0 MLP                                    Hit@1  35.0%  Hit@3  68.8%  NDCG@3 0.809  cold  31.1%  cov90  73.5% size 3.49  train    3.5s  infer 0.008 ms/q
+leave-states-out f0 Crop prior                             Hit@1  13.9%  Hit@3  53.1%  NDCG@3 0.712  cold  13.4%  cov90  76.3% size 4.53  train    0.1s  infer 0.011 ms/q
+leave-states-out f0 Persistence                            Hit@1  50.5%  Hit@3  83.6%  NDCG@3 0.900  cold  40.7%  cov90  88.4% size 3.34  train    0.0s  infer 0.017 ms/q
+leave-states-out f0 Gaussian NB                            Hit@1  25.4%  Hit@3  57.6%  NDCG@3 0.745  cold  24.3%  cov90  81.5% size 4.57  train    0.1s  infer 0.010 ms/q
+leave-states-out f0 Random Forest                          Hit@1  32.3%  Hit@3  67.7%  NDCG@3 0.815  cold  28.9%  cov90  70.2% size 3.41  train    7.6s  infer 0.036 ms/q
+leave-states-out f0 XGBoost                                Hit@1  34.0%  Hit@3  67.7%  NDCG@3 0.823  cold  31.6%  cov90  76.0% size 3.71  train   92.5s  infer 0.051 ms/q
+leave-states-out f0 MLP                                    Hit@1  34.3%  Hit@3  68.3%  NDCG@3 0.806  cold  30.1%  cov90  73.0% size 3.42  train    3.4s  infer 0.010 ms/q
