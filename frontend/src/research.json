@@ -1009,7 +1009,7 @@
     }
   },
   "v4": {
-    "_doc": "CC5 novel method: yield-grounded crop ranking (YieldRank, LightGBM LambdaMART) + split-conformal sets on DES district x season x year data (interim soil, CC4 commit 680962d). Query = district-season-year; relevance = yield percentile; hit@1 = top-ranked crop is the best-yielding one. Produced by experiments/run.py, crossconf.py, report.py; paper numbers = paper/tables/numbers.tex.",
+    "_doc": "CC5 novel method: yield-grounded crop ranking (YieldRank, LightGBM LambdaMART) + split-conformal sets on DES district x season x year data. Written by experiments/report.py. v4.numbers holds exactly the values of paper/tables/numbers.tex (same names, as printed in the paper); use them for any displayed figure. v4.conformal = YieldRank 90%/80% sets per protocol and calibration (fractions). Hit@1 = top-ranked crop is the best-yielding one.",
     "meta": {
       "rows": 227451,
       "queries": 38068,
@@ -1026,38 +1026,372 @@
         "NaN": 4721
       }
     },
+    "numbers": {
+      "NRows": "227,451",
+      "NQueries": "38,068",
+      "NCrops": "49",
+      "NStates": "35",
+      "NDistricts": "792",
+      "YearA": "1997",
+      "YearB": "2020",
+      "KaggleRF": "99.5",
+      "KaggleNB": "99.5",
+      "StatesN": "32",
+      "StatesBelowIID": "3",
+      "StatesBelowGRP": "3",
+      "OursNDCGR": "0.938",
+      "OursHitR": "59.8",
+      "OursHitThreeR": "90.2",
+      "BaseNDCGR": "0.917",
+      "BaseHitR": "57.6",
+      "BaseHitThreeR": "88.8",
+      "BaseNameR": "Random Forest",
+      "GainHitR": "2.2",
+      "GainNDCGR": "0.021",
+      "PersNDCGR": "0.912",
+      "PersHitR": "54.5",
+      "PHitR": "=7.2\\times10^{-22}",
+      "NPairedR": "38,068",
+      "CovIIDR": "89.8",
+      "CovGRPR": "90.2",
+      "SizeIIDR": "2.57",
+      "SizeGRPR": "2.62",
+      "APSCovGRPR": "91.5",
+      "APSSizeGRPR": "3.78",
+      "OursNDCGLSO": "0.917",
+      "OursHitLSO": "54.2",
+      "OursHitThreeLSO": "87.2",
+      "BaseNDCGLSO": "0.842",
+      "BaseHitLSO": "38.8",
+      "BaseHitThreeLSO": "73.7",
+      "BaseNameLSO": "XGBoost",
+      "GainHitLSO": "15.4",
+      "GainNDCGLSO": "0.075",
+      "PersNDCGLSO": "0.906",
+      "PersHitLSO": "53.7",
+      "PHitLSO": "<10^{-300}",
+      "NPairedLSO": "38,068",
+      "CovIIDLSO": "90.1",
+      "CovGRPLSO": "89.8",
+      "SizeIIDLSO": "2.95",
+      "SizeGRPLSO": "2.96",
+      "APSCovGRPLSO": "91.3",
+      "APSSizeGRPLSO": "4.46",
+      "OursNDCGLYO": "0.930",
+      "OursHitLYO": "57.6",
+      "OursHitThreeLYO": "88.9",
+      "BaseNDCGLYO": "0.903",
+      "BaseHitLYO": "52.8",
+      "BaseHitThreeLYO": "85.8",
+      "BaseNameLYO": "Random Forest",
+      "GainHitLYO": "4.8",
+      "GainNDCGLYO": "0.027",
+      "PersNDCGLYO": "0.911",
+      "PersHitLYO": "54.4",
+      "PHitLYO": "=1.7\\times10^{-86}",
+      "NPairedLYO": "38,068",
+      "CovIIDLYO": "88.8",
+      "CovGRPLYO": "90.1",
+      "SizeIIDLYO": "2.60",
+      "SizeGRPLYO": "2.75",
+      "APSCovGRPLYO": "91.3",
+      "APSSizeGRPLYO": "4.00",
+      "ColdShareR": "41.1",
+      "OursHitColdR": "54.3",
+      "OursHitWarmR": "63.8",
+      "BaseHitColdR": "50.2",
+      "PersPColdR": "=4.4\\times10^{-141}",
+      "PersPWarmR": "=1.1\\times10^{-10}",
+      "PersPR": "=8.8\\times10^{-113}",
+      "PersHitColdR": "43.8",
+      "PersHitWarmR": "61.9",
+      "ColdShareLSO": "41.1",
+      "OursHitColdLSO": "45.9",
+      "OursHitWarmLSO": "60.0",
+      "BaseHitColdLSO": "32.6",
+      "PersPColdLSO": "=6.3\\times10^{-24}",
+      "PersPWarmLSO": "=9.0\\times10^{-11}",
+      "PersPLSO": "=2.7\\times10^{-2}",
+      "PersHitColdLSO": "41.8",
+      "PersHitWarmLSO": "61.9",
+      "ColdShareLYO": "41.1",
+      "OursHitColdLYO": "50.5",
+      "OursHitWarmLYO": "62.7",
+      "BaseHitColdLYO": "45.2",
+      "PersPColdLYO": "=3.9\\times10^{-65}",
+      "PersPWarmLYO": "=6.7\\times10^{-3}",
+      "PersPLYO": "=8.4\\times10^{-44}",
+      "PersHitColdLYO": "43.5",
+      "PersHitWarmLYO": "61.9",
+      "RFCovIIDMean": "73.6",
+      "RFCovIIDMin": "65.9",
+      "RFCovIIDMax": "78.2",
+      "RFCovGRPMean": "88.8",
+      "RFCovGRPMin": "86.0",
+      "RFCovGRPMax": "92.4",
+      "RFSizeGRPLSO": "4.97",
+      "XGBSizeGRPLSO": "4.57",
+      "PointHitLSO": "55.2",
+      "PointNDCGLSO": "0.919",
+      "PointPLSO": "=1.5\\times10^{-8}",
+      "WorstState": "Telangana",
+      "WorstIID": "69.4",
+      "WorstGRP": "63.5",
+      "MedianStateCovIID": "91.7",
+      "RFHitR": "57.6",
+      "MLPHitR": "53.7",
+      "NBHitR": "33.2",
+      "XGBHitR": "57.4",
+      "RFHitLSO": "34.3",
+      "MLPHitLSO": "37.6",
+      "NBHitLSO": "27.1",
+      "XGBHitLSO": "38.8",
+      "RFHitLYO": "52.8",
+      "MLPHitLYO": "50.9",
+      "NBHitLYO": "32.9",
+      "XGBHitLYO": "52.6",
+      "PriorHitR": "28.5",
+      "PriorHitLSO": "20.7",
+      "PriorHitLYO": "27.7",
+      "ClfDropMax": "23.3",
+      "OursDrop": "5.7",
+      "NHOursHitR": "53.8",
+      "NHOursNDCGR": "0.920",
+      "NHBaseHitR": "50.3",
+      "NHBaseNDCGR": "0.893",
+      "NHBaseNameR": "Random Forest",
+      "NHCovIIDR": "89.9",
+      "NHOursHitLSO": "28.0",
+      "NHOursNDCGLSO": "0.787",
+      "NHBaseHitLSO": "26.0",
+      "NHBaseNDCGLSO": "0.779",
+      "NHBaseNameLSO": "MLP",
+      "NHCovIIDLSO": "82.6",
+      "NHOursHitLYO": "51.1",
+      "NHOursNDCGLYO": "0.907",
+      "NHBaseHitLYO": "46.0",
+      "NHBaseNDCGLYO": "0.879",
+      "NHBaseNameLYO": "Random Forest",
+      "NHCovIIDLYO": "88.3",
+      "NSRFHitR": "55.3",
+      "NSXGBHitR": "55.9",
+      "NSOursHitR": "58.7",
+      "NSRFHitLSO": "37.6",
+      "NSXGBHitLSO": "39.4",
+      "NSOursHitLSO": "54.7",
+      "NSRFHitLYO": "51.0",
+      "NSXGBHitLYO": "51.6",
+      "NSOursHitLYO": "56.8",
+      "NHRFHitR": "50.3",
+      "NHRFHitLSO": "24.2",
+      "NHPriorHitLSO": "20.7",
+      "CCLACCovR": "90.1",
+      "CCLACSizeR": "2.58",
+      "CCAPSCovR": "91.6",
+      "CCAPSSizeR": "3.77",
+      "CCHitR": "60.3",
+      "CCMNCovR": "90.1",
+      "CCMNSizeR": "2.83",
+      "CCMRCovR": "90.1",
+      "CCMRSizeR": "2.62",
+      "CCLACCovLSO": "90.2",
+      "CCLACSizeLSO": "2.98",
+      "CCAPSCovLSO": "90.6",
+      "CCAPSSizeLSO": "4.30",
+      "CCHitLSO": "55.0",
+      "CCMNCovLSO": "90.3",
+      "CCMNSizeLSO": "3.29",
+      "CCMRCovLSO": "90.7",
+      "CCMRSizeLSO": "3.09",
+      "CCLACCovLYO": "90.2",
+      "CCLACSizeLYO": "2.71",
+      "CCAPSCovLYO": "91.2",
+      "CCAPSSizeLYO": "3.92",
+      "CCHitLYO": "58.0",
+      "CCMNCovLYO": "90.1",
+      "CCMNSizeLYO": "2.99",
+      "CCMRCovLYO": "90.2",
+      "CCMRSizeLYO": "2.76",
+      "CCStatesBelow": "4",
+      "CCWorstCov": "70.1",
+      "CCWorstState": "Telangana",
+      "CCTelanganaCov": "70.1",
+      "MNStatesBelow": "3",
+      "MNWorstCov": "78.3",
+      "MNWorstState": "Haryana",
+      "MNTelanganaCov": "83.1",
+      "MRStatesBelow": "4",
+      "MRWorstCov": "75.8",
+      "MRWorstState": "Nagaland",
+      "MRTelanganaCov": "78.1"
+    },
+    "conformal": {
+      "random": {
+        "conformal_iid_cal": {
+          "LAC@0.9": {
+            "coverage": 0.8979194927068711,
+            "size": 2.5670894707465224,
+            "frac": 0.5340957983095832,
+            "singleton": 0.147919497882374
+          },
+          "APS@0.9": {
+            "coverage": 0.9156510001089961,
+            "size": 3.8005932402895235,
+            "frac": 0.615699844082238,
+            "singleton": 0.20098253471356403
+          },
+          "LAC@0.8": {
+            "coverage": 0.7973102290605107,
+            "size": 1.7609539397152596,
+            "frac": 0.39692353589783774,
+            "singleton": 0.375512239356932
+          },
+          "APS@0.8": {
+            "coverage": 0.8591204660740439,
+            "size": 2.8257585432629426,
+            "frac": 0.479850761329694,
+            "singleton": 0.308185468354198
+          }
+        },
+        "conformal_group_cal": {
+          "LAC@0.9": {
+            "coverage": 0.9019912022662077,
+            "size": 2.6160288118173702,
+            "frac": 0.5419941237024762,
+            "singleton": 0.1410633022309764
+          },
+          "APS@0.9": {
+            "coverage": 0.9152568786659596,
+            "size": 3.779759743496558,
+            "frac": 0.6128530105537744,
+            "singleton": 0.20258509121875537
+          },
+          "LAC@0.8": {
+            "coverage": 0.8002787387823995,
+            "size": 1.7760592658563001,
+            "frac": 0.3995484062307318,
+            "singleton": 0.3681828060755297
+          },
+          "APS@0.8": {
+            "coverage": 0.8568612935217093,
+            "size": 2.7971512652155037,
+            "frac": 0.4758095308631732,
+            "singleton": 0.3123097472211949
+          }
+        }
+      },
+      "leave-states-out": {
+        "conformal_iid_cal": {
+          "LAC@0.9": {
+            "coverage": 0.9007113007331828,
+            "size": 2.9510052984173343,
+            "frac": 0.6059838721936477,
+            "singleton": 0.08380865985791419
+          },
+          "APS@0.9": {
+            "coverage": 0.90065372803939,
+            "size": 4.167384721219636,
+            "frac": 0.6653403059898291,
+            "singleton": 0.17945079281397353
+          },
+          "LAC@0.8": {
+            "coverage": 0.7721884601626977,
+            "size": 1.8825045788819648,
+            "frac": 0.4324358644952159,
+            "singleton": 0.2978071582530715
+          },
+          "APS@0.8": {
+            "coverage": 0.8556819616703752,
+            "size": 3.342421272916313,
+            "frac": 0.5511521046724429,
+            "singleton": 0.24233407100931864
+          }
+        },
+        "conformal_group_cal": {
+          "LAC@0.9": {
+            "coverage": 0.8982154498963393,
+            "size": 2.9559523371452263,
+            "frac": 0.6067966386853959,
+            "singleton": 0.08800986780276568
+          },
+          "APS@0.9": {
+            "coverage": 0.9128546620888821,
+            "size": 4.457824161913665,
+            "frac": 0.7147953575576776,
+            "singleton": 0.15368415271184005
+          },
+          "LAC@0.8": {
+            "coverage": 0.797047753633773,
+            "size": 2.052808527870308,
+            "frac": 0.46311829016670947,
+            "singleton": 0.25551331658285364
+          },
+          "APS@0.8": {
+            "coverage": 0.8393054248519322,
+            "size": 3.1157183807509243,
+            "frac": 0.5217735401085403,
+            "singleton": 0.2631121526718383
+          }
+        }
+      },
+      "leave-years-out": {
+        "conformal_iid_cal": {
+          "LAC@0.9": {
+            "coverage": 0.8883682507408237,
+            "size": 2.597094405263193,
+            "frac": 0.5400481270939428,
+            "singleton": 0.14703845480449995
+          },
+          "APS@0.9": {
+            "coverage": 0.9046641758755747,
+            "size": 3.784041757751209,
+            "frac": 0.614285872581587,
+            "singleton": 0.20088931714286243
+          },
+          "LAC@0.8": {
+            "coverage": 0.7785563133294641,
+            "size": 1.7596550046484893,
+            "frac": 0.39899808849740004,
+            "singleton": 0.3722400227820192
+          },
+          "APS@0.8": {
+            "coverage": 0.847982003628595,
+            "size": 2.8648390883335626,
+            "frac": 0.4859860297391604,
+            "singleton": 0.30302833996232614
+          }
+        },
+        "conformal_group_cal": {
+          "LAC@0.9": {
+            "coverage": 0.901451123514746,
+            "size": 2.7462267972238896,
+            "frac": 0.5634636645129467,
+            "singleton": 0.12749341583139043
+          },
+          "APS@0.9": {
+            "coverage": 0.9130478933779633,
+            "size": 3.9981245408524173,
+            "frac": 0.6439128030277028,
+            "singleton": 0.18579484199006785
+          },
+          "LAC@0.8": {
+            "coverage": 0.7999024225353287,
+            "size": 1.8869852313648754,
+            "frac": 0.4213849302695808,
+            "singleton": 0.3199909436026685
+          },
+          "APS@0.8": {
+            "coverage": 0.8526155819558161,
+            "size": 2.932982828395263,
+            "frac": 0.49549503279313145,
+            "singleton": 0.2936499574408707
+          }
+        }
+      }
+    },
     "kaggle_random_split_accuracy": {
       "RandomForest": 0.9954545454545455,
       "GaussianNB": 0.9954545454545455
-    },
-    "headline": {
-      "OursHitLSO": "54.",
-      "BaseHitLSO": "38.",
-      "BaseNameLSO": "XGBoos",
-      "GainHitLSO": "15.",
-      "OursNDCGLSO": "0.91",
-      "BaseNDCGLSO": "0.84",
-      "PersHitLSO": "53.",
-      "PHitLSO": "<10^{-300",
-      "PersPLSO": "=2.7\\times10^{-2",
-      "OursHitColdLSO": "45.",
-      "PersHitColdLSO": "41.",
-      "ColdShareLSO": "41.",
-      "PointHitLSO": "55.",
-      "CovIIDLSO": "90.",
-      "SizeIIDLSO": "2.9",
-      "RFCovIIDMean": "73.",
-      "RFCovGRPMean": "88.",
-      "WorstState": "Telangan",
-      "WorstIID": "69.",
-      "MNWorstCov": "78.",
-      "NHOursHitLSO": "28.",
-      "NHRFHitR": "50.",
-      "NHRFHitLSO": "24.",
-      "NSRFHitLSO": "37.",
-      "RFHitLSO": "34.",
-      "ClfDropMax": "23.",
-      "OursDrop": "5."
     },
     "metrics": {
       "main": {

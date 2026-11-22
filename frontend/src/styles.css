@@ -525,6 +525,15 @@ table {
   font-weight: 700;
 }
 
+.data tbody tr.group-row th {
+  background: var(--navy-light);
+  color: var(--navy);
+}
+
+:root[data-contrast='high'] .data tbody tr.group-row th {
+  color: #fff;
+}
+
 .data tbody tr.is-warn {
   background: var(--warn-light);
 }

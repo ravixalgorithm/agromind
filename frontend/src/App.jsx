@@ -1371,6 +1371,7 @@ const COLS = {
   hit3: 'Hit@3',
   recall3: 'Recall@3',
   hit1_by_year: 'Hit@1',
+  hist: 'Yield history used',
   v1: 'v1',
   v2: 'v2',
   v3: 'v3',
@@ -1592,8 +1593,8 @@ function V4Report({ v }) {
   const bestClf = entries.filter(([n]) => isClassifier(n)).sort((a, b) => b[1].mean['hit@1'] - a[1].mean['hit@1'])[0];
   const pers = entries.find(([n]) => /persistence/i.test(n));
   const pointwise = entries.find(([n]) => /pointwise/i.test(n));
-  const folds = v.crossconf?.['leave-states-out'] ?? [];
-  const lac = folds.map((f) => f.conformal_crossgroup?.['LAC@0.9']).filter(Boolean);
+  const n = v.numbers ?? {}; // exact paper values (paper/tables/numbers.tex), as strings
+  const iid = v.conformal?.['leave-states-out']?.conformal_iid_cal?.['LAC@0.9'];
   const states = Object.entries(v.coverage_by_state_leave_states_out ?? {}).sort((a, b) => a[1].cov_LAC - b[1].cov_LAC);
 
   return (
@@ -1610,11 +1611,17 @@ function V4Report({ v }) {
               {pointwise && <>, and a pointwise LightGBM model {pct1(pointwise[1].mean['hit@1'])}</>}.
             </>
           )}
-          {lac.length > 0 && (
+          {n.OursHitColdLSO && n.PersHitColdLSO && (
             <>
               {' '}
-              With 90% conformal sets, coverage on unseen states is {pct1(avg(lac.map((c) => c.coverage)))} with {avg(lac.map((c) => c.size)).toFixed(2)} crops per set on average;
-              per-state coverage is uneven (lowest: {states.slice(0, 2).map(([n, s]) => `${n} ${pct1(s.cov_LAC)}`).join(', ')}).
+              Its clear gain over persistence is on cold-start queries ({n.ColdShareLSO ? `${n.ColdShareLSO}% of cases, where some candidate crop has no yield history` : 'some candidate crop has no yield history'}): {n.OursHitColdLSO}% vs {n.PersHitColdLSO}%.
+            </>
+          )}
+          {iid && (
+            <>
+              {' '}
+              With 90% conformal prediction sets (i.i.d. calibration), coverage on unseen states is <strong>{pct1(iid.coverage)}</strong> with {iid.size.toFixed(2)} crops per set on
+              average{n.WorstState && n.WorstIID ? `, but it drops to ${n.WorstIID}% in ${n.WorstState}` : ''}.
             </>
           )}
         </p>
@@ -1714,7 +1721,7 @@ function V4Report({ v }) {
 
       {v.crossconf && (
         <div className="sub-section">
-          <h3>Conformal prediction sets — coverage and average set size (mean of 5 folds)</h3>
+          <h3>Conformal prediction sets — coverage · average set size</h3>
           <div className="table-wrap">
             <table className="data">
               <thead>
@@ -1728,6 +1735,36 @@ function V4Report({ v }) {
                 </tr>
               </thead>
               <tbody>
+                {[
+                  ['conformal_iid_cal', 'i.i.d. calibration (paper headline)'],
+                  ['conformal_group_cal', 'Held-out-group calibration'],
+                ]
+                  .filter(([cal]) => v.conformal?.['leave-states-out']?.[cal])
+                  .flatMap(([cal, title]) => [
+                    <tr key={cal} className="group-row">
+                      <th scope="colgroup" colSpan={Object.keys(v.crossconf).length + 1}>
+                        {title}
+                      </th>
+                    </tr>,
+                    ...Object.keys(V4_CONFORMAL).map((key) => (
+                      <tr key={`${cal}-${key}`}>
+                        <th scope="row">{V4_CONFORMAL[key]}</th>
+                        {Object.keys(v.crossconf).map((s) => {
+                          const c = v.conformal?.[s]?.[cal]?.[key];
+                          return (
+                            <td key={s} className="num">
+                              {c ? `${pct1(c.coverage)} · ${c.size.toFixed(2)} crops` : '—'}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    )),
+                  ])}
+                <tr className="group-row">
+                  <th scope="colgroup" colSpan={Object.keys(v.crossconf).length + 1}>
+                    Cross-group calibration (mean of 5 folds)
+                  </th>
+                </tr>
                 {[...Object.keys(V4_CONFORMAL), 'mondrian_ncand', 'mondrian_region'].map((key) => (
                   <tr key={key}>
                     <th scope="row">{V4_CONFORMAL[key] ?? (key === 'mondrian_ncand' ? 'Mondrian by no. of candidates, 90%' : 'Mondrian by region, 90%')}</th>
@@ -1749,7 +1786,7 @@ function V4Report({ v }) {
 
       {states.length > 0 && (
         <div className="sub-section">
-          <h3>Coverage of 90% sets for each held-out state (lowest first)</h3>
+          <h3>Coverage of 90% sets for each held-out state, cross-group calibration (lowest first)</h3>
           <div className="table-wrap">
             <table className="data">
               <thead>
@@ -1790,7 +1827,7 @@ function V4Report({ v }) {
               </tbody>
             </table>
           </div>
-          <p className="muted small">Rows shaded red have coverage below 85% with the standard (LAC) calibration.</p>
+          <p className="muted small">Rows shaded red have LAC coverage below 85%. Per-state values use cross-group calibration, so they differ slightly from the i.i.d. figure in the headline.</p>
         </div>
       )}
 
@@ -1805,7 +1842,14 @@ function V4Report({ v }) {
       {v.meta && (
         <div className="sub-section">
           <h3>Run details</h3>
-          <ReportValue value={v.meta} />
+          <ReportValue
+            value={{
+              ...v.meta,
+              ...(Array.isArray(v.meta.years) && { years: v.meta.years.join('–') }),
+              ...('hist' in v.meta && { hist: v.meta.hist ? 'Yes' : 'No' }),
+              ...(v.meta.soil_coverage && { soil_coverage: Object.fromEntries(Object.entries(v.meta.soil_coverage).map(([k, x]) => [k === 'NaN' ? 'No soil data' : k, x])) }),
+            }}
+          />
         </div>
       )}
       {typeof v._doc === 'string' && <p className="muted small">{v._doc}</p>}
