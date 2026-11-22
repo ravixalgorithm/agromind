@@ -15,9 +15,9 @@ const SITE = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const FINAL = 'AgroMind v4 (final)';
-const SAVED_KEY = 'agromind.saved-analyses.v3';
-// Keys left by the removed soil-test mode; cleared once so old v2 entries don't linger.
-const OLD_KEYS = ['agromind.saved-analyses.v2', 'agromind.active-analysis.v2', 'agromind.advisory-mode'];
+const SAVED_KEY = 'agromind.saved-analyses.v4';
+// Keys left by earlier versions (v2 soil-test mode, v3 saved analyses); cleared once so old entries don't linger.
+const OLD_KEYS = ['agromind.saved-analyses.v2', 'agromind.active-analysis.v2', 'agromind.advisory-mode', 'agromind.saved-analyses.v3'];
 const PREFS_KEY = 'agromind.prefs.v1';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -64,7 +64,7 @@ const T = {
   },
 };
 
-const prob = (p) => (p > 0 && p < 0.0005 ? '<0.1%' : `${(p * 100).toFixed(1)}%`);
+const prob = (p) => (typeof p !== 'number' ? '—' : p > 0 && p < 0.0005 ? '<0.1%' : `${(p * 100).toFixed(1)}%`);
 const longDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
 function loadSaved() {
@@ -169,7 +169,7 @@ function App() {
               ·
             </span>
             <span className="brand-sub">Crop Recommendation Research</span>
-            <span className="brand-tag">v4 (final)</span>
+            <span className="tag">v4 (final)</span>
           </a>
           <div className="header-tools">
             <span role="group" aria-label="Text size">
@@ -265,6 +265,9 @@ const EXAMPLES = [
   ['Uttar Pradesh', 'Lucknow', 'rabi'],
 ];
 const V3_PAGE = 100;
+const FEW_YEARS = 5; // fewer recorded years than this for a district-season counts as little history
+const UNITS = { 'Tonnes/ha': 't/ha' };
+const yieldText = (v, unit) => (typeof v === 'number' ? `${num(v, v >= 100 ? 0 : 2)} ${UNITS[unit] ?? unit ?? ''}`.trim() : '—');
 
 const seasonLabel = (s) => (s === 'whole_year' ? 'Whole year' : SEASONS[s] ? `${SEASONS[s].name} (${SEASONS[s].months})` : s);
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -289,7 +292,10 @@ function useV3Info() {
   const [v3, setV3] = useState(null);
   useEffect(() => {
     getJSON('/model-info')
-      .then((d) => setV3(d.rows ? d : null))
+      .then((d) => {
+        const flat = { ...d, ...(d.data ?? {}) };
+        setV3(flat.rows ? flat : null);
+      })
       .catch(() => setV3(null));
   }, []);
   return v3;
@@ -298,12 +304,12 @@ function useV3Info() {
 // The API gives crop-year starts: [1997, 2022] means crop years 1997-98 to 2022-23.
 const cropYear = (y) => `${y}-${String((y + 1) % 100).padStart(2, '0')}`;
 const yearSpan = (years) => (years ? `crop years ${cropYear(years[0])} to ${cropYear(years[1])}` : '');
-const districtCount = (v3) => `${v3.districts} districts${v3.locations ? ` (${v3.locations} locations)` : ''}`;
+const districtCount = (v3) => (v3.districts ? `${v3.districts} districts${v3.locations ? ` (${v3.locations} locations)` : ''}` : '');
 
 function useV3Stats() {
   const v3 = useV3Info();
   if (!v3?.rows) return null;
-  return [`${v3.rows.toLocaleString('en-IN')} records`, districtCount(v3), `${v3.states} states`, yearSpan(v3.years)].filter(Boolean).join(' · ');
+  return [`${(v3.records ?? v3.rows).toLocaleString('en-IN')} records`, districtCount(v3), `${v3.states} states`, yearSpan(v3.years)].filter(Boolean).join(' · ');
 }
 
 function Advisory({ t }) {
@@ -322,10 +328,11 @@ function Advisory({ t }) {
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState('idle'); // idle | loading | ready | error
   const [message, setMessage] = useState('');
-  const [showAll, setShowAll] = useState(false);
   const warm = useRef(false); // the first prediction after the server starts loads the model (~3 s)
   const resultsRef = useRef(null);
   const stats = useV3Stats();
+  const served = useV3Info();
+  const soilUsed = Boolean(served?.features?.some((f) => f.startsWith('soil')));
   const [saved, setSaved] = useState(loadSaved);
   const reopen = useRef(null); // {id, climate} of a saved analysis being reopened
 
@@ -362,7 +369,6 @@ function Advisory({ t }) {
   useEffect(() => {
     setInfo(null);
     setResult(null);
-    setShowAll(false);
     if (!complete) {
       setStatus('idle');
       return undefined;
@@ -425,7 +431,7 @@ function Advisory({ t }) {
       season: result.season,
       climate: Object.fromEntries(V3_CLIMATE.map((f) => [f.key, result.inputs?.[f.key]])),
       edited,
-      pick: { crop: top.crop, name: top.name, probability: top.probability },
+      pick: { crop: top.crop, name: top.name, probability: result.fallback ? null : top.probability_best }, // v3 fallback has no P(best)
       savedAt: new Date().toISOString(),
     };
     setSaved((list) => {
@@ -460,7 +466,8 @@ function Advisory({ t }) {
   const cropInfo = (slug) => options?.crops.find((c) => c.slug === slug);
   const recs = result?.recommendations ?? [];
   const top = recs[0];
-  const shown = showAll ? recs : recs.slice(0, 10);
+  const fallback = Boolean(result?.fallback);
+  const setCrops = recs.filter((r) => r.in_set);
   const place = info ? `${info.district}, ${info.state}` : '';
   const loadingText = warm.current ? 'Updating…' : 'Loading model… the first prediction after the server starts takes a few seconds.';
   const cal = top && cropInfo(top.crop);
@@ -575,8 +582,8 @@ function Advisory({ t }) {
           ) : !complete ? (
             <div className="status-box">
               <p>
-                Choose a <strong>state, district and season</strong>. The district&apos;s season climate is filled in from NASA POWER, and every crop is ranked by the model trained
-                on Government of India district crop statistics.
+                Choose a <strong>state, district and season</strong>. The district&apos;s season climate (NASA POWER) and soil (SoilGrids) are filled in, and {FINAL} ranks the
+                crops grown there by the yield they can be expected to give, with a 90% prediction set.
               </p>
             </div>
           ) : !top ? (
@@ -588,84 +595,142 @@ function Advisory({ t }) {
               <section className="rec" aria-labelledby="v3-rec-h">
                 <p className="eyebrow">
                   {t('recommended')} · {place} · {seasonLabel(info.season).split(' (')[0]}
+                  {result.target_year ? ` ${cropYear(result.target_year)}` : ''}
                 </p>
                 <h2 id="v3-rec-h" className="rec-crop">
                   {top.name} <span className="rec-type">{cropInfo(top.crop)?.type}</span>
                 </h2>
-                <dl className="stats">
-                  <div>
-                    <dt>P(crop)</dt>
-                    <dd>{prob(top.probability)}</dd>
-                  </div>
-                  <div>
-                    <dt>Grown in this district</dt>
-                    <dd className={top.grown_here ? 'ok' : 'off'}>{top.grown_here ? `${top.years_grown} yrs` : 'No'}</dd>
-                  </div>
-                  <div>
-                    <dt>Median yield here</dt>
-                    <dd>
-                      {typeof top.historical_median_yield === 'number' ? num(top.historical_median_yield, 2) : '—'}
-                      {typeof top.historical_median_yield === 'number' && <small className="unit"> {top.yield_unit}</small>}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Climate used</dt>
-                    <dd className="dd-text">
-                      {num(result.inputs.temperature)} °C · {num(result.inputs.humidity)}% · {num(result.inputs.rainfall, 0)} mm
-                    </dd>
-                  </div>
-                </dl>
+                {fallback ? (
+                  <p className="keybox is-warn">
+                    No crop in this district and season has a recorded yield, so {FINAL} cannot rank them. The list below comes from the earlier v3 model: the crops most likely to
+                    be grown here, not the best-yielding ones.
+                  </p>
+                ) : (
+                  <>
+                    <dl className="stats">
+                      <div>
+                        <dt>Expected yield</dt>
+                        <dd>{yieldText(top.expected_yield, top.yield_unit)}</dd>
+                      </div>
+                      <div>
+                        <dt>P(best crop)</dt>
+                        <dd>{prob(top.probability_best)}</dd>
+                      </div>
+                      <div>
+                        <dt>Grown here</dt>
+                        <dd>{top.years_grown ? `${top.years_grown} yrs` : '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>Climate used</dt>
+                        <dd className="dd-text">
+                          {num(result.inputs.temperature)} °C · {num(result.inputs.humidity)}% · {num(result.inputs.rainfall, 0)} mm
+                        </dd>
+                      </div>
+                    </dl>
+                    {setCrops.length > 0 && (
+                      <p className="keybox conformal-set">
+                        <strong>We are 90% confident the best crop is among {setCrops.length === 1 ? 'this one' : `these ${setCrops.length}`}:</strong>{' '}
+                        {setCrops.map((r) => r.name).join(', ')}.
+                        {result.set_was_empty && <span className="muted"> (The set came out empty, so the top-ranked crop was put in.)</span>}
+                      </p>
+                    )}
+                    {typeof result.history_years === 'number' && result.history_years < FEW_YEARS && (
+                      <p className="note cold-note">
+                        Little history: this district and season has only {result.history_years} {result.history_years === 1 ? 'year' : 'years'} of records, so the ranking leans on
+                        climate, soil and the few yields there are. Treat it as a starting point and check locally.
+                      </p>
+                    )}
+                  </>
+                )}
                 {status === 'loading' && <p className="muted small">{loadingText}</p>}
                 {result.note && <p className="note">{result.note}</p>}
               </section>
 
               <section className="block" aria-labelledby="v3-top-h">
                 <h3 id="v3-top-h">
-                  {t('topCrops')} · {place}
+                  {fallback ? t('topCrops') : 'Crops grown here, ranked by expected yield'} · {place}
                 </h3>
-                <div className="table-wrap">
-                  <table className="data">
-                    <thead>
-                      <tr>
-                        <th scope="col">#</th>
-                        <th scope="col">Crop</th>
-                        <th scope="col" className="hide-sm">
-                          Type
-                        </th>
-                        <th scope="col" className="num">
-                          P(crop)
-                        </th>
-                        <th scope="col" className="num wrap">
-                          Median yield here
-                        </th>
-                        <th scope="col" className="num wrap hide-sm">
-                          Years grown
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shown.map((r, i) => (
-                        <tr key={r.crop} className={i === 0 ? 'is-selected' : undefined}>
-                          <td>{i + 1}</td>
-                          <th scope="row">{r.name}</th>
-                          <td className="hide-sm">{cropInfo(r.crop)?.type ?? ''}</td>
-                          <td className="num">{prob(r.probability)}</td>
-                          <td className="num">{typeof r.historical_median_yield === 'number' ? `${num(r.historical_median_yield, 2)} ${r.yield_unit ?? ''}` : '—'}</td>
-                          <td className="num hide-sm">{r.grown_here ? r.years_grown : <span className="muted">not grown</span>}</td>
+                {fallback ? (
+                  <div className="table-wrap">
+                    <table className="data">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Crop</th>
+                          <th scope="col" className="num">
+                            P(grown)
+                          </th>
+                          <th scope="col" className="num wrap hide-sm">
+                            Years grown
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="note">
-                  P(crop) is the model&apos;s probability that the crop is among this district&apos;s three best-yielding crops for the season. Median yield is the district&apos;s
-                  historical median for that crop in this season (Government APY records).{' '}
-                  {recs.length > 10 && (
-                    <button type="button" className="link-btn" onClick={() => setShowAll((s) => !s)}>
-                      {showAll ? 'Show top 10' : `Show all ${recs.length} crops`}
-                    </button>
-                  )}
-                </p>
+                      </thead>
+                      <tbody>
+                        {recs.slice(0, 10).map((r, i) => (
+                          <tr key={r.crop}>
+                            <td>{i + 1}</td>
+                            <th scope="row">{r.name}</th>
+                            <td className="num">{prob(r.probability)}</td>
+                            <td className="num hide-sm">{r.grown_here ? r.years_grown : <span className="muted">not grown</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <>
+                    <div className="table-wrap">
+                      <table className="data">
+                        <thead>
+                          <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Crop</th>
+                            <th scope="col" className="c wrap">
+                              In 90% set
+                            </th>
+                            <th scope="col" className="num wrap">
+                              Expected yield
+                            </th>
+                            <th scope="col" className="num wrap">
+                              P(best)
+                            </th>
+                            <th scope="col" className="num wrap hide-sm">
+                              Median yield, all years
+                            </th>
+                            <th scope="col" className="num wrap hide-sm">
+                              Years grown
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recs.map((r) => (
+                            <tr key={r.crop}>
+                              <td>{r.rank}</td>
+                              <th scope="row">
+                                {r.name}
+                                {r.cold_start && (
+                                  <span className="tag tag-muted" title="No yield record for this crop here last year">
+                                    cold start
+                                  </span>
+                                )}
+                              </th>
+                              <td className={`c ${r.in_set ? 'ok' : ''}`}>{r.in_set ? '✓' : <span className="muted">–</span>}</td>
+                              <td className="num">{yieldText(r.expected_yield, r.yield_unit)}</td>
+                              <td className="num">{prob(r.probability_best)}</td>
+                              <td className="num hide-sm">{yieldText(r.historical_median_yield, r.yield_unit)}</td>
+                              <td className="num hide-sm">{r.years_grown ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="note">
+                      Only crops grown in this district and season in its last five recorded years are ranked. Expected yield = the crop&apos;s median yield here over those years;
+                      P(best) = calibrated probability that it gives the best yield of these crops. The 90% set contains the best-yielding crop in about 90% of past cases.
+                      &quot;Cold start&quot;: no yield record for that crop here last year, so the model relies more on climate, soil and older years.
+                    </p>
+                  </>
+                )}
               </section>
 
               {info.history?.top_crops?.length > 0 && (
@@ -697,7 +762,7 @@ function Advisory({ t }) {
                           <tr key={c.crop}>
                             <th scope="row">{c.name ?? c.crop}</th>
                             <td className="num">{num(c.mean_area_ha, 0)}</td>
-                            <td className="num">{typeof c.median_yield === 'number' ? `${num(c.median_yield, 2)} ${c.yield_unit ?? ''}` : '—'}</td>
+                            <td className="num">{yieldText(c.median_yield, c.yield_unit)}</td>
                             <td className="num hide-sm">{c.years}</td>
                             <td className="num">{c.recommended_years}</td>
                           </tr>
@@ -747,7 +812,7 @@ function Advisory({ t }) {
 
               {info.soil && (
                 <section className="block" aria-labelledby="v3-soil-h">
-                  <h3 id="v3-soil-h">District soil profile (SoilGrids, context only)</h3>
+                  <h3 id="v3-soil-h">District soil (SoilGrids){soilUsed ? ', used by the model' : ', context only'}</h3>
                   <table className="kv">
                     <tbody>
                       {SOIL_ROWS.map(([k, labelText, unit]) => (
@@ -767,7 +832,8 @@ function Advisory({ t }) {
                     </tbody>
                   </table>
                   <p className="note">
-                    Not used by the model: adding soil gave no gain in the study (Results, v3). District centre {num(info.location?.lat, 3)}° N, {num(info.location?.lon, 3)}° E.
+                    {soilUsed ? `${FINAL} uses these values as inputs.` : 'Not used by the served model.'} District centre {num(info.location?.lat, 3)}° N,{' '}
+                    {num(info.location?.lon, 3)}° E.
                   </p>
                 </section>
               )}
@@ -796,7 +862,7 @@ function Advisory({ t }) {
                   <th scope="col">District · season</th>
                   <th scope="col">Recommended</th>
                   <th scope="col" className="num">
-                    P(crop)
+                    P(best)
                   </th>
                   <th scope="col" className="hide-sm">
                     Climate
@@ -1333,17 +1399,29 @@ function ServedModel({ served, failed }) {
               </tr>
             )}
             <tr>
-              <th scope="row">Records · training rows</th>
+              <th scope="row">Training data</th>
               <td>
-                {served.rows?.toLocaleString('en-IN')} · {served.training_rows?.toLocaleString('en-IN')}
+                {[
+                  served.training_rows && `${served.training_rows.toLocaleString('en-IN')} rows`,
+                  served.training_queries && `${served.training_queries.toLocaleString('en-IN')} district-season-year queries`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </td>
             </tr>
             <tr>
               <th scope="row">Coverage</th>
-              <td>
-                {served.crops} crops · {served.states} states · {districtCount(served)} · {yearSpan(served.years)}
-              </td>
+              <td>{[`${served.crops} crops`, `${served.states} states`, districtCount(served), yearSpan(served.years)].filter(Boolean).join(' · ')}</td>
             </tr>
+            {served.holdout_check && (
+              <tr>
+                <th scope="row">Hold-out check</th>
+                <td>
+                  Hit@1 {pct1(served.holdout_check.hit1)} · 90% set coverage {pct1(served.holdout_check.coverage)} with {num(served.holdout_check.set_size, 2)} crops on average
+                  {served.holdout_check.queries ? ` (${served.holdout_check.queries.toLocaleString('en-IN')} queries)` : ''}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       ) : (
@@ -2078,7 +2156,7 @@ function ResultsPage({ t }) {
       .then(setInfo)
       .catch(() => setFailed(true));
   }, []);
-  const served = info?.rows ? info : null;
+  const served = info?.model ? { ...info, ...(info.data ?? {}) } : null; // v4 nests its counts in data
 
   return (
     <div className="results">

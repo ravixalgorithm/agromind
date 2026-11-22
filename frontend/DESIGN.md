@@ -12,13 +12,13 @@ An **academic research tool**: clean white page, navy and green accents, serif h
 
 | Route | Page |
 |---|---|
-| `#/` | **Advisory** (landing, the only mode): State → District → Season with editable season climate on the left; recommended crop with P(crop), ranked crops with historical yield, district history, crop calendar (when `/options` has months) and a read-only soil profile on the right; saved analyses below (localStorage `agromind.saved-analyses.v3`) |
-| `#/results` | Three numbered sections from `src/research.json`: (1) improvement table v1 → v3 → v4, (2) current system v3 (served model from `/model-info`, grouped evaluation, per-state grid, soil test, figs 11–13), (3) improved method v4 (headline, unseen-states ranking, conformal summary, per-state coverage), (4) recent work and gap matrix (`related_work`, `related_work_ours`), (5) method comparison: Hit@1 dot plot, selection table, ablation, reasons (`method_comparison`). Sections 4–5 render only when their keys exist. Captions are numbered with CSS counters (`.tcap::before` tables, `.fcap::before` figures); wide tables put `p.tcap` outside `.table-wrap` so mobile does not clip it; `#/report` still works |
-| `#/dataset` | Paged, filterable browser of the district crop records (`/dataset`) |
+| `#/` | **Advisory** (landing): State → District → Season with editable season climate on the left. On the right, **AgroMind v4 (final)** `/predict` output: the top crop with expected yield (`yield_unit`, Tonnes/ha shown as t/ha), P(best), the 90% conformal set ("we are 90% confident the best crop is among these N"), a little-history note when `history_years` < `FEW_YEARS`, and the district's candidate crops ranked by expected yield with in-set ✓ and a cold-start tag. When `fallback` is set (district-seasons with no yield records), it shows the v3 P(grown) list behind a warning. Then district history, crop calendar, and district soil (labelled "used by the model" when `/model-info` features include soil). Saved analyses below (localStorage `agromind.saved-analyses.v4`) |
+| `#/results` | v4 first. A Final model box (`research.final`), then numbered sections: (1) From v1 to v4: version-history strip plus a v1 \| v2 \| v3 \| v4 (final) table with the v4 column tinted; (2) AgroMind v4 (final): headline, ranking, conformal sets, per-state coverage, live `/model-info`; (3) method comparison; (4) recent work and gaps; (5) Intermediate step: v3 (one table + Fig. `13_v3_generalisation`); (6) Earlier step: v2 (one table + Fig. `07_loso`). Sections built from `research.*` keys that are missing render nothing. Captions are numbered with CSS counters (`.tcap` tables, `.fcap` figures); `#/report` still works |
+| `#/dataset` | The data behind AgroMind v4: a paged, filterable browser of the district crop records (`/dataset`) |
 | `#/paper` | Title, abstract (`ABSTRACT_TEX` from `paper/main.tex`, `\Macros` filled from `research.v4.numbers`), PDF/newsletter/code links, Colab links, BibTeX |
 | `#/about` | Project, team, system, data sources with licences, disclaimer |
 
-The header has a small A−/A/A+ text-size control and EN/हि (Hindi covers navigation and headings only).
+The header carries a `v4 (final)` tag (`FINAL` constant in `App.jsx` holds the label used across pages), a small A−/A/A+ text-size control and EN/हि (Hindi covers navigation and headings only).
 
 ## Type and colour
 
@@ -34,9 +34,9 @@ The header has a small A−/A/A+ text-size control and EN/हि (Hindi covers n
 
 ## Data sources
 
-- Live: `/options`, `/district`, `/predict`, `/dataset`, `/model-info` (all counts and years shown on the site come from `/model-info`).
-- Research: `src/research.json` (see below). v1/v2 appear only there, as history.
+- Live: `/options`, `/district`, `/predict` (v4: YieldRank + conformal set), `/dataset`, `/model-info` (v4 nests its counts in `data`; the site reads `data.records ?? data.rows`).
+- Research: `src/research.json` (see below): every Results number, including the v1 → v2 → v3 history.
 
 ## Results data
 
-`src/research.json` is a copy of `docs/research/results.json`; only the v3 figures (11–13) are copied to `public/research/`. `ImprovementTable`, `V3Section`, `V4Section`, `RelatedWork` and `MethodComparison` read named keys from it; v1/v2 detail is no longer shown. `method_comparison` rates are percentages (0–100), NDCG is 0–1. Never put mock data in `src/research.json`: test with Playwright route interception instead.
+`src/research.json` is a copy of `docs/research/results.json`; only the two figures shown (`07_loso.png`, `13_v3_generalisation.png`) are copied to `public/research/`. `FinalBox`, `VersionHistory`, `ImprovementTable`, `V4Section`, `MethodComparison`, `RelatedWork`, `V3Section` and `V2Section` read named keys from it;  `method_comparison` rates are percentages (0–100), NDCG is 0–1. Never put mock data in `src/research.json`: test with Playwright route interception instead.
