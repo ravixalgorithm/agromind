@@ -1333,7 +1333,7 @@ const SECTIONS = {
   v1_fixed: 'Model v1 Corrected (plain multiclass, Kaggle data)',
   models: 'Model Comparison on v2 Data (stratified 5-fold CV)',
   v3: 'Model v3 — Large Real Dataset (district crop statistics)',
-  v4: 'Model v4',
+  v4: 'Model v4 — YieldRank + Conformal Prediction Sets (proposed method)',
   ablation: 'Feature Ablation (deployed Random Forest)',
   loso: 'Leave-One-Source-Out Validation',
   leave_states_out: 'Leave-States-Out Validation (multi-state source)',
@@ -1574,6 +1574,245 @@ function generalisationSummary(v) {
   );
 }
 
+// v4 (YieldRank + conformal sets): metrics are {variant: {split: {method: {mean, std, wilcoxon_vs_ours_*}}}}, so it gets its own tables.
+const V4_SPLITS = { random: 'Random split', 'leave-states-out': 'Unseen states (leave-states-out)', 'leave-years-out': 'Future years (leave-years-out)' };
+const V4_VARIANTS = { main: 'All features (with yield history and soil)', nohist: 'Without yield history', nosoil: 'Without soil' };
+const V4_CONFORMAL = { 'LAC@0.9': 'LAC, 90% target', 'APS@0.9': 'APS, 90% target', 'LAC@0.8': 'LAC, 80% target', 'APS@0.8': 'APS, 80% target' };
+const pct1 = (x) => (typeof x === 'number' ? `${(x * 100).toFixed(1)}%` : '—');
+const pval = (p) => (typeof p !== 'number' ? '—' : p < 0.0001 ? '< 0.0001' : p.toFixed(3));
+const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+const isOurs = (name) => name.includes('(ours)');
+const isClassifier = (name) => /\[[\d,]+\]/.test(name); // literature classifiers carry their citation numbers
+
+function V4Report({ v }) {
+  const main = v.metrics?.main ?? {};
+  const lso = main['leave-states-out'] ?? {};
+  const entries = Object.entries(lso);
+  const ours = entries.find(([n]) => isOurs(n));
+  const bestClf = entries.filter(([n]) => isClassifier(n)).sort((a, b) => b[1].mean['hit@1'] - a[1].mean['hit@1'])[0];
+  const pers = entries.find(([n]) => /persistence/i.test(n));
+  const pointwise = entries.find(([n]) => /pointwise/i.test(n));
+  const folds = v.crossconf?.['leave-states-out'] ?? [];
+  const lac = folds.map((f) => f.conformal_crossgroup?.['LAC@0.9']).filter(Boolean);
+  const states = Object.entries(v.coverage_by_state_leave_states_out ?? {}).sort((a, b) => a[1].cov_LAC - b[1].cov_LAC);
+
+  return (
+    <>
+      {ours && bestClf && (
+        <p className="notice">
+          <strong>Headline:</strong> on unseen states, YieldRank ranks the best-yielding crop first in <strong>{pct1(ours[1].mean['hit@1'])}</strong> of district-season-year
+          queries, against {pct1(bestClf[1].mean['hit@1'])} for the best literature classifier ({bestClf[0]}); NDCG@3 {ours[1].mean['ndcg@3'].toFixed(3)} vs{' '}
+          {bestClf[1].mean['ndcg@3'].toFixed(3)} (Wilcoxon p {pval(bestClf[1]['wilcoxon_vs_ours_hit@1']?.p)}, n = {bestClf[1]['wilcoxon_vs_ours_hit@1']?.n?.toLocaleString('en-IN')}).
+          {pers && (
+            <>
+              {' '}
+              <strong>But</strong> a simple persistence rule (last year&apos;s crop) reaches {pct1(pers[1].mean['hit@1'])} (difference p {pval(pers[1]['wilcoxon_vs_ours_hit@1']?.p)})
+              {pointwise && <>, and a pointwise LightGBM model {pct1(pointwise[1].mean['hit@1'])}</>}.
+            </>
+          )}
+          {lac.length > 0 && (
+            <>
+              {' '}
+              With 90% conformal sets, coverage on unseen states is {pct1(avg(lac.map((c) => c.coverage)))} with {avg(lac.map((c) => c.size)).toFixed(2)} crops per set on average;
+              per-state coverage is uneven (lowest: {states.slice(0, 2).map(([n, s]) => `${n} ${pct1(s.cov_LAC)}`).join(', ')}).
+            </>
+          )}
+        </p>
+      )}
+
+      {Object.entries(main).map(([split, methods]) => (
+        <div key={split} className="sub-section">
+          <h3>Ranking quality — {V4_SPLITS[split] ?? split}</h3>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Method</th>
+                  {['ndcg@3', 'hit@1', 'hit@3', 'ndcg@1'].map((m) => (
+                    <th key={m} scope="col" className="num">
+                      {m.replace('ndcg', 'NDCG').replace('hit', 'Hit')}
+                    </th>
+                  ))}
+                  <th scope="col" className="num wrap">
+                    YieldRank − method (Hit@1)
+                  </th>
+                  <th scope="col" className="num">
+                    p (Wilcoxon)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(methods).map(([name, r]) => {
+                  const w = r['wilcoxon_vs_ours_hit@1'];
+                  return (
+                    <tr key={name} className={isOurs(name) ? 'is-highlight' : undefined}>
+                      <th scope="row">{name}</th>
+                      {['ndcg@3', 'hit@1', 'hit@3', 'ndcg@1'].map((m) => (
+                        <td key={m} className="num">
+                          {m.startsWith('ndcg') ? `${r.mean[m].toFixed(3)} ± ${r.std[m].toFixed(3)}` : `${(r.mean[m] * 100).toFixed(1)} ± ${(r.std[m] * 100).toFixed(1)}%`}
+                        </td>
+                      ))}
+                      <td className="num">{w ? `${w.mean_diff >= 0 ? '+' : '−'}${Math.abs(w.mean_diff * 100).toFixed(1)} pts` : '—'}</td>
+                      <td className="num">{w ? pval(w.p) : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+
+      <div className="sub-section">
+        <h3>Ablation — Hit@1 without yield history or soil</h3>
+        <div className="table-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th scope="col">Features</th>
+                {Object.keys(V4_SPLITS).map((s) => (
+                  <th key={s} scope="col" className="num wrap" colSpan={2}>
+                    {V4_SPLITS[s]}
+                  </th>
+                ))}
+              </tr>
+              <tr>
+                <th scope="col" />
+                {Object.keys(V4_SPLITS).flatMap((s) => [
+                  <th key={`${s}o`} scope="col" className="num">
+                    YieldRank
+                  </th>,
+                  <th key={`${s}c`} scope="col" className="num">
+                    Best classifier
+                  </th>,
+                ])}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(v.metrics ?? {}).map(([variant, splits]) => (
+                <tr key={variant}>
+                  <th scope="row">{V4_VARIANTS[variant] ?? variant}</th>
+                  {Object.keys(V4_SPLITS).flatMap((s) => {
+                    const rows = Object.entries(splits[s] ?? {});
+                    const o = rows.find(([n]) => isOurs(n));
+                    const c = rows.filter(([n]) => isClassifier(n)).sort((a, b) => b[1].mean['hit@1'] - a[1].mean['hit@1'])[0];
+                    return [
+                      <td key={`${s}o`} className="num">
+                        {pct1(o?.[1].mean['hit@1'])}
+                      </td>,
+                      <td key={`${s}c`} className="num">
+                        {pct1(c?.[1].mean['hit@1'])}
+                      </td>,
+                    ];
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {v.crossconf && (
+        <div className="sub-section">
+          <h3>Conformal prediction sets — coverage and average set size (mean of 5 folds)</h3>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Calibration</th>
+                  {Object.keys(v.crossconf).map((s) => (
+                    <th key={s} scope="col" className="num wrap">
+                      {V4_SPLITS[s] ?? s}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...Object.keys(V4_CONFORMAL), 'mondrian_ncand', 'mondrian_region'].map((key) => (
+                  <tr key={key}>
+                    <th scope="row">{V4_CONFORMAL[key] ?? (key === 'mondrian_ncand' ? 'Mondrian by no. of candidates, 90%' : 'Mondrian by region, 90%')}</th>
+                    {Object.entries(v.crossconf).map(([s, fs]) => {
+                      const cs = fs.map((f) => f.conformal_crossgroup?.[key] ?? f[key]).filter(Boolean);
+                      return (
+                        <td key={s} className="num">
+                          {cs.length ? `${pct1(avg(cs.map((c) => c.coverage)))} · ${avg(cs.map((c) => c.size)).toFixed(2)} crops` : '—'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {states.length > 0 && (
+        <div className="sub-section">
+          <h3>Coverage of 90% sets for each held-out state (lowest first)</h3>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">State</th>
+                  <th scope="col" className="num">
+                    Queries
+                  </th>
+                  <th scope="col" className="num">
+                    Coverage (LAC)
+                  </th>
+                  <th scope="col" className="num">
+                    Set size (LAC)
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Coverage (Mondrian, candidates)
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Set size (Mondrian)
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Coverage (Mondrian, region)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {states.map(([name, s]) => (
+                  <tr key={name} className={Math.round(s.cov_LAC * 1000) < 850 ? 'is-warn' : undefined}>
+                    <th scope="row">{name}</th>
+                    <td className="num">{s.n.toLocaleString('en-IN')}</td>
+                    <td className="num">{pct1(s.cov_LAC)}</td>
+                    <td className="num">{s.size_LAC.toFixed(2)}</td>
+                    <td className="num">{pct1(s.cov_Mncand)}</td>
+                    <td className="num">{s.size_Mncand.toFixed(2)}</td>
+                    <td className="num">{pct1(s.cov_Mregion)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted small">Rows shaded red have coverage below 85% with the standard (LAC) calibration.</p>
+        </div>
+      )}
+
+      {v.kaggle_random_split_accuracy && (
+        <div className="sub-section">
+          <h3>Sanity check — accuracy on the Kaggle set with a random split</h3>
+          <ReportValue value={v.kaggle_random_split_accuracy} ctx="accuracy" />
+          <p className="muted small">Near-perfect scores on the small Kaggle set show that task is almost a lookup; the grouped splits above are the meaningful test.</p>
+        </div>
+      )}
+
+      {v.meta && (
+        <div className="sub-section">
+          <h3>Run details</h3>
+          <ReportValue value={v.meta} />
+        </div>
+      )}
+      {typeof v._doc === 'string' && <p className="muted small">{v._doc}</p>}
+    </>
+  );
+}
+
 function ReportPage({ t }) {
   const [info, setInfo] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -1644,13 +1883,17 @@ function ReportPage({ t }) {
       {keys.map((k) => (
         <Panel key={k} title={SECTIONS[k] ?? label(k)}>
           {k === 'loso' && losoSummary(prepared.loso)}
-          {/^v\d+$/.test(k) && generalisationSummary(prepared[k])}
-          <ReportValue
-            value={prepared[k]}
-            name={k === 'importance' ? 'Input' : k === 'ablation' ? 'Feature set' : 'Model'}
-            split={SPLIT_KEYS[k]}
-            highlight={deployed ? (r) => Object.values(r).includes(deployed) : undefined}
-          />
+          {/^v\d+$/.test(k) && !prepared[k]?.metrics?.main && generalisationSummary(prepared[k])}
+          {k === 'v4' && prepared.v4?.metrics?.main ? (
+            <V4Report v={prepared.v4} />
+          ) : (
+            <ReportValue
+              value={prepared[k]}
+              name={k === 'importance' ? 'Input' : k === 'ablation' ? 'Feature set' : 'Model'}
+              split={SPLIT_KEYS[k]}
+              highlight={deployed ? (r) => Object.values(r).includes(deployed) : undefined}
+            />
+          )}
           {doc[k] && <p className="muted small">{doc[k]}</p>}
         </Panel>
       ))}

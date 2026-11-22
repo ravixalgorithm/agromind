@@ -525,6 +525,10 @@ table {
   font-weight: 700;
 }
 
+.data tbody tr.is-warn {
+  background: var(--warn-light);
+}
+
 .data .total {
   font-weight: 700;
 }
