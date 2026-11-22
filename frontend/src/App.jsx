@@ -14,20 +14,17 @@ const SITE = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-const STORAGE_KEY = 'agromind.saved-analyses.v2';
-const ACTIVE_KEY = 'agromind.active-analysis.v2';
+const SAVED_KEY = 'agromind.saved-analyses.v3';
+// Keys left by the removed soil-test mode; cleared once so old v2 entries don't linger.
+const OLD_KEYS = ['agromind.saved-analyses.v2', 'agromind.active-analysis.v2', 'agromind.advisory-mode'];
 const PREFS_KEY = 'agromind.prefs.v1';
 
-const NUTRIENTS = ['N', 'P', 'K', 'ph'];
-const SAMPLES = ['rice', 'wheat', 'cotton', 'maize', 'sugarcane', 'groundnut'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const SEASONS = {
   kharif: { name: 'Kharif', months: 'Jun–Oct' },
   rabi: { name: 'Rabi', months: 'Oct–Mar' },
   zaid: { name: 'Zaid', months: 'Mar–Jun' },
 };
-const SHORT = { N: 'N', P: 'P', K: 'K', ph: 'pH', temperature: '°C', humidity: 'RH', water: 'Rain' };
-const MAX_ROWS = 8;
 const FONT_SIZES = [13, 15, 17];
 
 const PAGES = ['advisory', 'results', 'dataset', 'paper', 'about'];
@@ -45,13 +42,9 @@ const T = {
     recommended: 'Recommended crop',
     topCrops: 'Top-ranked crops',
     calendar: 'Crop calendar',
-    readings: 'Readings vs typical range',
     saved: 'Saved analyses',
-    submit: 'Recommend',
-    reset: 'Clear form',
     newAnalysis: 'New analysis',
-    summary: 'Dataset summary',
-    rawData: 'Training data',
+    rawData: 'District crop records',
   },
   hi: {
     skip: 'मुख्य सामग्री पर जाएं',
@@ -64,62 +57,20 @@ const T = {
     recommended: 'अनुशंसित फसल',
     topCrops: 'शीर्ष फसलें',
     calendar: 'फसल कैलेंडर',
-    readings: 'माप बनाम सामान्य सीमा',
     saved: 'सहेजे गए विश्लेषण',
-    submit: 'अनुशंसा करें',
-    reset: 'फ़ॉर्म साफ़ करें',
     newAnalysis: 'नया विश्लेषण',
-    summary: 'डेटासेट सारांश',
-    rawData: 'प्रशिक्षण डेटा',
+    rawData: 'ज़िला फसल अभिलेख',
   },
 };
 
-const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-const round = (n) => (Math.abs(n) >= 20 ? String(Math.round(n)) : fmt(n));
-const withUnit = (text, unit) => (unit ? `${text}${unit === 'mm' ? ' ' : ''}${unit}` : text);
 const prob = (p) => (p > 0 && p < 0.0005 ? '<0.1%' : `${(p * 100).toFixed(1)}%`);
-const range = (lo, hi, unit) => withUnit(round(lo) === round(hi) ? round(lo) : `${round(lo)}–${round(hi)}`, unit);
 const longDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-const formKey = (form) => JSON.stringify(form);
-const plainName = (crop) => crop.name.replace(/ \(.*\)$/, '');
-
-const emptyForm = (meta) => ({
-  ...Object.fromEntries(meta.fields.map((f) => [f.key, ''])),
-  soil: '',
-  season: '',
-  water_source: '',
-  state: '',
-});
-
-function sampleValues(meta, id) {
-  const crop = meta.crops[id];
-  return {
-    ...Object.fromEntries(meta.fields.map((f) => [f.key, String(crop.profile[f.key][1])])),
-    soil: crop.soils.find((s) => s !== 'Other') ?? crop.soils[0],
-    season: crop.season,
-    water_source: crop.water_source,
-    state: crop.states?.[0] ?? meta.options.state?.[0] ?? '',
-  };
-}
-
-function dedupeSaved(list) {
-  if (!Array.isArray(list)) return [];
-  const best = new Map();
-  for (const entry of list) {
-    if (!entry?.id || !entry?.form) continue;
-    const key = formKey(entry.form);
-    const prev = best.get(key);
-    if (!prev || new Date(entry.savedAt) >= new Date(prev.savedAt)) best.set(key, entry);
-  }
-  const winners = new Set([...best.values()].map((e) => e.id));
-  return list.filter((e) => winners.has(e.id) && best.get(formKey(e.form))?.id === e.id);
-}
 
 function loadSaved() {
   try {
-    const cleaned = dedupeSaved(JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? []);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
-    return cleaned;
+    OLD_KEYS.forEach((k) => localStorage.removeItem(k));
+    const list = JSON.parse(localStorage.getItem(SAVED_KEY)) ?? [];
+    return Array.isArray(list) ? list.filter((e) => e?.id && e.state && e.district && e.season && e.pick?.crop) : [];
   } catch {
     return [];
   }
@@ -130,48 +81,6 @@ function loadPrefs() {
     return { font: 15, lang: 'en', ...JSON.parse(localStorage.getItem(PREFS_KEY)) };
   } catch {
     return { font: 15, lang: 'en' };
-  }
-}
-
-// Compare the form against one crop's typical band (p10–p90) for every reading.
-function assess(meta, id, form) {
-  const crop = meta.crops[id];
-  const readings = meta.fields.map((f) => {
-    const [lo, , hi] = crop.profile[f.key];
-    const v = Number(form[f.key]);
-    const span = hi - lo || 1;
-    const status = v < lo ? 'low' : v > hi ? 'high' : 'ok';
-    return { ...f, lo, hi, v, status, gap: status === 'low' ? (lo - v) / span : status === 'high' ? (v - hi) / span : 0 };
-  });
-  return {
-    id,
-    crop,
-    readings,
-    inRange: readings.filter((r) => r.status === 'ok').length,
-    distance: readings.reduce((sum, r) => sum + r.gap, 0),
-    soilOk: crop.soils.includes(form.soil),
-  };
-}
-
-function advice(r, cropName) {
-  const d = (n) => round(Math.abs(n));
-  if (r.status === 'ok') return 'Within range';
-  const low = r.status === 'low';
-  switch (r.key) {
-    case 'N':
-    case 'P':
-    case 'K':
-      return low ? `Add about ${d(r.lo - r.v)} ${r.key}` : `${d(r.v - r.hi)} more ${r.key} than usual`;
-    case 'ph':
-      return low ? 'More acidic than usual; liming raises pH' : 'More alkaline than usual';
-    case 'temperature':
-      return `${d(low ? r.lo - r.v : r.v - r.hi)}°C ${low ? 'cooler' : 'warmer'} than ${cropName} prefers`;
-    case 'humidity':
-      return low ? 'Drier air than usual' : 'More humid than usual';
-    case 'water':
-      return low ? `About ${d(r.lo - r.v)} mm short for the season` : `${d(r.v - r.hi)} mm more water than needed`;
-    default:
-      return low ? 'Below range' : 'Above range';
   }
 }
 
@@ -211,21 +120,10 @@ function useRoute() {
 /* ── Shell ────────────────────────────────────────────── */
 
 function App() {
-  const [meta, setMeta] = useState(null);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
   const [prefs, setPrefs] = useState(loadPrefs);
   const route = useRoute();
   const mainRef = useRef(null);
   const t = (k) => T[prefs.lang]?.[k] ?? T.en[k];
-
-  useEffect(() => {
-    setFailed(false);
-    fetch(`${API_BASE_URL}/metadata`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then(setMeta)
-      .catch(() => setFailed(true));
-  }, [attempt]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -240,11 +138,9 @@ function App() {
   }, [prefs]);
 
   const pref = (patch) => setPrefs((p) => ({ ...p, ...patch }));
-  const metaProps = { meta, metaFailed: failed, retryMeta: () => setAttempt((a) => a + 1) };
-
   let page;
-  if (route === 'advisory') page = <Advisory {...metaProps} t={t} />;
-  else if (route === 'dataset') page = <DatasetPage {...metaProps} t={t} />;
+  if (route === 'advisory') page = <Advisory t={t} />;
+  else if (route === 'dataset') page = <DatasetPage t={t} />;
   else if (route === 'results') page = <ResultsPage t={t} />;
   else if (route === 'paper') page = <PaperPage />;
   else page = <AboutPage />;
@@ -345,7 +241,6 @@ function Section({ id, title, children, className = '', actions }) {
 
 /* ── District mode (v3: Government district crop statistics) ── */
 
-const MODE_KEY = 'agromind.advisory-mode';
 const V3_SEL_KEY = 'agromind.v3.selection';
 const V3_CLIMATE = [
   { key: 'temperature', label: 'Temperature', unit: '°C', min: 0, max: 50, step: 0.1 },
@@ -371,6 +266,8 @@ const V3_PAGE = 100;
 
 const seasonLabel = (s) => (s === 'whole_year' ? 'Whole year' : SEASONS[s] ? `${SEASONS[s].name} (${SEASONS[s].months})` : s);
 const round2 = (n) => Math.round(n * 100) / 100;
+const analysisId = (x) => `${x.state}|${x.district}|${x.season}`;
+const climateStrings = (c) => Object.fromEntries(V3_CLIMATE.map((f) => [f.key, typeof c?.[f.key] === 'number' ? String(round2(c[f.key])) : '']));
 const num = (n, digits = 1) => (typeof n === 'number' ? n.toLocaleString('en-IN', { maximumFractionDigits: digits }) : '—');
 
 // One request per path for the whole session (options are ~60 KB; model-info rarely changes).
@@ -390,7 +287,7 @@ function useV3Info() {
   const [v3, setV3] = useState(null);
   useEffect(() => {
     getJSON('/model-info')
-      .then((d) => setV3(d.v3 ?? null))
+      .then((d) => setV3(d.v3 ?? (d.rows ? d : null)))
       .catch(() => setV3(null));
   }, []);
   return v3;
@@ -407,58 +304,7 @@ function useV3Stats() {
   return [`${v3.rows.toLocaleString('en-IN')} records`, districtCount(v3), `${v3.states} states`, yearSpan(v3.years)].filter(Boolean).join(' · ');
 }
 
-function Advisory({ meta, metaFailed, retryMeta, t }) {
-  const [mode, setMode] = useState(() => {
-    try {
-      return localStorage.getItem(MODE_KEY) === 'soil' ? 'soil' : 'district';
-    } catch {
-      return 'district';
-    }
-  });
-  const stats = useV3Stats();
-  useEffect(() => {
-    try {
-      localStorage.setItem(MODE_KEY, mode);
-    } catch {
-      /* ignore */
-    }
-  }, [mode]);
-
-  return (
-    <>
-      <div className="mode-switch" role="tablist" aria-label="Advisory mode">
-        <button type="button" role="tab" aria-selected={mode === 'district'} onClick={() => setMode('district')}>
-          <strong>District mode</strong>
-          <small>Government crop statistics{stats ? ` · ${stats}` : ''}</small>
-        </button>
-        <button type="button" role="tab" aria-selected={mode === 'soil'} onClick={() => setMode('soil')}>
-          <strong>Soil-test mode (N-P-K)</strong>
-          <small>Soil test and climate readings{meta ? ` · ${meta.rows.toLocaleString('en-IN')} training rows` : ''}</small>
-        </button>
-      </div>
-      {mode === 'district' ? <DistrictAdvisory meta={meta} t={t} /> : meta ? <SoilAdvisory meta={meta} t={t} /> : <MetaStatus failed={metaFailed} retry={retryMeta} />}
-    </>
-  );
-}
-
-function MetaStatus({ failed, retry }) {
-  return (
-    <div className={`status-box${failed ? ' is-error' : ''}`}>
-      {failed ? (
-        <>
-          <p>Cannot reach the model server at {API_BASE_URL}. Start the backend and try again.</p>
-          <button type="button" className="btn" onClick={retry}>
-            Try again
-          </button>
-        </>
-      ) : (
-        <p>Loading crop data…</p>
-      )}
-    </div>
-  );
-}
-
-function DistrictAdvisory({ meta, t }) {
+function Advisory({ t }) {
   const [options, setOptions] = useState(null);
   const [optError, setOptError] = useState('');
   const [sel, setSel] = useState(() => {
@@ -477,6 +323,9 @@ function DistrictAdvisory({ meta, t }) {
   const [showAll, setShowAll] = useState(false);
   const warm = useRef(false); // the first prediction after the server starts loads the model (~3 s)
   const resultsRef = useRef(null);
+  const stats = useV3Stats();
+  const [saved, setSaved] = useState(loadSaved);
+  const reopen = useRef(null); // {id, climate} of a saved analysis being reopened
 
   useEffect(() => {
     getJSON('/v3/options')
@@ -499,6 +348,14 @@ function DistrictAdvisory({ meta, t }) {
     }
   }, [sel]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+    } catch {
+      /* ignore */
+    }
+  }, [saved]);
+
   // District defaults: season climate averaged over the years, soil, crop history.
   useEffect(() => {
     setInfo(null);
@@ -514,7 +371,9 @@ function DistrictAdvisory({ meta, t }) {
       .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error(await readError(r, [])))))
       .then((d) => {
         setInfo(d);
-        setClimate(Object.fromEntries(V3_CLIMATE.map((f) => [f.key, typeof d.climate?.[f.key] === 'number' ? String(round2(d.climate[f.key])) : ''])));
+        const back = reopen.current?.id === analysisId(d) ? reopen.current.climate : d.climate;
+        reopen.current = null;
+        setClimate(climateStrings(back));
       })
       .catch((e) => {
         if (e.name === 'AbortError') return;
@@ -553,6 +412,43 @@ function DistrictAdvisory({ meta, t }) {
     };
   }, [info, climate, climateReady]);
 
+  // Autosave: one entry per district and season, updated with the latest climate and pick.
+  useEffect(() => {
+    const top = result?.recommendations?.[0];
+    if (status !== 'ready' || !top) return;
+    const entry = {
+      id: analysisId(result),
+      state: result.state,
+      district: result.district,
+      season: result.season,
+      climate: Object.fromEntries(V3_CLIMATE.map((f) => [f.key, result.inputs?.[f.key]])),
+      edited,
+      pick: { crop: top.crop, name: top.name, probability: top.probability },
+      savedAt: new Date().toISOString(),
+    };
+    setSaved((list) => {
+      const prev = list.find((e) => e.id === entry.id);
+      if (prev && prev.pick.crop === entry.pick.crop && prev.pick.probability === entry.pick.probability && JSON.stringify(prev.climate) === JSON.stringify(entry.climate))
+        return list;
+      return [entry, ...list.filter((e) => e.id !== entry.id)].slice(0, 50);
+    });
+  }, [status, result]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const currentId = complete ? analysisId(sel) : null;
+  const openSaved = (e) => {
+    if (e.id === currentId) setClimate(climateStrings(e.climate));
+    else {
+      reopen.current = { id: e.id, climate: e.climate };
+      setSel({ state: e.state, district: e.district, season: e.season });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const removeSaved = (id) => {
+    setSaved((list) => list.filter((e) => e.id !== id));
+    // Clearing the open analysis stops autosave from putting it straight back.
+    if (id === currentId) setSel({ state: '', district: '', season: '' });
+  };
+
   const examples = EXAMPLES.filter(([s, d, season]) =>
     options?.states
       .find((x) => x.state === s)
@@ -565,315 +461,360 @@ function DistrictAdvisory({ meta, t }) {
   const shown = showAll ? recs : recs.slice(0, 10);
   const place = info ? `${info.district}, ${info.state}` : '';
   const loadingText = warm.current ? 'Updating…' : 'Loading model… the first prediction after the server starts takes a few seconds.';
-  const calendarCrop = top && meta?.crops?.[top.crop];
+  const cal = top && cropInfo(top.crop);
+  const calendarCrop = cal?.sow_months?.length && cal?.harvest_months?.length ? cal : null;
 
   return (
-    <div className="advisory">
-      <form
-        className="adv-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }}
-        aria-labelledby="v3-form-title"
-      >
-        <div className="sec-head">
-          <h2 id="v3-form-title">{t('fieldInputs')}</h2>
-        </div>
-
-        {optError && <p className="error">{optError}</p>}
-
-        <fieldset>
-          <legend>Location &amp; season</legend>
-          <div className="field">
-            <label htmlFor="v3-state">
-              State <span className="req">*</span>
-            </label>
-            <select id="v3-state" value={sel.state} onChange={(e) => setSel({ state: e.target.value, district: '', season: '' })} disabled={!options}>
-              <option value="">{options ? '-- Select --' : 'Loading…'}</option>
-              {options?.states.map((s) => (
-                <option key={s.state} value={s.state}>
-                  {s.state}
-                </option>
-              ))}
-            </select>
+    <>
+      {stats && <p className="stat-line">Government of India district crop statistics · {stats}</p>}
+      <div className="advisory">
+        <form
+          className="adv-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          aria-labelledby="v3-form-title"
+        >
+          <div className="sec-head">
+            <h2 id="v3-form-title">{t('fieldInputs')}</h2>
           </div>
-          <div className="field">
-            <label htmlFor="v3-district">
-              District <span className="req">*</span>
-            </label>
-            <select
-              id="v3-district"
-              value={sel.district}
-              onChange={(e) => {
-                const d = stateOpt?.districts.find((x) => x.district === e.target.value);
-                setSel((s) => ({ ...s, district: e.target.value, season: d?.seasons.includes(s.season) ? s.season : (d?.seasons[0] ?? '') }));
-              }}
-              disabled={!stateOpt}
-            >
-              <option value="">-- Select --</option>
-              {stateOpt?.districts.map((d) => (
-                <option key={d.district} value={d.district}>
-                  {d.district}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="v3-season">
-              Season <span className="req">*</span>
-            </label>
-            <select id="v3-season" value={sel.season} onChange={(e) => setSel((s) => ({ ...s, season: e.target.value }))} disabled={!districtOpt}>
-              <option value="">-- Select --</option>
-              {districtOpt?.seasons.map((s) => (
-                <option key={s} value={s}>
-                  {seasonLabel(s)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </fieldset>
 
-        <fieldset disabled={!info}>
-          <legend>Season climate (NASA POWER, editable)</legend>
-          {V3_CLIMATE.map((f) => (
-            <ClimateField key={f.key} field={f} value={climate[f.key] ?? ''} base={base[f.key]} onChange={(v) => setClimate((c) => ({ ...c, [f.key]: v }))} />
-          ))}
-          <p className="note">
-            {info ? `Pre-filled with this district's ${info.season === 'whole_year' ? 'yearly' : 'season'} average over ${info.climate_years} years. ` : ''}Changing a value changes
-            the prediction.
-          </p>
-          {edited && (
-            <button
-              type="button"
-              className="btn btn-plain btn-small reset-climate"
-              onClick={() => setClimate(Object.fromEntries(V3_CLIMATE.map((f) => [f.key, base[f.key] === null ? '' : String(base[f.key])])))}
-            >
-              Reset to district averages
-            </button>
-          )}
-        </fieldset>
+          {optError && <p className="error">{optError}</p>}
 
-        {examples.length > 0 && (
-          <p className="samples">
-            <span>Example districts:</span>
-            {examples.map(([s, d, season]) => (
-              <button key={d} type="button" className="link-btn" onClick={() => setSel({ state: s, district: d, season })}>
-                {d} ({seasonLabel(season).split(' ')[0]})
-              </button>
+          <fieldset>
+            <legend>Location &amp; season</legend>
+            <div className="field">
+              <label htmlFor="v3-state">
+                State <span className="req">*</span>
+              </label>
+              <select id="v3-state" value={sel.state} onChange={(e) => setSel({ state: e.target.value, district: '', season: '' })} disabled={!options}>
+                <option value="">{options ? '-- Select --' : 'Loading…'}</option>
+                {options?.states.map((s) => (
+                  <option key={s.state} value={s.state}>
+                    {s.state}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="v3-district">
+                District <span className="req">*</span>
+              </label>
+              <select
+                id="v3-district"
+                value={sel.district}
+                onChange={(e) => {
+                  const d = stateOpt?.districts.find((x) => x.district === e.target.value);
+                  setSel((s) => ({ ...s, district: e.target.value, season: d?.seasons.includes(s.season) ? s.season : (d?.seasons[0] ?? '') }));
+                }}
+                disabled={!stateOpt}
+              >
+                <option value="">-- Select --</option>
+                {stateOpt?.districts.map((d) => (
+                  <option key={d.district} value={d.district}>
+                    {d.district}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="v3-season">
+                Season <span className="req">*</span>
+              </label>
+              <select id="v3-season" value={sel.season} onChange={(e) => setSel((s) => ({ ...s, season: e.target.value }))} disabled={!districtOpt}>
+                <option value="">-- Select --</option>
+                {districtOpt?.seasons.map((s) => (
+                  <option key={s} value={s}>
+                    {seasonLabel(s)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </fieldset>
+
+          <fieldset disabled={!info}>
+            <legend>Season climate (NASA POWER, editable)</legend>
+            {V3_CLIMATE.map((f) => (
+              <ClimateField key={f.key} field={f} value={climate[f.key] ?? ''} base={base[f.key]} onChange={(v) => setClimate((c) => ({ ...c, [f.key]: v }))} />
             ))}
-          </p>
-        )}
-      </form>
-
-      <div className="adv-results" ref={resultsRef}>
-        {status === 'error' ? (
-          <div className="status-box is-error">
-            <p>{message}</p>
-          </div>
-        ) : !complete ? (
-          <div className="status-box">
-            <p>
-              Choose a <strong>state, district and season</strong>. The district&apos;s season climate is filled in from NASA POWER, and every crop is ranked by the model trained
-              on Government of India district crop statistics.
+            <p className="note">
+              {info ? `Pre-filled with this district's ${info.season === 'whole_year' ? 'yearly' : 'season'} average over ${info.climate_years} years. ` : ''}Changing a value
+              changes the prediction.
             </p>
-          </div>
-        ) : !top ? (
-          <div className="status-box">
-            <p>{loadingText}</p>
-          </div>
-        ) : (
-          <>
-            <section className="rec" aria-labelledby="v3-rec-h">
-              <p className="eyebrow">
-                {t('recommended')} · {place} · {seasonLabel(info.season).split(' (')[0]}
-              </p>
-              <h2 id="v3-rec-h" className="rec-crop">
-                {top.name} <span className="rec-type">{cropInfo(top.crop)?.type}</span>
-              </h2>
-              <dl className="stats">
-                <div>
-                  <dt>P(crop)</dt>
-                  <dd>{prob(top.probability)}</dd>
-                </div>
-                <div>
-                  <dt>Grown in this district</dt>
-                  <dd className={top.grown_here ? 'ok' : 'off'}>{top.grown_here ? `${top.years_grown} yrs` : 'No'}</dd>
-                </div>
-                <div>
-                  <dt>Median yield here</dt>
-                  <dd>
-                    {typeof top.historical_median_yield === 'number' ? num(top.historical_median_yield, 2) : '—'}
-                    {typeof top.historical_median_yield === 'number' && <small className="unit"> {top.yield_unit}</small>}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Climate used</dt>
-                  <dd className="dd-text">
-                    {num(result.inputs.temperature)} °C · {num(result.inputs.humidity)}% · {num(result.inputs.rainfall, 0)} mm
-                  </dd>
-                </div>
-              </dl>
-              {status === 'loading' && <p className="muted small">{loadingText}</p>}
-              {result.note && <p className="note">{result.note}</p>}
-            </section>
+            {edited && (
+              <button
+                type="button"
+                className="btn btn-plain btn-small reset-climate"
+                onClick={() => setClimate(Object.fromEntries(V3_CLIMATE.map((f) => [f.key, base[f.key] === null ? '' : String(base[f.key])])))}
+              >
+                Reset to district averages
+              </button>
+            )}
+          </fieldset>
 
-            <section className="block" aria-labelledby="v3-top-h">
-              <h3 id="v3-top-h">
-                {t('topCrops')} · {place}
-              </h3>
-              <div className="table-wrap">
-                <table className="data">
-                  <thead>
-                    <tr>
-                      <th scope="col">#</th>
-                      <th scope="col">Crop</th>
-                      <th scope="col" className="hide-sm">
-                        Type
-                      </th>
-                      <th scope="col" className="num">
-                        P(crop)
-                      </th>
-                      <th scope="col" className="num wrap">
-                        Median yield here
-                      </th>
-                      <th scope="col" className="num wrap hide-sm">
-                        Years grown
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shown.map((r, i) => (
-                      <tr key={r.crop} className={i === 0 ? 'is-selected' : undefined}>
-                        <td>{i + 1}</td>
-                        <th scope="row">{r.name}</th>
-                        <td className="hide-sm">{cropInfo(r.crop)?.type ?? ''}</td>
-                        <td className="num">{prob(r.probability)}</td>
-                        <td className="num">{typeof r.historical_median_yield === 'number' ? `${num(r.historical_median_yield, 2)} ${r.yield_unit ?? ''}` : '—'}</td>
-                        <td className="num hide-sm">{r.grown_here ? r.years_grown : <span className="muted">not grown</span>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="note">
-                P(crop) is the model&apos;s probability that the crop is among this district&apos;s three best-yielding crops for the season. Median yield is the district&apos;s
-                historical median for that crop in this season (Government APY records).{' '}
-                {recs.length > 10 && (
-                  <button type="button" className="link-btn" onClick={() => setShowAll((s) => !s)}>
-                    {showAll ? 'Show top 10' : `Show all ${recs.length} crops`}
-                  </button>
-                )}
-              </p>
-            </section>
+          {examples.length > 0 && (
+            <p className="samples">
+              <span>Example districts:</span>
+              {examples.map(([s, d, season]) => (
+                <button key={d} type="button" className="link-btn" onClick={() => setSel({ state: s, district: d, season })}>
+                  {d} ({seasonLabel(season).split(' ')[0]})
+                </button>
+              ))}
+            </p>
+          )}
+        </form>
 
-            {info.history?.top_crops?.length > 0 && (
-              <section className="block" aria-labelledby="v3-hist-h">
-                <h3 id="v3-hist-h">
-                  District history · {info.history.years?.[0]}–{info.history.years?.[1]}
+        <div className="adv-results" ref={resultsRef}>
+          {status === 'error' ? (
+            <div className="status-box is-error">
+              <p>{message}</p>
+            </div>
+          ) : !complete ? (
+            <div className="status-box">
+              <p>
+                Choose a <strong>state, district and season</strong>. The district&apos;s season climate is filled in from NASA POWER, and every crop is ranked by the model trained
+                on Government of India district crop statistics.
+              </p>
+            </div>
+          ) : !top ? (
+            <div className="status-box">
+              <p>{loadingText}</p>
+            </div>
+          ) : (
+            <>
+              <section className="rec" aria-labelledby="v3-rec-h">
+                <p className="eyebrow">
+                  {t('recommended')} · {place} · {seasonLabel(info.season).split(' (')[0]}
+                </p>
+                <h2 id="v3-rec-h" className="rec-crop">
+                  {top.name} <span className="rec-type">{cropInfo(top.crop)?.type}</span>
+                </h2>
+                <dl className="stats">
+                  <div>
+                    <dt>P(crop)</dt>
+                    <dd>{prob(top.probability)}</dd>
+                  </div>
+                  <div>
+                    <dt>Grown in this district</dt>
+                    <dd className={top.grown_here ? 'ok' : 'off'}>{top.grown_here ? `${top.years_grown} yrs` : 'No'}</dd>
+                  </div>
+                  <div>
+                    <dt>Median yield here</dt>
+                    <dd>
+                      {typeof top.historical_median_yield === 'number' ? num(top.historical_median_yield, 2) : '—'}
+                      {typeof top.historical_median_yield === 'number' && <small className="unit"> {top.yield_unit}</small>}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Climate used</dt>
+                    <dd className="dd-text">
+                      {num(result.inputs.temperature)} °C · {num(result.inputs.humidity)}% · {num(result.inputs.rainfall, 0)} mm
+                    </dd>
+                  </div>
+                </dl>
+                {status === 'loading' && <p className="muted small">{loadingText}</p>}
+                {result.note && <p className="note">{result.note}</p>}
+              </section>
+
+              <section className="block" aria-labelledby="v3-top-h">
+                <h3 id="v3-top-h">
+                  {t('topCrops')} · {place}
                 </h3>
                 <div className="table-wrap">
                   <table className="data">
                     <thead>
                       <tr>
+                        <th scope="col">#</th>
                         <th scope="col">Crop</th>
-                        <th scope="col" className="num wrap">
-                          Mean area (ha)
+                        <th scope="col" className="hide-sm">
+                          Type
+                        </th>
+                        <th scope="col" className="num">
+                          P(crop)
                         </th>
                         <th scope="col" className="num wrap">
-                          Median yield
+                          Median yield here
                         </th>
                         <th scope="col" className="num wrap hide-sm">
-                          Years recorded
-                        </th>
-                        <th scope="col" className="num wrap">
-                          Years in top 3
+                          Years grown
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {info.history.top_crops.map((c) => (
-                        <tr key={c.crop}>
-                          <th scope="row">{c.name ?? c.crop}</th>
-                          <td className="num">{num(c.mean_area_ha, 0)}</td>
-                          <td className="num">{typeof c.median_yield === 'number' ? `${num(c.median_yield, 2)} ${c.yield_unit ?? ''}` : '—'}</td>
-                          <td className="num hide-sm">{c.years}</td>
-                          <td className="num">{c.recommended_years}</td>
+                      {shown.map((r, i) => (
+                        <tr key={r.crop} className={i === 0 ? 'is-selected' : undefined}>
+                          <td>{i + 1}</td>
+                          <th scope="row">{r.name}</th>
+                          <td className="hide-sm">{cropInfo(r.crop)?.type ?? ''}</td>
+                          <td className="num">{prob(r.probability)}</td>
+                          <td className="num">{typeof r.historical_median_yield === 'number' ? `${num(r.historical_median_yield, 2)} ${r.yield_unit ?? ''}` : '—'}</td>
+                          <td className="num hide-sm">{r.grown_here ? r.years_grown : <span className="muted">not grown</span>}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <p className="note">
-                  Largest crops by area in this district and season over the last five crop years with records. &quot;Top 3&quot; = among the three best yields that year.
+                  P(crop) is the model&apos;s probability that the crop is among this district&apos;s three best-yielding crops for the season. Median yield is the district&apos;s
+                  historical median for that crop in this season (Government APY records).{' '}
+                  {recs.length > 10 && (
+                    <button type="button" className="link-btn" onClick={() => setShowAll((s) => !s)}>
+                      {showAll ? 'Show top 10' : `Show all ${recs.length} crops`}
+                    </button>
+                  )}
                 </p>
               </section>
-            )}
 
-            {calendarCrop && (
-              <section className="block" aria-labelledby="v3-cal-h">
-                <h3 id="v3-cal-h">{t('calendar')}</h3>
-                <div className="table-wrap">
-                  <table className="data cal-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Crop</th>
-                        {MONTHS.map((m) => (
-                          <th key={m} scope="col" className="c">
-                            {m}
+              {info.history?.top_crops?.length > 0 && (
+                <section className="block" aria-labelledby="v3-hist-h">
+                  <h3 id="v3-hist-h">
+                    District history · {info.history.years?.[0]}–{info.history.years?.[1]}
+                  </h3>
+                  <div className="table-wrap">
+                    <table className="data">
+                      <thead>
+                        <tr>
+                          <th scope="col">Crop</th>
+                          <th scope="col" className="num wrap">
+                            Mean area (ha)
                           </th>
+                          <th scope="col" className="num wrap">
+                            Median yield
+                          </th>
+                          <th scope="col" className="num wrap hide-sm">
+                            Years recorded
+                          </th>
+                          <th scope="col" className="num wrap">
+                            Years in top 3
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {info.history.top_crops.map((c) => (
+                          <tr key={c.crop}>
+                            <th scope="row">{c.name ?? c.crop}</th>
+                            <td className="num">{num(c.mean_area_ha, 0)}</td>
+                            <td className="num">{typeof c.median_yield === 'number' ? `${num(c.median_yield, 2)} ${c.yield_unit ?? ''}` : '—'}</td>
+                            <td className="num hide-sm">{c.years}</td>
+                            <td className="num">{c.recommended_years}</td>
+                          </tr>
                         ))}
-                      </tr>
-                    </thead>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="note">
+                    Largest crops by area in this district and season over the last five crop years with records. &quot;Top 3&quot; = among the three best yields that year.
+                  </p>
+                </section>
+              )}
+
+              {calendarCrop && (
+                <section className="block" aria-labelledby="v3-cal-h">
+                  <h3 id="v3-cal-h">{t('calendar')}</h3>
+                  <div className="table-wrap">
+                    <table className="data cal-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Crop</th>
+                          {MONTHS.map((m) => (
+                            <th key={m} scope="col" className="c">
+                              {m}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <CalendarRow crop={calendarCrop} />
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="legend">
+                    <span>
+                      <i className="cal-sow">S</i> Sowing
+                    </span>
+                    <span>
+                      <i className="cal-grow">G</i> Growing
+                    </span>
+                    <span>
+                      <i className="cal-harvest">H</i> Harvest
+                    </span>
+                  </p>
+                </section>
+              )}
+
+              {info.soil && (
+                <section className="block" aria-labelledby="v3-soil-h">
+                  <h3 id="v3-soil-h">District soil profile (SoilGrids, context only)</h3>
+                  <table className="kv">
                     <tbody>
-                      <CalendarRow crop={calendarCrop} />
+                      {SOIL_ROWS.map(([k, labelText, unit]) => (
+                        <tr key={k}>
+                          <th scope="row">{labelText}</th>
+                          <td>{typeof info.soil[k] === 'number' ? `${num(info.soil[k], 2)}${unit ? ` ${unit}` : ''}` : '—'}</td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <th scope="row">Soil class</th>
+                        <td>{info.soil.soil_class ?? '—'}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Source</th>
+                        <td>{SOIL_SOURCE[info.soil.source] ?? 'Not available'}</td>
+                      </tr>
                     </tbody>
                   </table>
-                </div>
-                <p className="legend">
-                  <span>
-                    <i className="cal-sow">S</i> Sowing
-                  </span>
-                  <span>
-                    <i className="cal-grow">G</i> Growing
-                  </span>
-                  <span>
-                    <i className="cal-harvest">H</i> Harvest
-                  </span>
-                </p>
-              </section>
-            )}
-
-            {info.soil && (
-              <section className="block" aria-labelledby="v3-soil-h">
-                <h3 id="v3-soil-h">District soil profile (SoilGrids, context only)</h3>
-                <table className="kv">
-                  <tbody>
-                    {SOIL_ROWS.map(([k, labelText, unit]) => (
-                      <tr key={k}>
-                        <th scope="row">{labelText}</th>
-                        <td>{typeof info.soil[k] === 'number' ? `${num(info.soil[k], 2)}${unit ? ` ${unit}` : ''}` : '—'}</td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <th scope="row">Soil class</th>
-                      <td>{info.soil.soil_class ?? '—'}</td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Source</th>
-                      <td>{SOIL_SOURCE[info.soil.source] ?? 'Not available'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p className="note">
-                  Not used by the model: adding soil gave no gain in the study (Results, v3). District centre {num(info.location?.lat, 3)}° N, {num(info.location?.lon, 3)}° E.
-                </p>
-              </section>
-            )}
-          </>
-        )}
+                  <p className="note">
+                    Not used by the model: adding soil gave no gain in the study (Results, v3). District centre {num(info.location?.lat, 3)}° N, {num(info.location?.lon, 3)}° E.
+                  </p>
+                </section>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+
+      <Section
+        id="saved"
+        title={`${t('saved')} (${saved.length})`}
+        actions={
+          <button type="button" className="btn btn-plain btn-small" onClick={() => setSel({ state: '', district: '', season: '' })}>
+            + {t('newAnalysis')}
+          </button>
+        }
+      >
+        {saved.length === 0 ? (
+          <p className="muted small">Each district and season you analyse is saved here automatically, in this browser only.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">District · season</th>
+                  <th scope="col">Recommended</th>
+                  <th scope="col" className="num">
+                    P(crop)
+                  </th>
+                  <th scope="col" className="hide-sm">
+                    Climate
+                  </th>
+                  <th scope="col" className="hide-sm">
+                    Saved
+                  </th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {saved.map((e, i) => (
+                  <SavedRow key={e.id} index={i + 1} entry={e} active={e.id === currentId} onOpen={() => openSaved(e)} onDelete={() => removeSaved(e.id)} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+    </>
   );
 }
 
@@ -1086,544 +1027,6 @@ function V3DataBrowser() {
   );
 }
 
-/* ── Soil-test mode (v2) ──────────────────────────────── */
-
-function initialAnalysis(meta, saved) {
-  try {
-    const activeId = localStorage.getItem(ACTIVE_KEY);
-    const entry = saved.find((s) => s.id === activeId) ?? saved[0];
-    if (entry) return { id: entry.id, name: entry.name, form: entry.form };
-  } catch {
-    /* fall through */
-  }
-  return { id: null, name: '', form: emptyForm(meta) };
-}
-
-function SoilAdvisory({ meta, t }) {
-  const seed = useRef(null);
-  if (!seed.current) {
-    const saved = loadSaved();
-    seed.current = { current: initialAnalysis(meta, saved), saved };
-  }
-
-  const [saved, setSaved] = useState(seed.current.saved);
-  const [current, setCurrent] = useState(seed.current.current);
-  const [result, setResult] = useState(null);
-  const [status, setStatus] = useState('idle'); // idle | loading | ready | invalid | offline
-  const [message, setMessage] = useState('');
-  const [selectedId, setSelectedId] = useState(null);
-  const requestId = useRef(0);
-  const resultsRef = useRef(null);
-
-  const { form } = current;
-  const numericDone = meta.fields.filter((f) => form[f.key] !== '' && !Number.isNaN(Number(form[f.key]))).length;
-  const choicesDone = ['soil', 'season', 'water_source', 'state'].filter((k) => form[k]).length;
-  const totalInputs = meta.fields.length + 4;
-  const complete = numericDone + choicesDone === totalInputs;
-
-  const setForm = (update) => setCurrent((c) => ({ ...c, form: typeof update === 'function' ? update(c.form) : update }));
-  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    } catch {
-      /* ignore */
-    }
-  }, [saved]);
-
-  useEffect(() => {
-    try {
-      if (current.id) localStorage.setItem(ACTIVE_KEY, current.id);
-    } catch {
-      /* ignore */
-    }
-  }, [current.id]);
-
-  // Live prediction: debounce edits, ignore stale responses.
-  useEffect(() => {
-    if (!complete) {
-      requestId.current++;
-      setResult(null);
-      setStatus('idle');
-      return;
-    }
-    const id = ++requestId.current;
-    const controller = new AbortController();
-    setStatus('loading');
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/predict`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...Object.fromEntries(meta.fields.map((f) => [f.key, Number(form[f.key])])),
-            soil: form.soil,
-            season: form.season,
-            water_source: form.water_source,
-            state: form.state,
-          }),
-          signal: controller.signal,
-        });
-        if (id !== requestId.current) return;
-        if (!res.ok) {
-          setStatus('invalid');
-          setMessage(await readError(res, meta.fields));
-          return;
-        }
-        setResult({ data: await res.json(), form });
-        setStatus('ready');
-      } catch (err) {
-        if (err.name === 'AbortError' || id !== requestId.current) return;
-        setStatus('offline');
-        setMessage(`Cannot reach the model server at ${API_BASE_URL}.`);
-      }
-    }, 160);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [form, complete, meta]);
-
-  // Rows: the model's pick plus the other crops of the same season, ranked by model probability.
-  const pick = result?.data.top_recommendations[0];
-  const rows = [];
-  if (result) {
-    const basis = result.form;
-    const probs = new Map(result.data.top_recommendations.map((r) => [r.crop, r.confidence]));
-    rows.push(
-      ...Object.keys(meta.crops)
-        .filter((id) => id === pick.crop || meta.crops[id].season === basis.season)
-        .map((id) => ({ ...assess(meta, id, basis), confidence: probs.get(id) }))
-        .sort((a, b) => (b.confidence ?? -1) - (a.confidence ?? -1) || b.inRange - a.inRange || a.distance - b.distance)
-        .slice(0, MAX_ROWS),
-    );
-  }
-  const top = rows[0];
-  const selected = rows.find((r) => r.id === selectedId) ?? top;
-  const seasonName = result ? (SEASONS[result.form.season]?.name ?? result.form.season) : '';
-  const displayName = current.name || (pick ? `${plainName(meta.crops[pick.crop])} · ${seasonName} · ${result.form.state || result.form.soil}` : 'Untitled analysis');
-
-  // Autosave whenever a ready recommendation exists (and when the name changes).
-  useEffect(() => {
-    if (!pick || status !== 'ready') return undefined;
-    const timer = window.setTimeout(() => {
-      setSaved((list) => {
-        const twin = list.find((s) => formKey(s.form) === formKey(form));
-        const id = current.id ?? twin?.id ?? crypto.randomUUID();
-        if (!current.id) queueMicrotask(() => setCurrent((c) => (c.id ? c : { ...c, id })));
-        const prev = list.find((s) => s.id === id);
-        if (prev && prev.name === displayName && prev.pick.crop === pick.crop && prev.pick.confidence === pick.confidence && formKey(prev.form) === formKey(form)) return list;
-        const snapshot = { id, name: displayName, savedAt: new Date().toISOString(), form, pick: { crop: pick.crop, confidence: pick.confidence } };
-        return [snapshot, ...list.filter((s) => s.id !== id && formKey(s.form) !== formKey(form))];
-      });
-    }, 320);
-    return () => window.clearTimeout(timer);
-  }, [pick, status, form, displayName, current.id]);
-
-  const open = (entry) => {
-    setCurrent({ id: entry.id, name: entry.name, form: entry.form });
-    setSelectedId(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  const startNew = () => {
-    setCurrent({ id: null, name: '', form: emptyForm(meta) });
-    setSelectedId(null);
-  };
-  const remove = (id) => {
-    setSaved((list) => list.filter((s) => s.id !== id));
-    // Deleting the open analysis also clears the form; otherwise autosave would save it straight back.
-    if (current.id === id) startNew();
-    try {
-      if (localStorage.getItem(ACTIVE_KEY) === id) localStorage.removeItem(ACTIVE_KEY);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const fieldRow = (f) => (
-    <NumField key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} check={selected?.readings.find((r) => r.key === f.key)} cropName={selected?.crop.name} />
-  );
-  const isError = status === 'offline' || status === 'invalid';
-
-  return (
-    <>
-      <div className="advisory">
-        <form
-          className="adv-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          aria-labelledby="form-title"
-        >
-          <div className="sec-head">
-            <h2 id="form-title">{t('fieldInputs')}</h2>
-          </div>
-          <p className="muted small">
-            All fields required. Analysis: <strong>{displayName}</strong>
-          </p>
-
-          <fieldset>
-            <legend>Location &amp; season</legend>
-            <SelectField label="State" value={form.state} onChange={(v) => set('state', v)} options={meta.options.state.map((s) => [s, s])} />
-            <SelectField
-              label="Season"
-              value={form.season}
-              onChange={(v) => set('season', v)}
-              options={meta.options.season.map((s) => [s, `${SEASONS[s]?.name ?? s} (${SEASONS[s]?.months ?? ''})`])}
-            />
-            <SelectField label="Soil type" value={form.soil} onChange={(v) => set('soil', v)} options={meta.options.soil.map((s) => [s, s])} />
-            <SelectField
-              label="Water source"
-              value={form.water_source}
-              onChange={(v) => set('water_source', v)}
-              options={meta.options.water_source.map((w) => [w, w === 'irrigated' ? 'Irrigated' : 'Rainfed'])}
-            />
-          </fieldset>
-
-          <fieldset>
-            <legend>Soil test (N, P, K, pH)</legend>
-            {meta.fields.filter((f) => NUTRIENTS.includes(f.key)).map(fieldRow)}
-          </fieldset>
-
-          <fieldset>
-            <legend>Climate</legend>
-            {meta.fields.filter((f) => !NUTRIENTS.includes(f.key)).map(fieldRow)}
-          </fieldset>
-
-          <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={!complete}>
-              {t('submit')}
-            </button>
-            <button type="button" className="btn btn-plain" onClick={startNew}>
-              {t('reset')}
-            </button>
-          </div>
-
-          <p className="samples">
-            <span>Sample field:</span>
-            {SAMPLES.filter((s) => meta.crops[s]).map((id) => (
-              <button
-                key={id}
-                type="button"
-                className="link-btn"
-                onClick={() => {
-                  setForm(sampleValues(meta, id));
-                  setSelectedId(null);
-                }}
-              >
-                {plainName(meta.crops[id])}
-              </button>
-            ))}
-          </p>
-        </form>
-
-        <div className="adv-results" ref={resultsRef}>
-          {top ? (
-            <>
-              <section className="rec" aria-labelledby="rec-h">
-                <p className="eyebrow">{t('recommended')}</p>
-                <h2 id="rec-h" className="rec-crop">
-                  {top.crop.name} <span className="rec-type">{top.crop.type}</span>
-                </h2>
-                <dl className="stats">
-                  <div>
-                    <dt>P(crop)</dt>
-                    <dd>{prob(top.confidence)}</dd>
-                  </div>
-                  <div>
-                    <dt>Readings in range</dt>
-                    <dd>
-                      {top.inRange}/{top.readings.length}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Usual soil ({result.form.soil})</dt>
-                    <dd className={top.soilOk ? 'ok' : 'off'}>{top.soilOk ? 'Yes' : 'No'}</dd>
-                  </div>
-                  <div>
-                    <dt>Sow · harvest</dt>
-                    <dd className="dd-text">
-                      {top.crop.sown} · {top.crop.harvested}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Duration</dt>
-                    <dd className="dd-text">~{top.crop.duration_days} days</dd>
-                  </div>
-                </dl>
-                {status === 'loading' && <p className="muted small">Updating…</p>}
-              </section>
-
-              <section className="block" aria-labelledby="top-h">
-                <h3 id="top-h">
-                  {t('topCrops')} · {seasonName} season
-                </h3>
-                <div className="table-wrap">
-                  <table className="data rank-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">#</th>
-                        <th scope="col">Crop</th>
-                        <th scope="col" className="hide-sm">
-                          Type
-                        </th>
-                        <th scope="col" className="num">
-                          P(crop)
-                        </th>
-                        <th scope="col" className="num wrap">
-                          In range
-                        </th>
-                        {meta.fields.map((f) => (
-                          <th key={f.key} scope="col" className="c hide-sm" title={f.label}>
-                            {SHORT[f.key] ?? f.key}
-                          </th>
-                        ))}
-                        <th scope="col">
-                          <span className="visually-hidden">Details</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row, i) => (
-                        <tr key={row.id} className={row.id === selected.id ? 'is-selected' : undefined}>
-                          <td>{i + 1}</td>
-                          <th scope="row">{row.crop.name}</th>
-                          <td className="hide-sm">{row.crop.type}</td>
-                          <td className="num">{row.confidence === undefined ? '—' : prob(row.confidence)}</td>
-                          <td className="num">
-                            {row.inRange}/{row.readings.length}
-                          </td>
-                          {row.readings.map((r) => (
-                            <td key={r.key} className={`c hide-sm ${r.status === 'ok' ? 'ok' : 'off'}`} title={`${r.label}: ${advice(r, row.crop.name.toLowerCase())}`}>
-                              {r.status === 'ok' ? '✓' : '✗'}
-                            </td>
-                          ))}
-                          <td>
-                            <button type="button" className="link-btn" onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
-                              Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="note">P(crop) is the model&apos;s predicted probability. ✓ means the reading lies inside the crop&apos;s typical range (10th–90th percentile).</p>
-              </section>
-
-              <section className="block" aria-labelledby="cal-h">
-                <h3 id="cal-h">{t('calendar')}</h3>
-                <div className="table-wrap">
-                  <table className="data cal-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Crop</th>
-                        {MONTHS.map((m) => (
-                          <th key={m} scope="col" className="c">
-                            {m}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <CalendarRow crop={top.crop} />
-                      {selected.id !== top.id && <CalendarRow crop={selected.crop} />}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="legend">
-                  <span>
-                    <i className="cal-sow">S</i> Sowing
-                  </span>
-                  <span>
-                    <i className="cal-grow">G</i> Growing
-                  </span>
-                  <span>
-                    <i className="cal-harvest">H</i> Harvest
-                  </span>
-                </p>
-              </section>
-
-              <section className="block" aria-labelledby="read-h">
-                <h3 id="read-h">
-                  {t('readings')} · {selected.crop.name}
-                </h3>
-                <div className="table-wrap">
-                  <table className="data">
-                    <thead>
-                      <tr>
-                        <th scope="col">Parameter</th>
-                        <th scope="col" className="num">
-                          Your value
-                        </th>
-                        <th scope="col" className="num">
-                          Typical
-                        </th>
-                        <th scope="col">Status</th>
-                        <th scope="col" className="hide-sm">
-                          Remark
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selected.readings.map((r) => (
-                        <tr key={r.key}>
-                          <th scope="row">{r.label}</th>
-                          <td className="num">{withUnit(fmt(r.v), r.unit)}</td>
-                          <td className="num">{range(r.lo, r.hi, r.unit)}</td>
-                          <td className={r.status === 'ok' ? 'ok' : 'off'}>{r.status === 'ok' ? 'In range' : r.status === 'low' ? 'Low' : 'High'}</td>
-                          <td className="hide-sm">{advice(r, selected.crop.name.toLowerCase())}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="note">
-                  Usual soils: {selected.crop.soils.filter((s) => s !== 'Other').join(', ') || 'varied'}
-                  {!selected.soilOk && ` (not usual for ${result.form.soil.toLowerCase()} soil)`}.
-                </p>
-              </section>
-            </>
-          ) : (
-            <div className={`status-box${isError ? ' is-error' : ''}`}>
-              {isError ? (
-                <p>{message}</p>
-              ) : status === 'loading' ? (
-                <p>Analysing the field…</p>
-              ) : (
-                <>
-                  <p>
-                    <strong>
-                      {numericDone + choicesDone} of {totalInputs}
-                    </strong>{' '}
-                    inputs filled. The recommendation appears here as soon as all are set, or pick a sample field.
-                  </p>
-                  <ul className="checklist">
-                    {[['state', 'State'], ['season', 'Season'], ['soil', 'Soil type'], ['water_source', 'Water source'], ...meta.fields.map((f) => [f.key, f.label])].map(
-                      ([k, label]) => (
-                        <li key={k} className={form[k] !== '' ? 'done' : ''}>
-                          <span aria-hidden="true">{form[k] !== '' ? '✓' : '○'}</span> {label}
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Section
-        id="saved"
-        title={`${t('saved')} (${saved.length})`}
-        actions={
-          <button type="button" className="btn btn-plain btn-small" onClick={startNew}>
-            + {t('newAnalysis')}
-          </button>
-        }
-      >
-        {saved.length === 0 ? (
-          <p className="muted small">Each completed recommendation is saved here automatically, in this browser only.</p>
-        ) : (
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th scope="col">#</th>
-                  <th scope="col">Analysis</th>
-                  <th scope="col" className="hide-sm">
-                    Crop
-                  </th>
-                  <th scope="col" className="num">
-                    P(crop)
-                  </th>
-                  <th scope="col" className="hide-sm">
-                    Saved
-                  </th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {saved.map((s, i) => (
-                  <SavedRow
-                    key={s.id}
-                    index={i + 1}
-                    entry={s}
-                    active={s.id === current.id}
-                    cropName={meta.crops[s.pick.crop]?.name ?? s.pick.crop}
-                    onOpen={() => open(s)}
-                    onDelete={() => remove(s.id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Section>
-    </>
-  );
-}
-
-function SelectField({ label, value, onChange, options }) {
-  const id = `f-${label.toLowerCase().replace(/\W+/g, '-')}`;
-  return (
-    <div className="field">
-      <label htmlFor={id}>
-        {label} <span className="req">*</span>
-      </label>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} required>
-        <option value="">-- Select --</option>
-        {options.map(([v, text]) => (
-          <option key={v} value={v}>
-            {text}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function NumField({ field, value, onChange, check, cropName }) {
-  const num = Number(value);
-  const isSet = value !== '' && !Number.isNaN(num);
-  const outside = check && isSet && (num < check.lo || num > check.hi);
-  const id = `f-${field.key}`;
-  return (
-    <div className={`field num-field${outside ? ' is-outside' : ''}`}>
-      <label htmlFor={id}>
-        {field.label}
-        {field.unit ? ` (${field.unit})` : ''} <span className="req">*</span>
-      </label>
-      <div className="num-row">
-        <input
-          type="range"
-          min={field.min}
-          max={field.max}
-          step={field.step}
-          value={isSet ? num : field.min}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label={`${field.label} slider`}
-          tabIndex={-1}
-        />
-        <input id={id} type="number" min={field.min} max={field.max} step={field.step} value={value} onChange={(e) => onChange(e.target.value)} required />
-      </div>
-      <small className="hint">
-        Allowed {field.min}–{field.max}
-        {check && (
-          <>
-            {' '}
-            · Typical for {cropName} (selected below): {range(check.lo, check.hi, field.unit)}
-            {outside && <strong> (outside)</strong>}
-          </>
-        )}
-      </small>
-    </div>
-  );
-}
-
 function CalendarRow({ crop }) {
   const sow = new Set(crop.sow_months);
   const harvest = new Set(crop.harvest_months);
@@ -1650,17 +1053,18 @@ function CalendarRow({ crop }) {
   );
 }
 
-function SavedRow({ index, entry, active, cropName, onOpen, onDelete }) {
+function SavedRow({ index, entry, active, onOpen, onDelete }) {
   const [confirming, setConfirming] = useState(false);
   return (
     <tr className={active ? 'is-selected' : undefined}>
       <td>{index}</td>
-      <td>
-        {entry.name}
+      <th scope="row">
+        {entry.district}, {entry.state} · {seasonLabel(entry.season).split(' (')[0]}
         {active && <span className="tag">Open</span>}
-      </td>
-      <td className="hide-sm">{cropName}</td>
-      <td className="num">{prob(entry.pick.confidence)}</td>
+      </th>
+      <td>{entry.pick.name}</td>
+      <td className="num">{prob(entry.pick.probability)}</td>
+      <td className="hide-sm">{entry.edited ? 'edited' : 'district average'}</td>
       <td className="hide-sm">{longDate(entry.savedAt)}</td>
       <td className="actions">
         <button type="button" className="link-btn" onClick={onOpen}>
@@ -1668,7 +1072,7 @@ function SavedRow({ index, entry, active, cropName, onOpen, onDelete }) {
         </button>
         {confirming ? (
           <>
-            <button type="button" className="link-btn danger" onClick={onDelete} aria-label={`Confirm delete ${entry.name}`}>
+            <button type="button" className="link-btn danger" onClick={onDelete} aria-label={`Confirm delete ${entry.district}`}>
               Confirm delete
             </button>
             <button type="button" className="link-btn" onClick={() => setConfirming(false)}>
@@ -1676,7 +1080,7 @@ function SavedRow({ index, entry, active, cropName, onOpen, onDelete }) {
             </button>
           </>
         ) : (
-          <button type="button" className="link-btn danger" onClick={() => setConfirming(true)} aria-label={`Delete ${entry.name}`}>
+          <button type="button" className="link-btn danger" onClick={() => setConfirming(true)} aria-label={`Delete ${entry.district}`}>
             Delete
           </button>
         )}
@@ -1687,204 +1091,19 @@ function SavedRow({ index, entry, active, cropName, onOpen, onDelete }) {
 
 /* ── Dataset ──────────────────────────────────────────── */
 
-const DATA_PAGE = 80;
-
-const DATA_HEADERS = {
-  crop: 'Crop',
-  source: 'Set',
-  state: 'State',
-  soil: 'Soil',
-  season: 'Season',
-  water: 'Water',
-  N: 'N',
-  P: 'P',
-  K: 'K',
-  pH: 'pH',
-  temp: 'Temp °C',
-  RH: 'RH %',
-  rain_mm: 'Rain mm',
-};
-
-const DATA_NUM_COLS = new Set(['N', 'P', 'K', 'pH', 'temp', 'RH', 'rain_mm']);
-
-function DatasetPage({ meta, metaFailed, retryMeta, t }) {
-  const [view, setView] = useState('v3');
+function DatasetPage({ t }) {
   const stats = useV3Stats();
   return (
     <>
       <header className="page-head">
         <h1>{t('dataset')}</h1>
         <p className="lede">
-          District mode is built on Government of India district-wise crop statistics (APY){stats ? `: ${stats}` : ''}, joined with NASA POWER climate and SoilGrids soil. Soil-test
-          mode uses a separate {meta ? meta.rows.toLocaleString('en-IN') : '67,200'}-row set with N-P-K readings. Licences are listed on the <a href="#/about">About</a> page.
+          Government of India district-wise, season-wise crop statistics (APY){stats ? `: ${stats}` : ''}, joined with NASA POWER climate and SoilGrids soil. These are the records
+          behind the advisory. Licences are listed on the <a href="#/about">About</a> page.
         </p>
       </header>
-      <div className="mode-switch" role="tablist" aria-label="Dataset">
-        <button type="button" role="tab" aria-selected={view === 'v3'} onClick={() => setView('v3')}>
-          <strong>District crop statistics (v3)</strong>
-          <small>{stats ?? 'Government APY records'}</small>
-        </button>
-        <button type="button" role="tab" aria-selected={view === 'v2'} onClick={() => setView('v2')}>
-          <strong>Soil-test training data (v2)</strong>
-          <small>{meta ? `${meta.rows.toLocaleString('en-IN')} rows · ${Object.keys(meta.crops).length} crops` : 'N-P-K readings'}</small>
-        </button>
-      </div>
-      {view === 'v3' ? (
-        <Section id="v3data" title="District crop statistics">
-          <V3DataBrowser />
-        </Section>
-      ) : meta ? (
-        <V2Data meta={meta} t={t} />
-      ) : (
-        <MetaStatus failed={metaFailed} retry={retryMeta} />
-      )}
-    </>
-  );
-}
-
-function V2Data({ meta, t }) {
-  const [crop, setCrop] = useState('');
-  const [offset, setOffset] = useState(0);
-  const [payload, setPayload] = useState(null);
-  const [status, setStatus] = useState('loading');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let alive = true;
-    setStatus('loading');
-    setError('');
-    const params = new URLSearchParams({ limit: String(DATA_PAGE), offset: String(offset) });
-    if (crop) params.set('crop', crop);
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/dataset?${params}`, { signal: controller.signal });
-        if (!res.ok) throw new Error(`Server returned ${res.status}`);
-        const data = await res.json();
-        if (!alive) return;
-        setPayload(data);
-        setStatus('ready');
-      } catch (err) {
-        if (err.name === 'AbortError' || !alive) return;
-        setStatus('error');
-        setError(err.message || `Cannot reach ${API_BASE_URL}`);
-      }
-    })();
-    return () => {
-      alive = false;
-      controller.abort();
-    };
-  }, [crop, offset]);
-
-  const crops = Object.entries(meta.crops).sort((a, b) => a[1].name.localeCompare(b[1].name));
-  const total = payload?.total ?? 0;
-  const from = total === 0 ? 0 : offset + 1;
-  const to = Math.min(offset + (payload?.rows?.length ?? 0), total);
-  const canPrev = offset > 0;
-  const canNext = offset + DATA_PAGE < total;
-  const coverage = Object.entries(meta.coverage ?? {});
-
-  return (
-    <>
-      <Section id="summary" title="Soil-test training data (v2)">
-        {coverage.length > 0 && (
-          <div className="table-wrap">
-            <table className="data narrow">
-              <thead>
-                <tr>
-                  <th scope="col">Source</th>
-                  <th scope="col" className="num">
-                    Rows
-                  </th>
-                  <th scope="col" className="num">
-                    Share
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {coverage.map(([key, rows], i) => (
-                  <tr key={key}>
-                    <th scope="row">{meta.sources?.[i] ?? key}</th>
-                    <td className="num">{rows.toLocaleString('en-IN')}</td>
-                    <td className="num">{((rows / meta.rows) * 100).toFixed(1)}%</td>
-                  </tr>
-                ))}
-                <tr className="total">
-                  <th scope="row">Total</th>
-                  <td className="num">{meta.rows.toLocaleString('en-IN')}</td>
-                  <td className="num">100%</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Section>
-
-      <Section id="raw" title={`${t('rawData')} (v2)`}>
-        <div className="toolbar">
-          <label className="inline-field">
-            <span>Crop</span>
-            <select
-              value={crop}
-              onChange={(e) => {
-                setCrop(e.target.value);
-                setOffset(0);
-              }}
-            >
-              <option value="">All crops</option>
-              {crops.map(([id, c]) => (
-                <option key={id} value={id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="range-note" aria-live="polite">
-            {status === 'ready' ? `Rows ${from.toLocaleString('en-IN')}–${to.toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')}` : '…'}
-          </p>
-          <div className="pager">
-            <button type="button" className="btn btn-plain btn-small" disabled={!canPrev || status === 'loading'} onClick={() => setOffset((o) => Math.max(0, o - DATA_PAGE))}>
-              ← Previous
-            </button>
-            <button type="button" className="btn btn-plain btn-small" disabled={!canNext || status === 'loading'} onClick={() => setOffset((o) => o + DATA_PAGE)}>
-              Next →
-            </button>
-          </div>
-        </div>
-
-        {status === 'loading' && <p className="muted">Loading rows…</p>}
-        {status === 'error' && <p className="error">{error}</p>}
-        {status === 'ready' && payload?.rows?.length === 0 && <p className="muted">No rows for this filter.</p>}
-        {status === 'ready' && payload?.rows?.length > 0 && (
-          <div className="table-wrap table-scroll">
-            <table className="data dense">
-              <thead>
-                <tr>
-                  <th scope="col" className="num">
-                    #
-                  </th>
-                  {payload.columns.map((col) => (
-                    <th key={col} scope="col" className={DATA_NUM_COLS.has(col) ? 'num' : undefined}>
-                      {DATA_HEADERS[col] ?? col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {payload.rows.map((row, i) => (
-                  <tr key={`${offset}-${i}`}>
-                    <td className="num">{offset + i + 1}</td>
-                    {payload.columns.map((col) => (
-                      <td key={col} className={DATA_NUM_COLS.has(col) ? 'num' : col === 'season' || col === 'water' ? 'cap' : undefined}>
-                        {row[col]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Section id="records" title={t('rawData')}>
+        <V3DataBrowser />
       </Section>
     </>
   );
@@ -2466,6 +1685,7 @@ function ResultsPage({ t }) {
       .catch(() => setFailed(true));
   }, []);
 
+  const served = info?.v3 ?? (info?.rows ? info : null);
   const { _placeholder, note, _doc: doc = {}, figures = [], meta: runMeta, ...sections } = research;
   const order = Object.keys(SECTIONS);
   const keys = [...order.filter((k) => k in sections), ...Object.keys(sections).filter((k) => !order.includes(k) && !k.startsWith('_'))];
@@ -2540,75 +1760,52 @@ function ResultsPage({ t }) {
       ))}
 
       <Section id="r-live" title="Deployed model (live from the server)" className="numbered">
-        {info ? (
-          <table className="kv">
-            <caption className="tcap">Model currently served by the advisory</caption>
-            <tbody>
-              <tr>
-                <th scope="row">Algorithm</th>
-                <td>{info.model}</td>
-              </tr>
-              <tr>
-                <th scope="row">Input features</th>
-                <td>{info.features.join(', ')}</td>
-              </tr>
-              {Object.entries(info.metrics ?? {}).map(([k, v]) => (
-                <tr key={k}>
-                  <th scope="row">{label(k)}</th>
-                  <td>{cell(v, k)}</td>
-                </tr>
-              ))}
-              <tr>
-                <th scope="row">Data sources</th>
-                <td>{info.sources.map((s) => `${s.name} (${s.rows.toLocaleString('en-IN')} rows)`).join('; ')}</td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <p className="muted">{failed ? `Cannot reach the model server at ${API_BASE_URL}.` : 'Loading…'}</p>
-        )}
-        {info?.v3 && (
-          <div className="sub-section">
+        {served ? (
+          <>
             <table className="kv">
-              <caption className="tcap">District-mode model (v3) currently served</caption>
+              <caption className="tcap">Model currently served by the advisory</caption>
               <tbody>
                 <tr>
                   <th scope="row">Algorithm</th>
-                  <td>{info.v3.model}</td>
+                  <td>{served.model}</td>
                 </tr>
                 <tr>
                   <th scope="row">Input features</th>
-                  <td>{info.v3.features?.join(', ')}</td>
+                  <td>{served.features?.join(', ')}</td>
                 </tr>
-                <tr>
-                  <th scope="row">Label</th>
-                  <td>{info.v3.label}</td>
-                </tr>
+                {served.label && (
+                  <tr>
+                    <th scope="row">Label</th>
+                    <td>{served.label}</td>
+                  </tr>
+                )}
                 <tr>
                   <th scope="row">Records · training rows</th>
                   <td>
-                    {info.v3.rows?.toLocaleString('en-IN')} · {info.v3.training_rows?.toLocaleString('en-IN')}
+                    {served.rows?.toLocaleString('en-IN')} · {served.training_rows?.toLocaleString('en-IN')}
                   </td>
                 </tr>
                 <tr>
                   <th scope="row">Coverage</th>
                   <td>
-                    {info.v3.crops} crops · {info.v3.states} states · {districtCount(info.v3)} · {yearSpan(info.v3.years)}
+                    {served.crops} crops · {served.states} states · {districtCount(served)} · {yearSpan(served.years)}
                   </td>
                 </tr>
               </tbody>
             </table>
-            {info.v3.metrics && (
+            {served.metrics && (
               <div className="sub-section">
                 <ReportValue
-                  value={Object.fromEntries(Object.entries(info.v3.metrics).filter(([, v]) => v && typeof v === 'object'))}
-                  caption="District-mode model: grouped evaluation"
+                  value={Object.fromEntries(Object.entries(served.metrics).filter(([, v]) => v && typeof v === 'object'))}
+                  caption="Served model: grouped evaluation"
                   name="Split"
                 />
-                {typeof info.v3.metrics.note === 'string' && <p className="note">{info.v3.metrics.note}</p>}
+                {typeof served.metrics.note === 'string' && <p className="note">{served.metrics.note}</p>}
               </div>
             )}
-          </div>
+          </>
+        ) : (
+          <p className="muted">{failed ? `Cannot reach the model server at ${API_BASE_URL}.` : 'Loading…'}</p>
         )}
       </Section>
 
@@ -2798,10 +1995,10 @@ const DATA_SOURCES = [
   ['Climate: NASA POWER (power.larc.nasa.gov), 1997–2023', 'Season temperature, humidity and rainfall at district centres', 'NASA open data, no restrictions; cite POWER'],
   ['Soil: ISRIC SoilGrids 2.0', 'District soil profile (context only)', 'CC BY 4.0'],
   ['District boundaries: datta07/INDIAN-SHAPEFILES', 'District centres', 'MIT'],
-  ['Kaggle Crop Recommendation dataset (2,200 rows)', 'v1 model; part of v2 training data', 'As listed on the Kaggle dataset page'],
+  ['Kaggle Crop Recommendation dataset (2,200 rows)', 'v1 and v2 research models (Results page)', 'As listed on the Kaggle dataset page'],
   [
     'Multi-state India crop records (8,000 rows) and Tamil Nadu field records (57,000 rows)',
-    'v2 training data (deployed advisory model)',
+    'v2 research model (Results page)',
     'Supplied with the original project; source licence to be confirmed',
   ],
 ];
@@ -2849,8 +2046,8 @@ function AboutPage() {
             <tr>
               <th scope="row">Advisory model</th>
               <td>
-                District mode: ExtraTrees over season climate, district location, season and state, trained on Government district crop statistics. Soil-test mode: Random Forest
-                over N-P-K, pH, climate, soil type, season and state. See Results.
+                ExtraTrees over season climate, district location, season and state, trained on Government of India district crop statistics. Earlier models (v1, v2) are documented
+                on the Results page.
               </td>
             </tr>
             <tr>

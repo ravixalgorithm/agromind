@@ -559,43 +559,6 @@ dd.off {
 
 /* ── Advisory ── */
 
-.mode-switch {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0 0 22px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.mode-switch button {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin-bottom: -1px;
-  padding: 8px 16px 9px 0;
-  margin-right: 24px;
-  font: inherit;
-  text-align: left;
-  color: var(--muted);
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-}
-
-.mode-switch button strong {
-  font-family: var(--serif);
-  font-size: 1.05rem;
-}
-
-.mode-switch button small {
-  font-size: 0.78rem;
-}
-
-.mode-switch button[aria-selected='true'] {
-  color: var(--navy-ink);
-  border-bottom-color: var(--green);
-}
-
 .unit {
   font-family: var(--sans);
   font-size: 0.75rem;
@@ -693,25 +656,10 @@ input[type='number'] {
   font-variant-numeric: tabular-nums;
 }
 
-.num-field.is-outside input[type='number'] {
-  border-color: var(--warn);
-  background: var(--warn-tint);
-}
-
 .hint {
   display: block;
   font-size: 0.76rem;
   color: var(--muted);
-}
-
-.num-field.is-outside .hint strong {
-  color: var(--warn);
-}
-
-.form-actions {
-  display: flex;
-  gap: 8px;
-  margin: 6px 0 12px;
 }
 
 .samples {
@@ -818,20 +766,6 @@ input[type='number'] {
   border: 1px solid var(--rule-strong);
 }
 
-.checklist {
-  columns: 2;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.88rem;
-  color: var(--muted);
-}
-
-.checklist li.done {
-  color: var(--green);
-  font-weight: 600;
-}
-
 /* ── Controls ── */
 
 .btn {
@@ -855,15 +789,6 @@ input[type='number'] {
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--green);
-  border-color: var(--green);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #24653f;
 }
 
 .btn-plain {
@@ -1041,8 +966,7 @@ input[type='number'] {
     display: none;
   }
 
-  .toc ol,
-  .checklist {
+  .toc ol {
     columns: 1;
   }
 
