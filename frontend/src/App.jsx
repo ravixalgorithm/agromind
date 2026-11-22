@@ -734,8 +734,9 @@ function Advisory({ t }) {
                     </div>
                     <p className="note">
                       Only crops grown in this district and season in its last five recorded years are ranked. Expected yield = the crop&apos;s median yield here over those years;
-                      P(best) = calibrated probability that it gives the best yield of these crops. The 90% set contains the best-yielding crop in about 90% of past cases.
-                      &quot;Cold start&quot;: no yield record for that crop here last year, so the model relies more on climate, soil and older years.
+                      P(best) = calibrated probability that it gives the best yield of these crops. The 90% set is sized so that it contains the best-yielding crop at least 90% of
+                      the time, state by state, including states the model has not seen. &quot;Cold start&quot;: no yield record for that crop here last year, so the model relies
+                      more on climate, soil and older years.
                     </p>
                   </>
                 )}
@@ -1191,12 +1192,12 @@ function DatasetPage({ t }) {
 const pct1 = (x) => (typeof x === 'number' ? `${(x * 100).toFixed(1)}%` : '—');
 const pct2 = (x) => (typeof x === 'number' ? `${(x * 100).toFixed(2)}%` : '—');
 const pval = (p) => (typeof p !== 'number' ? '—' : p < 0.0001 ? '< 0.0001' : p.toFixed(3));
-const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const metric = (r, m) => r?.[`${m}_mean`] ?? r?.[m];
 const isOurs = (name) => name.includes('(ours)');
 const isClassifier = (name) => /\[[\d,]+\]/.test(name); // literature classifiers carry their citation numbers
 // The pointwise LightGBM row uses the proposed yield-ranking formulation too; name it so it doesn't read as an outside baseline.
-const methodName = (name) => (/pointwise/i.test(name) ? 'LightGBM pointwise (same yield-ranking formulation, ours)' : name);
+const methodName = (name) =>
+  /pointwise/i.test(name) ? 'LightGBM pointwise (YieldRank component)' : /lambdamart/i.test(name) ? 'LambdaMART listwise (earlier v4 model; YieldRank component)' : name;
 const V3_TESTS = [
   ['leave_districts_out', 'Unseen districts'],
   ['leave_years_out', 'Future crop years'],
@@ -1233,6 +1234,7 @@ function versionNumbers(r) {
     pairs,
     h3,
     n: r.v4?.numbers ?? {},
+    f: r.final?.numbers ?? {},
     m4: r.v4?.meta ?? {},
     sources: Object.keys(r.dataset?.rows_by_source ?? {}),
   };
@@ -1266,7 +1268,7 @@ function VersionHistory({ r }) {
     {
       v: 'v4',
       name: 'Final',
-      fact: `Hit@1 ${x.n.OursHitLSO ?? '—'}% on unseen states; 90% sets of ${x.n.SizeIIDLSO ?? '—'} crops`,
+      fact: `Hit@1 ${x.n.OursHitLSO ?? '—'}% on unseen states; 90% sets of ${x.f.CCSRSizeLSO ?? x.n.SizeIIDLSO ?? '—'} crops`,
       fixed: 'Ranks crops by realised yield and gives a 90% prediction set',
       lacked: null,
     },
@@ -1348,7 +1350,9 @@ function ImprovementTable({ r }) {
       imp['Probability calibration']?.v1 ?? 'not measured',
       `Probability per crop (ECE ${typeof r.calibration?.[V2_MODEL]?.ece === 'number' ? r.calibration[V2_MODEL].ece.toFixed(3) : '—'})`,
       'Probability per crop',
-      `90% prediction sets: ${n.CovIIDLSO ?? '—'}% coverage with ${n.SizeIIDLSO ?? '—'} crops on average`,
+      x.f.CCSRCovLSO
+        ? `90% prediction sets (state-robust, served): ${x.f.CCSRCovLSO}% coverage on unseen states with ${x.f.CCSRSizeLSO} crops on average`
+        : `90% prediction sets: ${n.CovIIDLSO ?? '—'}% coverage with ${n.SizeIIDLSO ?? '—'} crops on average`,
     ],
   ];
   return (
@@ -1554,27 +1558,27 @@ function V2Section({ r }) {
   );
 }
 
-function V4Section({ v, served, failed }) {
+function V4Section({ v, fin, served, failed }) {
   const lso = v.metrics?.main?.['leave-states-out'] ?? {};
   const entries = Object.entries(lso);
   const ours = entries.find(([name]) => isOurs(name));
   const bestClf = entries.filter(([name]) => isClassifier(name)).sort((a, b) => b[1].mean['hit@1'] - a[1].mean['hit@1'])[0];
   const pers = entries.find(([name]) => /persistence/i.test(name));
   const pointwise = entries.find(([name]) => /pointwise/i.test(name));
+  const listwise = entries.find(([name]) => /lambdamart/i.test(name));
   const n = v.numbers ?? {};
-  const iid = v.conformal?.['leave-states-out']?.conformal_iid_cal?.['LAC@0.9'];
-  const states = Object.entries(v.coverage_by_state_leave_states_out ?? {}).sort((a, b) => a[1].cov_LAC - b[1].cov_LAC);
-  const splits = { random: 'Random split', 'leave-states-out': 'Unseen states', 'leave-years-out': 'Future years' };
-  const conformalRows = [
-    ['i.i.d. calibration (paper headline)', (s) => v.conformal?.[s]?.conformal_iid_cal?.['LAC@0.9']],
-    ['Held-out-group calibration', (s) => v.conformal?.[s]?.conformal_group_cal?.['LAC@0.9']],
-    [
-      'Cross-group calibration (mean of 5 folds)',
-      (s) => {
-        const cs = (v.crossconf?.[s] ?? []).map((f) => f.conformal_crossgroup?.['LAC@0.9']).filter(Boolean);
-        return cs.length ? { coverage: avg(cs.map((c) => c.coverage)), size: avg(cs.map((c) => c.size)) } : null;
-      },
-    ],
+  const f = fin ?? {}; // results.json final.numbers: the served (state-robust) and plain LAC sets, same pipeline
+  const hasSets = f.CCSRCovLSO && f.CCLACCovLSO;
+  const srKey = Object.values(v.coverage_by_state_leave_states_out ?? {}).some((s) => typeof s.cov_SR === 'number') ? 'SR' : 'LAC';
+  const states = Object.entries(v.coverage_by_state_leave_states_out ?? {}).sort((a, b) => a[1][`cov_${srKey}`] - b[1][`cov_${srKey}`]);
+  const SPLIT_SUFFIX = [
+    ['R', 'Random split'],
+    ['LSO', 'Unseen states'],
+    ['LYO', 'Future years'],
+  ];
+  const setRows = [
+    ['LAC (marginal 90%)', 'CCLAC'],
+    ['State-robust (served)', 'CCSR'],
   ];
 
   return (
@@ -1589,7 +1593,13 @@ function V4Section({ v, served, failed }) {
             <>
               {' '}
               <strong>But</strong> a simple persistence rule (last year&apos;s crop) reaches {pct1(pers[1].mean['hit@1'])} (difference p{' '}
-              {pval(pers[1]['wilcoxon_vs_ours_hit@1']?.p)}){pointwise && <>, and the pointwise LightGBM variant of the same formulation {pct1(pointwise[1].mean['hit@1'])}</>}.
+              {pval(pers[1]['wilcoxon_vs_ours_hit@1']?.p)})
+              {pointwise && listwise && (
+                <>
+                  ; its two learned components alone reach {pct1(pointwise[1].mean['hit@1'])} (pointwise LightGBM) and {pct1(listwise[1].mean['hit@1'])} (listwise LambdaMART)
+                </>
+              )}
+              .
             </>
           )}
           {n.OursHitColdLSO && n.PersHitColdLSO && (
@@ -1599,11 +1609,12 @@ function V4Section({ v, served, failed }) {
               {n.PersHitColdLSO}%.
             </>
           )}
-          {iid && (
+          {hasSets && (
             <>
               {' '}
-              With 90% conformal prediction sets (i.i.d. calibration), coverage on unseen states is <strong>{pct1(iid.coverage)}</strong> with {iid.size.toFixed(2)} crops per set
-              on average{n.WorstState && n.WorstIID ? `, but it drops to ${n.WorstIID}% in ${n.WorstState}` : ''}.
+              The served 90% prediction sets use a state-robust threshold: on unseen states they contain the best crop <strong>{f.CCSRCovLSO}%</strong> of the time with{' '}
+              {f.CCSRSizeLSO} crops on average, and the worst state ({f.SRWorstState}) still reaches {f.SRWorstCov}%. Plain LAC sets are smaller ({f.CCLACSizeLSO} crops) but reach
+              only {f.CCWorstCov}% in {f.CCWorstState}.
             </>
           )}
         </p>
@@ -1617,7 +1628,8 @@ function V4Section({ v, served, failed }) {
             <caption className="tcap">
               Ranking quality on unseen states (leave-states-out, mean ± sd over folds)
               <span className="tcap-note">
-                Both YieldRank variants use the proposed yield-grounded formulation; the gain over the classifiers comes from the formulation, not the loss function (paper §V).
+                YieldRank (ours) blends its two learned components, pointwise LightGBM and listwise LambdaMART, with last-year persistence; the blend was chosen on held-out
+                training states and years (paper §V).
               </span>
             </caption>
             <thead>
@@ -1657,79 +1669,92 @@ function V4Section({ v, served, failed }) {
         </div>
       )}
 
-      {v.conformal && (
-        <div className="sub-section table-wrap">
-          <table className="data">
-            <caption className="tcap">90% prediction sets (LAC): coverage · average set size</caption>
-            <thead>
-              <tr>
-                <th scope="col">Calibration</th>
-                {Object.values(splits).map((s) => (
-                  <th key={s} scope="col" className="num">
-                    {s}
+      {hasSets && (
+        <div className="sub-section">
+          <p className="tcap">
+            90% prediction sets: coverage · average set size
+            <span className="tcap-note">
+              Coverage = share of queries whose set contains the best-yielding crop. The advisory serves the state-robust sets: their threshold targets 90% coverage in each state
+              rather than on average.
+            </span>
+          </p>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Sets</th>
+                  {SPLIT_SUFFIX.map(([k, label]) => (
+                    <th key={k} scope="col" className="num">
+                      {label}
+                    </th>
+                  ))}
+                  <th scope="col" className="num wrap">
+                    Worst state (unseen states)
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {conformalRows.map(([title, get]) => (
-                <tr key={title}>
-                  <th scope="row">{title}</th>
-                  {Object.keys(splits).map((s) => {
-                    const c = get(s);
-                    return (
-                      <td key={s} className="num">
-                        {c ? `${pct1(c.coverage)} · ${c.size.toFixed(2)} crops` : '—'}
-                      </td>
-                    );
-                  })}
+                  <th scope="col" className="num wrap hide-sm">
+                    States below 90%
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {setRows.map(([title, pre]) => {
+                  const worst = pre === 'CCSR' ? ['SRWorstCov', 'SRWorstState', 'SRStatesBelowNinety'] : ['CCWorstCov', 'CCWorstState', 'CCStatesBelowNinety'];
+                  return (
+                    <tr key={pre} className={pre === 'CCSR' ? 'is-highlight' : undefined}>
+                      <th scope="row">{title}</th>
+                      {SPLIT_SUFFIX.map(([k]) => (
+                        <td key={k} className="num">
+                          {f[`${pre}Cov${k}`] ? `${f[`${pre}Cov${k}`]}% · ${f[`${pre}Size${k}`]} crops` : '—'}
+                        </td>
+                      ))}
+                      <td className="num">{f[worst[0]] ? `${f[worst[0]]}% (${f[worst[1]]})` : '—'}</td>
+                      <td className="num hide-sm">{f[worst[2]] ?? '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {states.length > 0 && (
         <div className="sub-section table-wrap">
           <table className="data">
-            <caption className="tcap">Coverage of 90% sets for each held-out state, cross-group calibration (lowest first)</caption>
+            <caption className="tcap">Coverage of 90% sets for each held-out state (lowest served coverage first)</caption>
             <thead>
               <tr>
                 <th scope="col">State</th>
                 <th scope="col" className="num">
                   Queries
                 </th>
-                <th scope="col" className="num">
-                  Coverage (LAC)
+                <th scope="col" className="num wrap">
+                  Coverage, {srKey === 'SR' ? 'state-robust (served)' : 'LAC'}
                 </th>
-                <th scope="col" className="num">
+                <th scope="col" className="num wrap">
                   Set size
                 </th>
-                <th scope="col" className="num wrap hide-sm">
-                  Coverage (Mondrian, candidates)
-                </th>
-                <th scope="col" className="num wrap hide-sm">
-                  Coverage (Mondrian, region)
-                </th>
+                {srKey === 'SR' && (
+                  <th scope="col" className="num wrap hide-sm">
+                    Coverage, LAC
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {states.map(([name, s]) => (
-                <tr key={name} className={Math.round(s.cov_LAC * 1000) < 850 ? 'is-warn' : undefined}>
+                <tr key={name} className={Math.round(s[`cov_${srKey}`] * 1000) < 850 ? 'is-warn' : undefined}>
                   <th scope="row">{name}</th>
                   <td className="num">{s.n.toLocaleString('en-IN')}</td>
-                  <td className="num">{pct1(s.cov_LAC)}</td>
-                  <td className="num">{s.size_LAC.toFixed(2)}</td>
-                  <td className="num hide-sm">{pct1(s.cov_Mncand)}</td>
-                  <td className="num hide-sm">{pct1(s.cov_Mregion)}</td>
+                  <td className="num">{pct1(s[`cov_${srKey}`])}</td>
+                  <td className="num">{s[`size_${srKey}`]?.toFixed(2) ?? '—'}</td>
+                  {srKey === 'SR' && <td className="num hide-sm">{pct1(s.cov_LAC)}</td>}
                 </tr>
               ))}
             </tbody>
           </table>
           <p className="note">
-            Rows shaded red have coverage below 85%. Per-state values use cross-group calibration, so they differ slightly from the i.i.d. figure in the headline. The method, its
-            abstract and the full paper are on the <a href="#/paper">Paper</a> page.
+            Rows shaded red have served coverage below 85%. The method, its abstract and the full paper are on the <a href="#/paper">Paper</a> page.
           </p>
         </div>
       )}
@@ -1751,12 +1776,15 @@ const GAPS = {
   NOT_REPRODUCIBLE: 'Not reproducible',
 };
 const isOursEntry = (p) => p?.ours === true;
-const paperShort = (p) =>
-  `${
-    String(p.authors ?? '')
-      .split(/,| and | et al/)[0]
-      .trim() || p.key
-  }${/et al|,| and /.test(p.authors ?? '') ? ' et al.' : ''} ${p.year ?? ''}`.trim();
+const paperList = (rw) => (Array.isArray(rw) ? rw : Array.isArray(rw?.papers) ? rw.papers : []);
+const authorList = (p) => (Array.isArray(p.authors) ? p.authors : String(p.authors ?? '').split(/,\s*| and /)).filter(Boolean);
+const authorText = (p) => (Array.isArray(p.authors) ? p.authors.join(', ') : p.authors);
+// Short label "Dey et al. 2024": the first author's surname comes from the curated bib key (names with trailing initials break a last-word rule).
+function paperShort(p) {
+  const fromKey = String(p.key ?? '').replace(/\d+[a-z]?$/, '');
+  const first = fromKey ? fromKey[0].toUpperCase() + fromKey.slice(1) : (authorList(p)[0] ?? '').split(/\s+/).pop();
+  return `${first}${authorList(p).length > 1 ? ' et al.' : ''} ${p.year ?? ''}`.trim();
+}
 
 function reported(p) {
   const v = p.reported_value;
@@ -1777,15 +1805,13 @@ function RelatedWork({ papers, ours }) {
           <span className="tcap-note">Reported numbers are on their own data and splits, not comparable to ours.</span>
         </p>
         <div className="table-wrap">
-          <table className="data">
+          <table className="data related-table">
             <thead>
               <tr>
                 <th scope="col">Paper</th>
                 <th scope="col">Dataset</th>
                 <th scope="col">Method</th>
-                <th scope="col" className="num">
-                  Reported result
-                </th>
+                <th scope="col">Reported result</th>
                 <th scope="col">Protocol</th>
               </tr>
             </thead>
@@ -1801,7 +1827,7 @@ function RelatedWork({ papers, ours }) {
                       p.title
                     )}
                     <span className="paper-meta">
-                      {p.authors}
+                      {authorText(p)}
                       {p.year ? ` · ${p.year}` : ''}
                       {p.venue ? ` · ${p.venue}` : ''}
                     </span>
@@ -1811,7 +1837,10 @@ function RelatedWork({ papers, ours }) {
                     {typeof p.n_rows === 'number' && <span className="paper-meta">{p.n_rows.toLocaleString('en-IN')} rows</span>}
                   </td>
                   <td>{p.method ?? '—'}</td>
-                  <td className="num">{reported(p)}</td>
+                  <td>
+                    {reported(p)}
+                    {typeof p.reported_value !== 'number' && p.reported_metric && <span className="paper-meta">{p.reported_metric}</span>}
+                  </td>
                   <td>{p.protocol ?? '—'}</td>
                 </tr>
               ))}
@@ -1863,15 +1892,18 @@ function RelatedWork({ papers, ours }) {
         </div>
         {ours?.note && <p className="note">{ours.note}</p>}
         {papers.some((p) => p.gap_text) && (
-          <ul className="gap-notes">
-            {papers
-              .filter((p) => p.gap_text)
-              .map((p) => (
-                <li key={p.key}>
-                  <strong>{paperShort(p)}:</strong> {p.gap_text}
-                </li>
-              ))}
-          </ul>
+          <details className="gap-details">
+            <summary>What each study gets wrong ({papers.filter((p) => p.gap_text).length} notes)</summary>
+            <ul className="gap-notes">
+              {papers
+                .filter((p) => p.gap_text)
+                .map((p) => (
+                  <li key={p.key}>
+                    <strong>{paperShort(p)}:</strong> {p.gap_text}
+                  </li>
+                ))}
+            </ul>
+          </details>
         )}
       </div>
     </>
@@ -2192,19 +2224,19 @@ function ResultsPage({ t }) {
 
       {research.v4?.metrics?.main && (
         <Section id="r-v4" title={`${FINAL}: YieldRank and conformal prediction sets`} className="numbered">
-          <V4Section v={research.v4} served={served} failed={failed} />
+          <V4Section v={research.v4} fin={research.final?.numbers} served={served} failed={failed} />
         </Section>
       )}
 
       {research.method_comparison?.methods?.length > 0 && (
         <Section id="r-methods" title={`Method comparison: why we chose ${research.method_comparison.chosen ?? 'YieldRank'}`} className="numbered">
-          <MethodComparison mc={research.method_comparison} papers={research.related_work ?? []} />
+          <MethodComparison mc={research.method_comparison} papers={paperList(research.related_work)} />
         </Section>
       )}
 
-      {Array.isArray(research.related_work) && research.related_work.length > 0 && (
+      {paperList(research.related_work).length > 0 && (
         <Section id="r-related" title="Recent work and where it falls short" className="numbered">
-          <RelatedWork papers={research.related_work} ours={research.related_work_ours ? { key: 'agromind', ours: true, ...research.related_work_ours } : null} />
+          <RelatedWork papers={paperList(research.related_work)} ours={research.related_work_ours ? { key: 'agromind', ours: true, ...research.related_work_ours } : null} />
         </Section>
       )}
 

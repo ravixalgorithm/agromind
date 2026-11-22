@@ -147,13 +147,19 @@ code {
 }
 
 .final-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px 24px;
+  margin: 0 0 8px;
+}
+
+.final-stats div {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 28px;
-  margin: 0;
+  flex-direction: column;
 }
 
 .final-stats dt {
+  flex: 1;
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -636,6 +642,20 @@ dd.off {
 
 .gap-matrix tr.is-highlight th {
   background: var(--green-tint);
+}
+
+.related-table {
+  min-width: 760px;
+}
+
+.gap-details {
+  margin-top: 10px;
+  font-size: 0.86rem;
+}
+
+.gap-details summary {
+  cursor: pointer;
+  color: var(--link);
 }
 
 .gap-notes,
