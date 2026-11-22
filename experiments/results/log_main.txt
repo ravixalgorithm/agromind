@@ -41,3 +41,5 @@ random            f4 GaussianNB [6,12]      ndcg@3=0.8158 hit@1=0.3301 cov90 iid
 random            f4 RandomForest [8,21]    ndcg@3=0.9150 hit@1=0.5813 cov90 iid=0.897 grp=0.907 (3s)
 random            f4 XGBoost [11,22]        ndcg@3=0.9122 hit@1=0.5805 cov90 iid=0.898 grp=0.895 (63s)
 random            f4 MLP [13]               ndcg@3=0.8978 hit@1=0.5375 cov90 iid=0.898 grp=0.907 (5s)
+random            f4 LGBM pointwise         ndcg@3=0.9350 hit@1=0.5905 cov90 iid=0.899 grp=0.903 (13s)
+random            f4 LambdaMART (v4 listwise) ndcg@3=0.9351 hit@1=0.5970 cov90 iid=0.900 grp=0.908 (18s)
