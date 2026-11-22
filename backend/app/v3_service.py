@@ -221,13 +221,12 @@ class V3Service:
             metrics = {
                 "leave_districts_out": v3.get("leave_districts_out", {}).get("ExtraTrees: + state + lat/lon"),
                 "leave_districts_out_baseline": v3.get("leave_districts_out", {}).get("baseline: state x season popularity"),
-                "leave_states_out": v3.get("leave_states_out", {}).get("RF: climate + season + lat/lon"),
-                "leave_years_out": {k: v for k, v in v3.get("leave_years_out", {}).get("RF: + state + lat/lon", {}).items()
+                "leave_states_out": v3.get("leave_states_out", {}).get("ExtraTrees: climate + season + lat/lon"),
+                "leave_years_out": {k: v for k, v in v3.get("leave_years_out", {}).get("ExtraTrees: + state + lat/lon", {}).items()
                                     if k != "hit1_by_year"},
                 "source": "docs/research/results.json (notebooks/AgroMind_v3_LargeScale.ipynb)",
                 "note": "hit1/hit3 = share of district-year-season queries whose top-1 / top-3 contains a recommended crop. "
-                        "Leave-states-out and leave-years-out were measured with RandomForest on the same features "
-                        "(ExtraTrees matched it within 0.5 points on leave-districts-out).",
+                        "All three grouped tests are for this same ExtraTrees model.",
             }
         return {
             "model": "ExtraTreesClassifier(300, min_samples_leaf=2), one-hot season + state",
