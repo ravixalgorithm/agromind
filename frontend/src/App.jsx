@@ -105,7 +105,7 @@ const NEWS = [
 const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const round = (n) => (Math.abs(n) >= 20 ? String(Math.round(n)) : fmt(n));
 const withUnit = (text, unit) => (unit ? `${text}${unit === 'mm' ? ' ' : ''}${unit}` : text);
-const pct = (c) => `${Math.min(99, Math.max(1, Math.round(c * 100)))}%`;
+const prob = (p) => `${(p * 100).toFixed(1)}%`;
 const range = (lo, hi, unit) => withUnit(round(lo) === round(hi) ? round(lo) : `${round(lo)}–${round(hi)}`, unit);
 const longDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 const formKey = (form) => JSON.stringify(form);
@@ -662,18 +662,19 @@ function Advisory({ meta, t }) {
     };
   }, [form, complete, meta]);
 
-  // Rows: the model's pick first, then other crops of the same season ranked by how many readings fit.
+  // Rows: the model's top-k crops by probability (the API returns only these), then other crops of the same season ranked by how many readings fit.
   const pick = result?.data.top_recommendations[0];
   const rows = [];
   if (result) {
     const basis = result.form;
-    rows.push({ ...assess(meta, pick.crop, basis), confidence: pick.confidence });
+    const ranked = result.data.top_recommendations.filter((r) => meta.crops[r.crop]);
+    rows.push(...ranked.map((r) => ({ ...assess(meta, r.crop, basis), confidence: r.confidence })));
     rows.push(
       ...Object.keys(meta.crops)
-        .filter((id) => id !== pick.crop && meta.crops[id].season === basis.season)
+        .filter((id) => !ranked.some((r) => r.crop === id) && meta.crops[id].season === basis.season)
         .map((id) => assess(meta, id, basis))
         .sort((a, b) => b.inRange - a.inRange || a.distance - b.distance)
-        .slice(0, MAX_ROWS - 1),
+        .slice(0, Math.max(0, MAX_ROWS - ranked.length)),
     );
   }
   const top = rows[0];
@@ -805,7 +806,7 @@ function Advisory({ meta, t }) {
                     <tr>
                       <th scope="row">Model confidence</th>
                       <td>
-                        <strong>{pct(top.confidence)}</strong> <span className={`tag ${top.confidence >= 0.7 ? 'tag-ok' : 'tag-warn'}`}>{top.confidence >= 0.7 ? 'Strong fit' : 'Review'}</span>
+                        <strong>{prob(top.confidence)}</strong> <span className={`tag ${top.confidence >= 0.7 ? 'tag-ok' : 'tag-warn'}`}>{top.confidence >= 0.7 ? 'Strong fit' : 'Review'}</span>
                       </td>
                     </tr>
                     <tr>
@@ -887,15 +888,17 @@ function Advisory({ meta, t }) {
                             {SHORT[f.key] ?? f.key}
                           </th>
                         ))}
-                        <th scope="col" className="num">
-                          Fit
+                        <th scope="col" className="num wrap">
+                          Model probability
+                        </th>
+                        <th scope="col" className="num wrap">
+                          Readings in range
                         </th>
                         <th scope="col">Details</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((row, i) => {
-                        const fit = i === 0 ? row.confidence : row.inRange / row.readings.length;
                         return (
                           <tr key={row.id} className={row.id === selected.id ? 'is-selected' : undefined}>
                             <td>{i + 1}</td>
@@ -909,7 +912,10 @@ function Advisory({ meta, t }) {
                                 {r.status === 'ok' ? '✓' : '✗'}
                               </td>
                             ))}
-                            <td className="num">{pct(fit)}</td>
+                            <td className="num">{row.confidence === undefined ? '—' : prob(row.confidence)}</td>
+                            <td className="num">
+                              {row.inRange}/{row.readings.length}
+                            </td>
                             <td>
                               <button type="button" className="link-btn" onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
                                 View
@@ -921,7 +927,7 @@ function Advisory({ meta, t }) {
                     </tbody>
                   </table>
                 </div>
-                <p className="muted small">Fit = model confidence for the pick; share of readings in range for the others. ✓ inside typical range (10th–90th percentile), ✗ outside.</p>
+                <p className="muted small">Model probability is the classifier's predicted probability; the server returns it for its top {rows.filter((r) => r.confidence !== undefined).length} crops only, so other {seasonName} crops show — and are ordered by readings in range. ✓ inside the crop's typical range (10th–90th percentile), ✗ outside.</p>
               </Panel>
 
               <Panel title={`${t('readings')} — ${selected.crop.name}`}>
@@ -1076,7 +1082,7 @@ function NumField({ field, value, onChange, check, cropName }) {
         {check && (
           <>
             {' '}
-            · Typical for {cropName}: {range(check.lo, check.hi, field.unit)}
+            · Typical for {cropName} (selected below): {range(check.lo, check.hi, field.unit)}
             {outside && <strong> (outside)</strong>}
           </>
         )}
@@ -1121,7 +1127,7 @@ function SavedRow({ index, entry, active, cropName, onOpen, onDelete }) {
         {active && <span className="tag">Open</span>}
       </td>
       <td>{cropName}</td>
-      <td className="num">{pct(entry.pick.confidence)}</td>
+      <td className="num">{prob(entry.pick.confidence)}</td>
       <td>{longDate(entry.savedAt)}</td>
       <td className="actions">
         <button type="button" className="link-btn" onClick={onOpen}>
