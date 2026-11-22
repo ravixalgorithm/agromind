@@ -15,11 +15,11 @@
 
 \author{\IEEEauthorblockN{[Student Names]}
 \IEEEauthorblockA{Department of Computer Science and Engineering\\
-[College Name], India}
+{[College Name]}, India}
 \and
 \IEEEauthorblockN{[Guide Name]}
 \IEEEauthorblockA{Department of Computer Science and Engineering\\
-[College Name], India}}
+{[College Name]}, India}}
 
 \maketitle
 
@@ -117,6 +117,7 @@ Split conformal prediction gives finite-sample marginal coverage under exchangea
 \label{tab:lit}
 \centering\scriptsize
 \setlength{\tabcolsep}{2.5pt}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lllll}
 \toprule
 Ref. & Data & Split & Metric & Reported \\
@@ -133,7 +134,7 @@ Ref. & Data & Split & Metric & Reported \\
 \midrule
 \textbf{Ours} & DES+POWER+SoilGrids & \textbf{states / years} & NDCG, hit@k, coverage & Tab.~\ref{tab:rank},\ref{tab:conf} \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 %=====================================================================
@@ -210,7 +211,7 @@ folds) between YieldRank and each baseline.
 \caption{Ranking the crops grown in a district-season by realised yield (mean$\pm$std over 5 folds). Hit@1: the top-ranked crop is the best-yielding one. $^{*}$/$^{**}$: YieldRank better or worse with Wilcoxon $p<0.05$/$p<0.001$ (paired over queries).}
 \label{tab:rank}
 \centering\footnotesize
-\input{tables/ranking}
+\resizebox{\textwidth}{!}{\input{tables/ranking}}
 \end{table*}
 
 \RESULTSTEXT
@@ -220,7 +221,7 @@ folds) between YieldRank and each baseline.
 \label{tab:conf}
 \centering\scriptsize
 \setlength{\tabcolsep}{2.2pt}
-\input{tables/conformal}
+\resizebox{\columnwidth}{!}{\input{tables/conformal}}
 \end{table}
 
 \begin{figure}[t]
