@@ -475,6 +475,27 @@ dd.off {
   border-bottom: 1px solid var(--rule);
 }
 
+.kv-grid li.is-small {
+  color: var(--muted);
+  background: var(--tint);
+}
+
+.kv-grid small {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.grid-val {
+  white-space: nowrap;
+}
+
+.tcap-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 .kv-grid strong {
   font-variant-numeric: tabular-nums;
 }

@@ -1119,6 +1119,9 @@ const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : nul
 const metric = (r, m) => r?.[`${m}_mean`] ?? r?.[m];
 const isOurs = (name) => name.includes('(ours)');
 const isClassifier = (name) => /\[[\d,]+\]/.test(name); // literature classifiers carry their citation numbers
+// The pointwise LightGBM row uses the proposed yield-ranking formulation too; name it so it doesn't read as an outside baseline.
+const methodName = (name) => (/pointwise/i.test(name) ? 'LightGBM pointwise (same yield-ranking formulation, ours)' : name);
+const MIN_STATE_QUERIES = 30;
 const V3_TESTS = [
   ['leave_districts_out', 'Unseen districts'],
   ['leave_years_out', 'Future crop years'],
@@ -1208,6 +1211,7 @@ function V3Section({ v, served, failed }) {
   const pairs = V3_TESTS.map(([k, name]) => [name, v3Pair(v[k])]).filter(([, p]) => p);
   const [first, ...rest] = pairs;
   const states = Object.entries(v.leave_states_out_per_state_hit1 ?? {}).sort((a, b) => b[1] - a[1]);
+  const stateN = v.leave_states_out_per_state_n; // queries per held-out state, when results.json carries it
   const soil = Object.entries(v.soil_subset ?? {}).filter(([, x]) => x && typeof x === 'object' && 'hit1_mean' in x);
   const figures = (v.figures?.length ? v.figures : (research.figures ?? []).filter((f) => f.file?.includes('_v3_'))) ?? [];
 
@@ -1306,13 +1310,26 @@ function V3Section({ v, served, failed }) {
         <div className="sub-section grid-table">
           <p className="tcap">Hit@1 for each held-out state (unseen states test), best first</p>
           <ul className="kv-grid">
-            {states.map(([name, x]) => (
-              <li key={name}>
-                <span>{name}</span>
-                <strong>{pct2(x)}</strong>
-              </li>
-            ))}
+            {states.map(([name, x]) => {
+              const count = stateN?.[name];
+              const small = typeof count === 'number' && count < MIN_STATE_QUERIES;
+              return (
+                <li key={name} className={small ? 'is-small' : undefined} title={small ? 'Too few queries for a reliable figure' : undefined}>
+                  <span>{name}</span>
+                  <span className="grid-val">
+                    <strong>{pct2(x)}</strong>
+                    {typeof count === 'number' && <small> · n {count.toLocaleString('en-IN')}</small>}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
+          {stateN && (
+            <p className="note">
+              n = district-season-year queries for the held-out state. States with fewer than {MIN_STATE_QUERIES} queries are greyed out: their Hit@1 rests on too few cases to read
+              as a success or a failure.
+            </p>
+          )}
         </div>
       )}
 
@@ -1405,7 +1422,7 @@ function V4Section({ v }) {
             <>
               {' '}
               <strong>But</strong> a simple persistence rule (last year&apos;s crop) reaches {pct1(pers[1].mean['hit@1'])} (difference p{' '}
-              {pval(pers[1]['wilcoxon_vs_ours_hit@1']?.p)}){pointwise && <>, and a pointwise LightGBM model {pct1(pointwise[1].mean['hit@1'])}</>}.
+              {pval(pers[1]['wilcoxon_vs_ours_hit@1']?.p)}){pointwise && <>, and the pointwise LightGBM variant of the same formulation {pct1(pointwise[1].mean['hit@1'])}</>}.
             </>
           )}
           {n.OursHitColdLSO && n.PersHitColdLSO && (
@@ -1428,7 +1445,12 @@ function V4Section({ v }) {
       {entries.length > 0 && (
         <div className="table-wrap">
           <table className="data">
-            <caption className="tcap">Ranking quality on unseen states (leave-states-out, mean ± sd over folds)</caption>
+            <caption className="tcap">
+              Ranking quality on unseen states (leave-states-out, mean ± sd over folds)
+              <span className="tcap-note">
+                Both YieldRank variants use the proposed yield-grounded formulation; the gain over the classifiers comes from the formulation, not the loss function (paper §V).
+              </span>
+            </caption>
             <thead>
               <tr>
                 <th scope="col">Method</th>
@@ -1450,7 +1472,7 @@ function V4Section({ v }) {
                 const w = r['wilcoxon_vs_ours_hit@1'];
                 return (
                   <tr key={name} className={isOurs(name) ? 'is-highlight' : undefined}>
-                    <th scope="row">{name}</th>
+                    <th scope="row">{methodName(name)}</th>
                     {['hit@1', 'hit@3', 'ndcg@3'].map((m) => (
                       <td key={m} className="num">
                         {m.startsWith('ndcg') ? `${r.mean[m].toFixed(3)} ± ${r.std[m].toFixed(3)}` : `${(r.mean[m] * 100).toFixed(1)} ± ${(r.std[m] * 100).toFixed(1)}%`}
