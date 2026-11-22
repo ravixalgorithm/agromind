@@ -164,7 +164,8 @@ GET /model-info
    "metrics": {"random" | "leave_states_out" | "leave_years_out": {"hit1", "hit3", "ndcg3", "best_baseline",
                "baseline_hit1", "baseline_ndcg3", "persistence_hit1", "conformal90_coverage", "conformal90_set_size"},
                "source", "note"},
-   "data": {"rows", "queries", "crops", "states", "years"},
+   "data": {"records": 400379, "districts": 748, "locations": 742,         # all APY rows (= /dataset)
+            "rows": 259181, "queries": 43443, "crops": 49, "states": 36, "years": [1997, 2022]},   # v4 training subset
    "history": {"v3": {"model", "rows", "training_rows", "crops", "states", "districts", "locations", "years", "metrics"},
                "v1": {…}, "v2": {…}, "source"}}
 ```
