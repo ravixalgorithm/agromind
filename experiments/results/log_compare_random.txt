@@ -4,3 +4,9 @@ random f0 Gaussian NB                            Hit@1  32.5%  Hit@3  73.4%  NDC
 random f0 Random Forest                          Hit@1  57.6%  Hit@3  88.7%  NDCG@3 0.914  cold  48.7%  cov90  90.3% size 2.79  train    8.0s  infer 0.067 ms/q
 random f0 XGBoost                                Hit@1  58.1%  Hit@3  88.1%  NDCG@3 0.913  cold  48.2%  cov90  90.8% size 2.96  train   94.8s  infer 0.051 ms/q
 random f0 MLP                                    Hit@1  53.9%  Hit@3  85.6%  NDCG@3 0.899  cold  44.5%  cov90  90.1% size 3.17  train    3.1s  infer 0.006 ms/q
+random f0 XGBoost (Dey 2024)                     Hit@1  58.1%  Hit@3  88.6%  NDCG@3 0.913  cold  49.1%  cov90  90.8% size 2.92  train  183.1s  infer 0.106 ms/q
+random f0 Random Forest (Dey 2024)               Hit@1  41.9%  Hit@3  76.1%  NDCG@3 0.847  cold  36.0%  cov90  90.5% size 4.23  train    0.1s  infer 0.009 ms/q
+random f0 SVM (Dey 2024)                         Hit@1  26.6%  Hit@3  63.0%  NDCG@3 0.767  cold  24.1%  cov90  90.2% size 4.78  train    7.9s  infer 1.707 ms/q
+random f0 k-NN (Dey 2024)                        Hit@1  35.2%  Hit@3  70.3%  NDCG@3 0.808  cold  31.9%  cov90  90.7% size 4.52  train    0.1s  infer 0.209 ms/q
+random f0 Decision Tree (Dey 2024)               Hit@1  31.0%  Hit@3  68.0%  NDCG@3 0.803  cold  26.7%  cov90  91.0% size 4.50  train    0.1s  infer 0.006 ms/q
+random f0 RFXG hard vote (Afzal 2025)            Hit@1  46.3%  Hit@3  76.9%  NDCG@3 0.843  cold  37.9%  cov90  90.7% size 4.29  train    0.9s  infer 0.013 ms/q

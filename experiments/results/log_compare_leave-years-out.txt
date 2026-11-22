@@ -4,3 +4,10 @@ leave-years-out f0 Gaussian NB                            Hit@1  31.1%  Hit@3  7
 leave-years-out f0 Random Forest                          Hit@1  53.6%  Hit@3  86.2%  NDCG@3 0.903  cold  42.9%  cov90  89.7% size 3.11  train    7.7s  infer 0.068 ms/q
 leave-years-out f0 XGBoost                                Hit@1  54.0%  Hit@3  86.4%  NDCG@3 0.905  cold  43.3%  cov90  90.1% size 3.17  train   93.1s  infer 0.062 ms/q
 leave-years-out f0 MLP                                    Hit@1  51.1%  Hit@3  84.1%  NDCG@3 0.884  cold  41.7%  cov90  89.3% size 3.32  train    4.8s  infer 0.007 ms/q
+leave-years-out f0 XGBoost (Dey 2024)                     Hit@1  54.3%  Hit@3  86.8%  NDCG@3 0.905  cold  43.2%  cov90  90.9% size 3.22  train  173.1s  infer 0.077 ms/q
+leave-years-out f0 Random Forest (Dey 2024)               Hit@1  39.8%  Hit@3  74.3%  NDCG@3 0.842  cold  31.6%  cov90  90.2% size 4.38  train    0.1s  infer 0.008 ms/q
+leave-years-out f0 SVM (Dey 2024)                         Hit@1  23.6%  Hit@3  62.1%  NDCG@3 0.758  cold  20.4%  cov90  90.8% size 4.91  train   10.4s  infer 1.453 ms/q
+leave-years-out f0 k-NN (Dey 2024)                        Hit@1  30.5%  Hit@3  67.2%  NDCG@3 0.791  cold  25.3%  cov90  90.3% size 4.58  train    0.0s  infer 0.041 ms/q
+leave-years-out f0 Decision Tree (Dey 2024)               Hit@1  28.5%  Hit@3  66.3%  NDCG@3 0.793  cold  24.6%  cov90  91.2% size 4.69  train    0.1s  infer 0.004 ms/q
+leave-years-out f0 RFXG hard vote (Afzal 2025)            Hit@1  43.9%  Hit@3  75.5%  NDCG@3 0.841  cold  34.0%  cov90  92.2% size 4.53  train    1.0s  infer 0.007 ms/q
+leave-years-out f0 Stacking KNN+RF+NB->LR (Ahmed 2025)    Hit@1  44.2%  Hit@3  78.9%  NDCG@3 0.862  cold  36.0%  cov90  89.5% size 3.84  train    9.5s  infer 0.391 ms/q

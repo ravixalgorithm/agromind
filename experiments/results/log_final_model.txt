@@ -1,0 +1,11 @@
+saved /Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/backend/models/v4_final.joblib T 1.816 qhat 0.9405 calibration states 32
+Traceback (most recent call last):
+  File "/Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/final_model.py", line 117, in <module>
+    r = predict(art, "Punjab", "LUDHIANA", "Rabi")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/final_model.py", line 90, in predict
+    rows, season_raw, y0 = _query_rows(art, state, district, season, env)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/final_model.py", line 68, in _query_rows
+    raise ValueError(f"no crop records for {state} / {district} / {season}")
+ValueError: no crop records for Punjab / LUDHIANA / Rabi
