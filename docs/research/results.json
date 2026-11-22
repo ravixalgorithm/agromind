@@ -80,11 +80,11 @@
     },
     "GradientBoosting": {
       "reported_accuracy": 0.98,
-      "reproduced_accuracy": 0.9818,
-      "exact_match_accuracy": 0.9782,
-      "zero_fire_pct": 1.45,
-      "multi_fire_pct": 0.36,
-      "pred_class0_pct": 6.55,
+      "reproduced_accuracy": 0.98,
+      "exact_match_accuracy": 0.9745,
+      "zero_fire_pct": 1.64,
+      "multi_fire_pct": 0.55,
+      "pred_class0_pct": 6.73,
       "true_class0_pct": 5.09
     }
   },
@@ -223,7 +223,7 @@
       "macro_f1_std": 0.0034,
       "top3_mean": 0.9776,
       "top3_std": 0.0019,
-      "fit_seconds_per_fold": 10.44,
+      "fit_seconds_per_fold": 14.29,
       "train_rows_cap": null,
       "oof_accuracy_india": 0.5709,
       "oof_accuracy_tamilnadu": 0.9168,
@@ -236,7 +236,7 @@
       "macro_f1_std": 0.0026,
       "top3_mean": 0.9672,
       "top3_std": 0.001,
-      "fit_seconds_per_fold": 0.06,
+      "fit_seconds_per_fold": 0.07,
       "train_rows_cap": null,
       "oof_accuracy_india": 0.5644,
       "oof_accuracy_tamilnadu": 0.9336,
@@ -249,7 +249,7 @@
       "macro_f1_std": 0.0039,
       "top3_mean": 0.8765,
       "top3_std": 0.0029,
-      "fit_seconds_per_fold": 0.07,
+      "fit_seconds_per_fold": 0.11,
       "train_rows_cap": null,
       "oof_accuracy_india": 0.3967,
       "oof_accuracy_tamilnadu": 0.7674,
@@ -262,7 +262,7 @@
       "macro_f1_std": 0.0021,
       "top3_mean": 0.9234,
       "top3_std": 0.0024,
-      "fit_seconds_per_fold": 0.72,
+      "fit_seconds_per_fold": 0.91,
       "train_rows_cap": null,
       "oof_accuracy_india": 0.6001,
       "oof_accuracy_tamilnadu": 0.964,
@@ -275,7 +275,7 @@
       "macro_f1_std": 0.0017,
       "top3_mean": 0.9826,
       "top3_std": 0.001,
-      "fit_seconds_per_fold": 2.55,
+      "fit_seconds_per_fold": 7.06,
       "train_rows_cap": 15000,
       "oof_accuracy_india": 0.5938,
       "oof_accuracy_tamilnadu": 0.9507,
@@ -288,7 +288,7 @@
       "macro_f1_std": 0.003,
       "top3_mean": 0.9875,
       "top3_std": 0.0006,
-      "fit_seconds_per_fold": 2.43,
+      "fit_seconds_per_fold": 1.22,
       "train_rows_cap": 15000,
       "oof_accuracy_india": 0.6591,
       "oof_accuracy_tamilnadu": 0.9713,
@@ -301,7 +301,7 @@
       "macro_f1_std": 0.0029,
       "top3_mean": 0.9918,
       "top3_std": 0.0009,
-      "fit_seconds_per_fold": 10.06,
+      "fit_seconds_per_fold": 4.64,
       "train_rows_cap": null,
       "oof_accuracy_india": 0.715,
       "oof_accuracy_tamilnadu": 0.9734,
@@ -314,7 +314,7 @@
       "macro_f1_std": 0.0017,
       "top3_mean": 0.9899,
       "top3_std": 0.0003,
-      "fit_seconds_per_fold": 5.16,
+      "fit_seconds_per_fold": 2.69,
       "train_rows_cap": null,
       "oof_accuracy_india": 0.6726,
       "oof_accuracy_tamilnadu": 0.965,
@@ -327,7 +327,7 @@
       "macro_f1_std": 0.0046,
       "top3_mean": 0.9883,
       "top3_std": 0.001,
-      "fit_seconds_per_fold": 98.77,
+      "fit_seconds_per_fold": 90.1,
       "train_rows_cap": 15000,
       "oof_accuracy_india": 0.681,
       "oof_accuracy_tamilnadu": 0.9687,
@@ -340,7 +340,7 @@
       "macro_f1_std": 0.0055,
       "top3_mean": 0.9883,
       "top3_std": 0.0007,
-      "fit_seconds_per_fold": 68.79,
+      "fit_seconds_per_fold": 54.07,
       "train_rows_cap": 15000,
       "oof_accuracy_india": 0.6847,
       "oof_accuracy_tamilnadu": 0.9679,
@@ -360,7 +360,7 @@
     "seed": 42,
     "rows": 67200,
     "crops": 74,
-    "runtime_seconds": 1653.1
+    "runtime_seconds": 1643.5
   },
   "app_protocol": {
     "split": "train_test_split(test_size=0.2, random_state=42, stratify=crop)",
@@ -673,7 +673,7 @@
     },
     {
       "aspect": "Decoding",
-      "v1": "argmax over 22 binary heads; 0.0% of rows (GaussianNB) had no head firing",
+      "v1": "argmax over 22 binary heads: 3.09% of rows with no head firing (DecisionTree), 13.09% with several (GaussianNB); GaussianNB exact-match 86.9% vs reported 97.1%",
       "v2": "single multiclass model, one ranked answer per row",
       "note": "\u00a71.1"
     },
@@ -698,8 +698,8 @@
     {
       "aspect": "Macro-F1 (v2 data, 5-fold)",
       "v1": "not reported",
-      "v2": "0.9215 (deployed RF); 0.9215 (RandomForest (v2 deployed))",
-      "note": ""
+      "v2": "0.9215 (deployed RF)",
+      "note": "best of 10 models"
     },
     {
       "aspect": "Top-3 accuracy (v2 data, 5-fold)",
@@ -711,7 +711,7 @@
       "aspect": "Paired test, full v2 test split",
       "v1": "0.0441",
       "v2": "0.9462",
-      "note": "McNemar b=8, c=12132, p=0"
+      "note": "McNemar b=8, c=12132, p=< 1e-300"
     },
     {
       "aspect": "Paired test, Kaggle test rows (v1's home ground)",
@@ -723,7 +723,13 @@
       "aspect": "Generalisation to an unseen source",
       "v1": "not tested",
       "v2": "Multi-state (india) 0.12, Tamil Nadu 0.13, Kaggle 0.07",
-      "note": "LOSO open-set accuracy (\u00a75.1)"
+      "note": "LOSO open-set accuracy (\u00a75.1): v2 does not transfer across sources"
+    },
+    {
+      "aspect": "Generalisation to unseen states (multi-state rows)",
+      "v1": "not tested",
+      "v2": "0.5585 vs 0.6531 random split",
+      "note": "GroupKFold by state (\u00a75.2)"
     },
     {
       "aspect": "Probability calibration",
