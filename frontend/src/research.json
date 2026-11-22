@@ -50,7 +50,7 @@
     },
     {
       "file": "figures/13_v3_generalisation.png",
-      "caption": "v3 hit@1 for unseen districts, unseen states and future years, and per held-out state."
+      "caption": "v3 hit@1 of ExtraTrees (the live model), Random Forest and the best popularity baseline for unseen districts, unseen states and future years, and ExtraTrees per held-out state."
     }
   ],
   "v1": {
@@ -777,7 +777,7 @@
       },
       {
         "file": "figures/13_v3_generalisation.png",
-        "caption": "v3 hit@1 for unseen districts, unseen states and future years, and per held-out state."
+        "caption": "v3 hit@1 of ExtraTrees (the live model), Random Forest and the best popularity baseline for unseen districts, unseen states and future years, and ExtraTrees per held-out state."
       }
     ],
     "data": {
@@ -871,44 +871,49 @@
         "hit1_mean": 0.404,
         "hit1_std": 0.0586,
         "hit3_mean": 0.7045
+      },
+      "ExtraTrees: climate + season + lat/lon": {
+        "hit1_mean": 0.418,
+        "hit1_std": 0.0591,
+        "hit3_mean": 0.707
       }
     },
     "leave_states_out_per_state_hit1": {
-      "Uttar Pradesh": 0.5026,
-      "Bihar": 0.2541,
-      "Madhya Pradesh": 0.3418,
-      "Karnataka": 0.4875,
-      "West Bengal": 0.2899,
-      "Gujarat": 0.3666,
-      "Tamil Nadu": 0.5456,
-      "Maharashtra": 0.4276,
-      "Rajasthan": 0.4555,
-      "Assam": 0.2855,
-      "Odisha": 0.3082,
-      "Haryana": 0.6941,
-      "Punjab": 0.6772,
-      "Kerala": 0.6298,
-      "Andhra Pradesh": 0.528,
-      "Telangana": 0.4908,
-      "Arunachal Pradesh": 0.3823,
-      "Jharkhand": 0.1977,
-      "Uttarakhand": 0.3333,
-      "Chhattisgarh": 0.0725,
-      "Meghalaya": 0.2211,
-      "Nagaland": 0.2231,
-      "Himachal Pradesh": 0.2624,
-      "Tripura": 0.491,
-      "Manipur": 0.0914,
+      "Uttar Pradesh": 0.494,
+      "Bihar": 0.2387,
+      "Madhya Pradesh": 0.3788,
+      "Karnataka": 0.5071,
+      "West Bengal": 0.3178,
+      "Gujarat": 0.4224,
+      "Tamil Nadu": 0.5313,
+      "Maharashtra": 0.4908,
+      "Rajasthan": 0.4502,
+      "Assam": 0.2759,
+      "Odisha": 0.2843,
+      "Haryana": 0.7385,
+      "Punjab": 0.6809,
+      "Kerala": 0.6355,
+      "Andhra Pradesh": 0.5682,
+      "Telangana": 0.5354,
+      "Arunachal Pradesh": 0.3556,
+      "Jharkhand": 0.1889,
+      "Uttarakhand": 0.3524,
+      "Chhattisgarh": 0.0699,
+      "Meghalaya": 0.2296,
+      "Nagaland": 0.3327,
+      "Himachal Pradesh": 0.2081,
+      "Tripura": 0.552,
+      "Manipur": 0.0787,
       "Jammu and Kashmir": 0.2533,
-      "Puducherry": 0.364,
-      "Mizoram": 0.2299,
-      "Sikkim": 0.1825,
-      "Goa": 0.3299,
-      "Andaman and Nicobar Islands": 0.2727,
-      "Dadra and Nagar Haveli": 0.2157,
-      "Chandigarh": 0.7576,
-      "Delhi": 0.8148,
-      "Ladakh": 0.6667,
+      "Puducherry": 0.386,
+      "Mizoram": 0.2471,
+      "Sikkim": 0.6131,
+      "Goa": 0.3918,
+      "Andaman and Nicobar Islands": 0.303,
+      "Dadra and Nagar Haveli": 0.1961,
+      "Chandigarh": 0.8485,
+      "Delhi": 0.7778,
+      "Ladakh": 0.5,
       "The Dadra & Nagar Haveli and Daman and Diu": 0.0,
       "Daman and Diu": 0.0
     },
@@ -957,6 +962,21 @@
           "2021": 0.6337,
           "2022": 0.6264
         }
+      },
+      "ExtraTrees: + state + lat/lon": {
+        "hit1": 0.6534,
+        "hit3": 0.878,
+        "recall3": 0.6584,
+        "hit1_by_year": {
+          "2015": 0.7331,
+          "2016": 0.6907,
+          "2017": 0.6674,
+          "2018": 0.6495,
+          "2019": 0.6029,
+          "2020": 0.6362,
+          "2021": 0.6294,
+          "2022": 0.6285
+        }
       }
     },
     "soil_subset": {
@@ -998,21 +1018,21 @@
       {
         "aspect": "Unseen states / regions, hit@1",
         "v2": "7\u201313% (leave-one-source-out accuracy)",
-        "v3": "40.40% (baseline 30.46%)"
+        "v3": "41.80% (ExtraTrees; baseline 30.46%)"
       },
       {
         "aspect": "Future years (2015\u20132022), hit@1",
         "v2": "not testable",
-        "v3": "65.20% (baseline 55.49%)"
+        "v3": "65.34% (ExtraTrees; baseline 55.49%)"
       }
     ],
     "meta": {
       "generated_by": "notebooks/AgroMind_v3_LargeScale.ipynb",
-      "date": "2026-11-22",
+      "date": "2026-11-23",
       "python": "3.12.14",
       "sklearn": "1.9.1",
       "seed": 42,
-      "runtime_seconds": 388.9,
+      "runtime_seconds": 154.4,
       "doc": "hit1 = top-ranked crop is one of the recommend==1 crops of the district-year-season query; hit3 = any of the top 3 is; recall3 = share of recommended crops in the top 3. leave_districts_out = GroupKFold(5) by state|district; leave_states_out = GroupKFold(5) by state (state feature dropped); leave_years_out = train <=2014, test >=2015."
     }
   },
