@@ -35,6 +35,25 @@ def mondrian(cal, test, group, alpha=0.1, min_n=50):
     return {"coverage": float(cov.mean()), "size": float(size.mean())}, cov, size
 
 
+def state_robust(cal, test, state, alpha=0.1, beta=0.9, min_n=30):
+    """Group-robust split conformal: per training state s, t_s = its own (1-alpha) LAC quantile; the threshold is the
+    ceil((S+1)beta)-th smallest t_s. If states are exchangeable, a new state's threshold t_new <= qhat with prob >= beta,
+    i.e. with prob >= beta the new state gets >= (1-alpha) coverage (per-state, not just marginal)."""
+    def qhat(s):
+        n = len(s)
+        return np.quantile(s, min(1, np.ceil((n + 1) * (1 - alpha)) / n), method="higher")
+    c = cal[cal.best == 1]
+    s = 1 - c.p.values
+    g = c.qid.map(state).values
+    ts = np.sort([qhat(s[g == k]) for k in np.unique(g) if (g == k).sum() >= min_n])
+    S = len(ts)
+    th = ts[min(S - 1, int(np.ceil((S + 1) * beta)) - 1)] if S else qhat(s)
+    t = test.assign(inset=(1 - test.p.values) <= th)
+    cov = t[t.best == 1].set_index("qid").inset.astype(float)
+    size = t.groupby("qid").inset.sum().astype(float)
+    return {"coverage": float(cov.mean()), "size": float(size.mean()), "n_states": S, "threshold": float(th)}, cov, size
+
+
 ap = argparse.ArgumentParser()
 ap.add_argument("--quick", action="store_true")
 args = ap.parse_args()
@@ -55,11 +74,11 @@ for protocol in ("random", "leave-states-out", "leave-years-out"):
         oof = pd.Series(np.nan, index=idx(trq))
         g = groups.loc[trq].values
         for itr, iho in GroupKFold(min(5, len(set(g)))).split(trq, groups=g):
-            score = run.fit_rank(df, idx(trq[itr]), crops, True, "lambdarank")
+            score = run.fit_final(df, idx(trq[itr]), crops)
             oof.loc[idx(trq[iho])] = score(idx(trq[iho]))
         tr_i, te_i = idx(trq), idx(teq)
         T = run.fit_T(df.loc[tr_i, "qid"], oof.values, df.loc[tr_i, "best"].values)
-        final = run.fit_rank(df, tr_i, crops, True, "lambdarank")
+        final = run.fit_final(df, tr_i, crops)
         s_te = final(te_i)
         mk = lambda i, s: df.loc[i, ["qid", "best"]].assign(p=run.softmax_by_q(df.loc[i, "qid"], s, T))
         res, per = run.conformal(mk(tr_i, oof.values), mk(te_i, s_te))
@@ -69,13 +88,16 @@ for protocol in ("random", "leave-states-out", "leave-years-out"):
         for name, grp in (("ncand", BUCKET), ("region", ZONE)):
             rec[f"mondrian_{name}"], cov, size = mondrian(cal_df, te_df, grp)
             per[f"cov_M{name}"], per[f"size_M{name}"] = cov, size
+        rec["state_robust"], cov, size = state_robust(cal_df, te_df, Q.state)
+        per["cov_SR"], per["size_SR"] = cov, size
         out.setdefault(protocol, []).append(rec)
         per["state"], per["protocol"], per["fold"] = Q.state.reindex(per.index).values, protocol, f
         perq.append(per.reset_index(names="qid"))
         print(f"{protocol:17s} f{f} hit@1={rec['hit@1']:.4f} ndcg@3={rec['ndcg@3']:.4f} "
               f"LAC90 cov={res['LAC@0.9']['coverage']:.3f} size={res['LAC@0.9']['size']:.2f} "
               f"APS90 cov={res['APS@0.9']['coverage']:.3f} | Mondrian ncand {rec['mondrian_ncand']['coverage']:.3f}/{rec['mondrian_ncand']['size']:.2f} "
-              f"region {rec['mondrian_region']['coverage']:.3f}/{rec['mondrian_region']['size']:.2f}", flush=True)
+              f"region {rec['mondrian_region']['coverage']:.3f}/{rec['mondrian_region']['size']:.2f} "
+              f"state-robust {rec['state_robust']['coverage']:.3f}/{rec['state_robust']['size']:.2f}", flush=True)
 tag = "quick" if args.quick else "main"
 json.dump(out, open(run.OUT / f"crossconf_{tag}.json", "w"), indent=1)
 pd.concat(perq, ignore_index=True).to_parquet(run.OUT / f"crossconf_query_{tag}.parquet")
