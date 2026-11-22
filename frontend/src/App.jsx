@@ -2587,7 +2587,7 @@ function ResultsPage({ t }) {
                 <tr>
                   <th scope="row">Coverage</th>
                   <td>
-                    {info.v3.crops} crops · {info.v3.states} states · {info.v3.districts} districts · {info.v3.years?.join('–')}
+                    {info.v3.crops} crops · {info.v3.states} states · {info.v3.districts} districts · {info.v3.years ? `${info.v3.years[0]}–${info.v3.years[1] + 1}` : ''}
                   </td>
                 </tr>
               </tbody>
