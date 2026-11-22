@@ -1,7 +1,7 @@
 {
   "apy_rows_raw": 345405,
-  "apy_rows_clean": 344540,
-  "rows": 344540,
+  "apy_rows_clean": 344539,
+  "rows": 344539,
   "states": 36,
   "districts_apy": 792,
   "districts_matched": 792,
@@ -13,7 +13,7 @@
   "seasons": {
     "Kharif": 138137,
     "Rabi": 100763,
-    "Whole Year": 68301,
+    "Whole Year": 68300,
     "Summer": 22101,
     "Winter": 8249,
     "Autumn": 6989
@@ -28,19 +28,22 @@
   "row_coverage_pct": {
     "centroid": 100.0,
     "climate": 100.0,
-    "soil_any": 7.0,
-    "soil_soilgrids": 0.82,
-    "soil_state_median": 6.18,
-    "wrb_class": 0.82
+    "soil_any": 97.75,
+    "soil_soilgrids": 21.52,
+    "soil_state_median": 76.23,
+    "wrb_class": 21.52
   },
-  "soil_points_cached": 8,
-  "soil_points_with_data": 8,
+  "soil_points_cached": 156,
+  "soil_points_with_data": 153,
   "recommend_rows": 84253,
-  "train_rows": 5790,
-  "train_crops": 36,
+  "train_rows": 82355,
+  "train_crops": 49,
   "train_soil_classes": {
-    "Loamy": 5355,
-    "Red": 285,
-    "Black": 150
+    "Loamy": 47891,
+    "Black": 25990,
+    "Alluvial": 5279,
+    "Red": 2411,
+    "Clay": 407,
+    "Sandy": 377
   }
 }
