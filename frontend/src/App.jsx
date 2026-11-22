@@ -1,11 +1,23 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Add, Award, Calendar as CalendarIcon, Chart, ClipboardText, CloseCircle, CloudSunny, Drop, InfoCircle, Layer, Location, PercentageCircle, StatusUp, TaskSquare, TickCircle, Warning2 } from 'iconsax-react';
-import Slider from './Slider';
+import { useEffect, useRef, useState } from 'react';
+import research from './research.json';
+
+// Project identity: fill in the placeholders before submission.
+const SITE = {
+  department: '[Department]',
+  college: '[College Name]',
+  address: '[College Address, City, State – PIN]',
+  team: ['[Student Name 1]', '[Student Name 2]', '[Student Name 3]', '[Student Name 4]'],
+  guide: '[Guide Name], [Designation]',
+  email: '[project-email@college.edu]',
+  phone: '[+91-XXXXX-XXXXX]',
+  session: '2026–27',
+  lastUpdated: '22 Nov 2026',
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const STORAGE_KEY = 'agromind.saved-analyses.v2';
 const ACTIVE_KEY = 'agromind.active-analysis.v2';
+const PREFS_KEY = 'agromind.prefs.v1';
 
 const NUTRIENTS = ['N', 'P', 'K', 'ph'];
 const SAMPLES = ['rice', 'wheat', 'cotton', 'maize', 'sugarcane', 'groundnut'];
@@ -15,22 +27,89 @@ const SEASONS = {
   rabi: { name: 'Rabi', months: 'Oct–Mar' },
   zaid: { name: 'Zaid', months: 'Mar–Jun' },
 };
-// Approximate field colour of each soil, so the picker reads like a soil chart.
-const SOIL_COLORS = {
-  Alluvial: '#a3906f', Black: '#3b3531', Clay: '#8c5b3e', Laterite: '#a2452b',
-  Loamy: '#8a6a45', Red: '#b4513a', Sandy: '#d9c49b', Saline: '#c4b89a',
-  Silty: '#b8a888', Other: null,
-};
-const SHORT = { N: 'N', P: 'P', K: 'K', ph: 'pH', temperature: '°C', humidity: 'RH', water: 'H₂O' };
+const SHORT = { N: 'N', P: 'P', K: 'K', ph: 'pH', temperature: '°C', humidity: 'RH', water: 'Rain' };
 const MAX_ROWS = 8;
+const FONT_SIZES = [13, 15, 17];
+
+const PAGES = ['home', 'advisory', 'dataset', 'report', 'about', 'contact'];
+const INFO_PAGES = ['disclaimer', 'privacy', 'help', 'sitemap'];
+
+const T = {
+  en: {
+    skip: 'Skip to main content',
+    contrast: 'High contrast',
+    home: 'Home',
+    advisory: 'Crop Advisory',
+    dataset: 'Dataset',
+    report: 'Model Report',
+    about: 'About',
+    contact: 'Contact',
+    disclaimer: 'Disclaimer',
+    privacy: 'Privacy Policy',
+    help: 'Help',
+    sitemap: 'Sitemap',
+    whatsNew: "What's New",
+    welcome: 'Welcome to AgroMind',
+    glance: 'At a Glance',
+    quick: 'Quick Links',
+    notice: 'Important Notice',
+    fieldDetails: 'Soil & Field Details',
+    recommended: 'Recommended Crop',
+    calendar: 'Crop Calendar',
+    ranking: 'Ranking of Suitable Crops',
+    readings: 'Field Readings vs Typical Range',
+    saved: 'Saved Analyses',
+    submit: 'Get Recommendation',
+    reset: 'Reset',
+    rawData: 'Raw Training Data',
+    lastUpdated: 'Last Updated',
+  },
+  hi: {
+    skip: 'मुख्य सामग्री पर जाएं',
+    contrast: 'उच्च कंट्रास्ट',
+    home: 'मुख्य पृष्ठ',
+    advisory: 'फसल परामर्श',
+    dataset: 'डेटासेट',
+    report: 'मॉडल रिपोर्ट',
+    about: 'परिचय',
+    contact: 'संपर्क',
+    disclaimer: 'अस्वीकरण',
+    privacy: 'गोपनीयता नीति',
+    help: 'सहायता',
+    sitemap: 'साइटमैप',
+    whatsNew: 'नया क्या है',
+    welcome: 'एग्रोमाइंड में आपका स्वागत है',
+    glance: 'एक नज़र में',
+    quick: 'त्वरित लिंक',
+    notice: 'महत्वपूर्ण सूचना',
+    fieldDetails: 'मृदा एवं खेत विवरण',
+    recommended: 'अनुशंसित फसल',
+    calendar: 'फसल कैलेंडर',
+    ranking: 'उपयुक्त फसलों की श्रेणी',
+    readings: 'खेत के माप बनाम सामान्य सीमा',
+    saved: 'सहेजे गए विश्लेषण',
+    submit: 'अनुशंसा प्राप्त करें',
+    reset: 'रीसेट',
+    rawData: 'प्रशिक्षण डेटा',
+    lastUpdated: 'अंतिम अद्यतन',
+  },
+};
+
+const NEWS = [
+  'Crop Advisory now covers 16 Indian states with Kharif, Rabi and Zaid seasons.',
+  'Model Report page added: v1 vs v2 metrics and model comparison.',
+  'Raw training data can now be browsed and filtered crop-wise on the Dataset page.',
+  'Saved analyses are stored in your browser and can be reopened at any time.',
+];
 
 const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const round = (n) => (Math.abs(n) >= 20 ? String(Math.round(n)) : fmt(n));
 const withUnit = (text, unit) => (unit ? `${text}${unit === 'mm' ? ' ' : ''}${unit}` : text);
 const pct = (c) => `${Math.min(99, Math.max(1, Math.round(c * 100)))}%`;
 const range = (lo, hi, unit) => withUnit(round(lo) === round(hi) ? round(lo) : `${round(lo)}–${round(hi)}`, unit);
-const shortDate = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+const longDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 const formKey = (form) => JSON.stringify(form);
+const plainName = (crop) => crop.name.replace(/ \(.*\)$/, '');
 
 const emptyForm = (meta) => ({
   ...Object.fromEntries(meta.fields.map((f) => [f.key, ''])),
@@ -73,6 +152,25 @@ function loadSaved() {
     return [];
   }
 }
+
+function loadPrefs() {
+  try {
+    return { font: 15, contrast: false, lang: 'en', ...JSON.parse(localStorage.getItem(PREFS_KEY)) };
+  } catch {
+    return { font: 15, contrast: false, lang: 'en' };
+  }
+}
+
+// Counted once per page load, per browser; there is no server-side counter.
+const VISITS = (() => {
+  try {
+    const n = Number(localStorage.getItem('agromind.visits') || 0) + 1;
+    localStorage.setItem('agromind.visits', String(n));
+    return n;
+  } catch {
+    return null;
+  }
+})();
 
 // Compare the form against one crop's typical band (p10–p90) for every reading.
 function assess(meta, id, form) {
@@ -131,12 +229,31 @@ async function readError(res, fields) {
   return `Server error (${res.status})`;
 }
 
-/* ── Boot ─────────────────────────────────────────────── */
+function useRoute() {
+  const read = () => (window.location.hash.startsWith('#/') ? window.location.hash.slice(2) : 'home');
+  const [route, setRoute] = useState(read);
+  useEffect(() => {
+    const onHash = () => {
+      setRoute(read());
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  return PAGES.includes(route) || INFO_PAGES.includes(route) ? route : 'home';
+}
+
+/* ── Shell ────────────────────────────────────────────── */
 
 function App() {
   const [meta, setMeta] = useState(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [prefs, setPrefs] = useState(loadPrefs);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const route = useRoute();
+  const mainRef = useRef(null);
+  const t = (k) => T[prefs.lang][k] ?? T.en[k];
 
   useEffect(() => {
     setFailed(false);
@@ -146,76 +263,334 @@ function App() {
       .catch(() => setFailed(true));
   }, [attempt]);
 
-  if (meta) return <Dashboard meta={meta} />;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.fontSize = `${prefs.font}px`;
+    root.dataset.contrast = prefs.contrast ? 'high' : 'normal';
+    root.lang = prefs.lang;
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+      /* ignore */
+    }
+  }, [prefs]);
+
+  useEffect(() => setMenuOpen(false), [route]);
+
+  const pref = (patch) => setPrefs((p) => ({ ...p, ...patch }));
+  const needsMeta = ['home', 'advisory', 'dataset'].includes(route);
+
+  let page;
+  if (needsMeta && !meta) {
+    page = (
+      <Panel title={failed ? 'Server not reachable' : 'Loading'} tone={failed ? 'orange' : undefined}>
+        {failed ? (
+          <>
+            <p>Cannot reach the model server at {API_BASE_URL}. Start the backend and try again.</p>
+            <button className="btn" onClick={() => setAttempt((a) => a + 1)}>
+              Try again
+            </button>
+          </>
+        ) : (
+          <p>Loading crop data…</p>
+        )}
+      </Panel>
+    );
+  } else if (route === 'home') page = <HomePage meta={meta} t={t} />;
+  else if (route === 'advisory') page = <Advisory meta={meta} t={t} />;
+  else if (route === 'dataset') page = <DatasetPage meta={meta} t={t} />;
+  else if (route === 'report') page = <ReportPage t={t} />;
+  else if (route === 'about') page = <AboutPage />;
+  else if (route === 'contact') page = <ContactPage />;
+  else page = <InfoPage route={route} t={t} />;
+
   return (
-    <div className="boot">
-      {failed ? (
-        <>
-          <p>Can't reach the model server at {API_BASE_URL}.</p>
-          <button className="btn" onClick={() => setAttempt((a) => a + 1)}>
-            Try again
+    <>
+      <div className="a11y-strip">
+        <div className="wrap a11y-inner">
+          <a
+            href="#main"
+            className="skip"
+            onClick={(e) => {
+              e.preventDefault();
+              mainRef.current?.focus();
+              mainRef.current?.scrollIntoView();
+            }}
+          >
+            {t('skip')}
+          </a>
+          <div className="a11y-tools">
+            <span className="font-tools" role="group" aria-label="Text size">
+              {FONT_SIZES.map((size, i) => (
+                <button key={size} type="button" aria-pressed={prefs.font === size} onClick={() => pref({ font: size })} aria-label={['Decrease text size', 'Normal text size', 'Increase text size'][i]}>
+                  {['A-', 'A', 'A+'][i]}
+                </button>
+              ))}
+            </span>
+            <button type="button" className="contrast-btn" aria-pressed={prefs.contrast} onClick={() => pref({ contrast: !prefs.contrast })} title={t('contrast')}>
+              <span aria-hidden="true">◐</span> {t('contrast')}
+            </button>
+            <span className="lang-tools" role="group" aria-label="Language">
+              <button type="button" aria-pressed={prefs.lang === 'en'} onClick={() => pref({ lang: 'en' })}>
+                English
+              </button>
+              <span aria-hidden="true">|</span>
+              <button type="button" aria-pressed={prefs.lang === 'hi'} onClick={() => pref({ lang: 'hi' })} lang="hi">
+                हिन्दी
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="tricolour" aria-hidden="true" />
+
+      <header className="site-header">
+        <div className="wrap header-inner">
+          <a href="#/" className="logo-link">
+            <Logo />
+            <span className="site-title">
+              <strong>AgroMind — Crop Recommendation System</strong>
+              <span lang="hi">एग्रोमाइंड — फसल अनुशंसा प्रणाली</span>
+            </span>
+          </a>
+          <p className="header-org">
+            Final Year Project
+            <br />
+            Dept. of {SITE.department}, {SITE.college}
+          </p>
+        </div>
+      </header>
+
+      <nav className="main-nav" aria-label="Main">
+        <div className="wrap nav-inner">
+          <button type="button" className="menu-btn" aria-expanded={menuOpen} aria-controls="nav-list" onClick={() => setMenuOpen((o) => !o)}>
+            ☰ Menu
           </button>
-        </>
-      ) : (
-        <p>Loading crop data…</p>
-      )}
+          <ul id="nav-list" className={menuOpen ? 'is-open' : ''}>
+            {PAGES.map((p) => (
+              <li key={p}>
+                <a href={p === 'home' ? '#/' : `#/${p}`} aria-current={route === p ? 'page' : undefined}>
+                  {t(p)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+
+      <div className="ticker" role="region" aria-label={t('whatsNew')}>
+        <div className="wrap ticker-inner">
+          <strong className="ticker-label">{t('whatsNew')}</strong>
+          <div className="ticker-track">
+            <ul className="ticker-list">
+              {[...NEWS, ...NEWS].map((n, i) => (
+                <li key={i} aria-hidden={i >= NEWS.length || undefined}>
+                  {n}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="wrap">
+        <ol className="breadcrumb" aria-label="Breadcrumb">
+          <li>
+            <a href="#/">{t('home')}</a>
+          </li>
+          {route !== 'home' && <li aria-current="page">{t(route)}</li>}
+        </ol>
+      </div>
+
+      <main id="main" ref={mainRef} tabIndex={-1} className="wrap main">
+        {page}
+      </main>
+
+      <footer className="site-footer">
+        <div className="wrap">
+          <ul className="footer-links">
+            {INFO_PAGES.map((p) => (
+              <li key={p}>
+                <a href={`#/${p}`}>{t(p)}</a>
+              </li>
+            ))}
+            <li>
+              <a href="#/contact">{t('contact')}</a>
+            </li>
+          </ul>
+          <p className="footer-disclaimer">This is an academic project and is not an official Government of India website.</p>
+          <p className="footer-meta">
+            <span>
+              {t('lastUpdated')}: {SITE.lastUpdated}
+            </span>
+            {VISITS !== null && <span>Visits from this browser: {String(VISITS).padStart(6, '0')}</span>}
+            <span>
+              © {SITE.session} Dept. of {SITE.department}, {SITE.college}
+            </span>
+          </p>
+          <p className="footer-meta">Best viewed in the latest versions of Chrome, Firefox, Edge and Safari at 1280×800 or above.</p>
+        </div>
+      </footer>
+    </>
+  );
+}
+
+function Logo() {
+  return (
+    <svg className="logo" width="56" height="56" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="30" fill="#fff" stroke="#138808" strokeWidth="3" />
+      <path d="M32 54V18" stroke="#8a5a14" strokeWidth="2.5" strokeLinecap="round" />
+      {[22, 29, 36, 43].map((y) => (
+        <g key={y} fill="#e0a526">
+          <ellipse cx="26.5" cy={y} rx="4.2" ry="2.3" transform={`rotate(-35 26.5 ${y})`} />
+          <ellipse cx="37.5" cy={y} rx="4.2" ry="2.3" transform={`rotate(35 37.5 ${y})`} />
+        </g>
+      ))}
+      <ellipse cx="32" cy="15" rx="2.3" ry="4" fill="#e0a526" />
+      <path d="M32 50c-6-1-11-5-13-10 6 0 11 4 13 10zM32 50c6-1 11-5 13-10-6 0-11 4-13 10z" fill="#138808" />
+    </svg>
+  );
+}
+
+function Panel({ title, tone, children, className = '', actions, id }) {
+  return (
+    <section className={`panel${tone ? ` panel-${tone}` : ''} ${className}`} aria-labelledby={id}>
+      <h2 className="panel-title" id={id}>
+        <span>{title}</span>
+        {actions}
+      </h2>
+      <div className="panel-body">{children}</div>
+    </section>
+  );
+}
+
+/* ── Home ─────────────────────────────────────────────── */
+
+function HomePage({ meta, t }) {
+  const crops = Object.keys(meta.crops).length;
+  return (
+    <div className="grid-home">
+      <div className="stack">
+        <Panel title={t('welcome')}>
+          <p>
+            <strong>AgroMind</strong> is a crop recommendation system that suggests suitable crops for a field from its soil nutrients (N, P, K, pH), climate (temperature, humidity,
+            seasonal rainfall), soil type, season, water source and state. The recommendation is produced by a machine-learning model trained on {meta.rows.toLocaleString('en-IN')}{' '}
+            records of Indian crop data.
+          </p>
+          <p>
+            For each field the system shows the recommended crop with model confidence, a month-wise sowing and harvest calendar, a ranking of other crops suited to the same season, and
+            a reading-by-reading comparison against each crop's typical range.
+          </p>
+          <p>
+            <a className="btn" href="#/advisory">
+              Go to Crop Advisory »
+            </a>
+          </p>
+        </Panel>
+
+        <Panel title="How to Use">
+          <ol className="steps">
+            <li>
+              Open <a href="#/advisory">Crop Advisory</a>.
+            </li>
+            <li>Select the state, season, soil type and water source of the field.</li>
+            <li>Enter the soil test values (N, P, K, pH) and climate values, or use a sample field.</li>
+            <li>Read the recommended crop, calendar and ranking. The analysis is saved in this browser automatically.</li>
+          </ol>
+        </Panel>
+
+        <Panel title={t('notice')} tone="orange">
+          <p>
+            Recommendations are generated by a statistical model for academic demonstration. They are not agronomic advice. Farmers should consult the local Krishi Vigyan Kendra or
+            agriculture department and their Soil Health Card before taking decisions.
+          </p>
+        </Panel>
+      </div>
+
+      <div className="stack">
+        <Panel title={t('glance')} tone="green">
+          <table className="kv">
+            <tbody>
+              <tr>
+                <th scope="row">Training records</th>
+                <td>{meta.rows.toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <th scope="row">Crops covered</th>
+                <td>{crops}</td>
+              </tr>
+              <tr>
+                <th scope="row">States covered</th>
+                <td>{meta.options.state.length}</td>
+              </tr>
+              <tr>
+                <th scope="row">Soil types</th>
+                <td>{meta.options.soil.length}</td>
+              </tr>
+              <tr>
+                <th scope="row">Seasons</th>
+                <td>{meta.options.season.map((s) => SEASONS[s]?.name ?? s).join(', ')}</td>
+              </tr>
+              <tr>
+                <th scope="row">Data sources</th>
+                <td>{meta.sources?.join(', ')}</td>
+              </tr>
+            </tbody>
+          </table>
+        </Panel>
+
+        <Panel title={t('quick')}>
+          <ul className="link-list">
+            <li>
+              <a href="#/advisory">{t('advisory')}</a> — get a crop recommendation
+            </li>
+            <li>
+              <a href="#/dataset">{t('dataset')}</a> — browse the training data
+            </li>
+            <li>
+              <a href="#/report">{t('report')}</a> — accuracy and model comparison
+            </li>
+            <li>
+              <a href="#/about">{t('about')}</a> — project and team
+            </li>
+            <li>
+              <a href="#/help">{t('help')}</a> — field descriptions
+            </li>
+          </ul>
+        </Panel>
+      </div>
     </div>
   );
 }
 
-/* ── Dashboard ────────────────────────────────────────── */
+/* ── Crop Advisory ────────────────────────────────────── */
 
-function createTab(meta, overrides = {}) {
-  return {
-    key: crypto.randomUUID(),
-    id: null,
-    name: '',
-    form: emptyForm(meta),
-    ...overrides,
-  };
-}
-
-function initialTab(meta, saved) {
+function initialAnalysis(meta, saved) {
   try {
     const activeId = localStorage.getItem(ACTIVE_KEY);
     const entry = saved.find((s) => s.id === activeId) ?? saved[0];
-    if (entry) return createTab(meta, { id: entry.id, name: entry.name, form: entry.form });
+    if (entry) return { id: entry.id, name: entry.name, form: entry.form };
   } catch {
     /* fall through */
   }
-  return createTab(meta);
+  return { id: null, name: '', form: emptyForm(meta) };
 }
 
-function Dashboard({ meta }) {
+function Advisory({ meta, t }) {
   const seed = useRef(null);
   if (!seed.current) {
     const saved = loadSaved();
-    seed.current = { tab: initialTab(meta, saved), saved };
+    seed.current = { current: initialAnalysis(meta, saved), saved };
   }
 
   const [saved, setSaved] = useState(seed.current.saved);
-  const [tabs, setTabs] = useState([seed.current.tab]);
-  const [activeKey, setActiveKey] = useState(seed.current.tab.key);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [current, setCurrent] = useState(seed.current.current);
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState('idle'); // idle | loading | ready | invalid | offline
   const [message, setMessage] = useState('');
   const [selectedId, setSelectedId] = useState(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [dataOpen, setDataOpen] = useState(false);
   const requestId = useRef(0);
-
-  const current = tabs.find((t) => t.key === activeKey) ?? tabs[0];
-  const activeKeyRef = useRef(activeKey);
-  activeKeyRef.current = activeKey;
-  const setCurrent = (update) => {
-    setTabs((list) =>
-      list.map((t) => {
-        if (t.key !== activeKeyRef.current) return t;
-        return typeof update === 'function' ? update(t) : { ...t, ...update };
-      }),
-    );
-  };
+  const resultsRef = useRef(null);
 
   const { form } = current;
   const numericDone = meta.fields.filter((f) => form[f.key] !== '' && !Number.isNaN(Number(form[f.key]))).length;
@@ -227,20 +602,20 @@ function Dashboard({ meta }) {
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    } catch {
+      /* ignore */
+    }
   }, [saved]);
 
   useEffect(() => {
-    if (current.id) localStorage.setItem(ACTIVE_KEY, current.id);
+    try {
+      if (current.id) localStorage.setItem(ACTIVE_KEY, current.id);
+    } catch {
+      /* ignore */
+    }
   }, [current.id]);
-
-  // Clear selection when switching tabs; prediction effect re-runs from form.
-  useEffect(() => {
-    setSelectedId(null);
-    setDetailOpen(false);
-    setResult(null);
-    setStatus('idle');
-  }, [activeKey]);
 
   // Live prediction: debounce edits, ignore stale responses.
   useEffect(() => {
@@ -278,14 +653,14 @@ function Dashboard({ meta }) {
       } catch (err) {
         if (err.name === 'AbortError' || id !== requestId.current) return;
         setStatus('offline');
-        setMessage(`Can't reach the model server at ${API_BASE_URL}.`);
+        setMessage(`Cannot reach the model server at ${API_BASE_URL}.`);
       }
     }, 160);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [form, complete, meta, activeKey]);
+  }, [form, complete, meta]);
 
   // Rows: the model's pick first, then other crops of the same season ranked by how many readings fit.
   const pick = result?.data.top_recommendations[0];
@@ -304,82 +679,37 @@ function Dashboard({ meta }) {
   const top = rows[0];
   const selected = rows.find((r) => r.id === selectedId) ?? top;
   const seasonName = result ? SEASONS[result.form.season]?.name ?? result.form.season : '';
+  const displayName = current.name || (pick ? `${plainName(meta.crops[pick.crop])} · ${seasonName} · ${result.form.state || result.form.soil}` : 'Untitled analysis');
 
   // Autosave whenever a ready recommendation exists (and when the name changes).
-  const autoName = pick
-    ? `${meta.crops[pick.crop].name.replace(/ \(.*\)$/, '')} · ${seasonName} · ${result.form.state || result.form.soil}`
-    : 'Untitled analysis';
-  const displayName = current.name || autoName;
-
   useEffect(() => {
     if (!pick || status !== 'ready') return undefined;
-    const name = displayName;
     const timer = window.setTimeout(() => {
       setSaved((list) => {
         const twin = list.find((s) => formKey(s.form) === formKey(form));
         const id = current.id ?? twin?.id ?? crypto.randomUUID();
-        const snapshot = {
-          id,
-          name,
-          savedAt: new Date().toISOString(),
-          form,
-          pick: { crop: pick.crop, confidence: pick.confidence },
-        };
-        const prev = list.find((s) => s.id === id);
-        if (
-          prev &&
-          prev.name === snapshot.name &&
-          prev.pick.crop === snapshot.pick.crop &&
-          prev.pick.confidence === snapshot.pick.confidence &&
-          formKey(prev.form) === formKey(snapshot.form)
-        ) {
-          if (!current.id) queueMicrotask(() => setCurrent((c) => (c.id ? c : { ...c, id })));
-          return list;
-        }
         if (!current.id) queueMicrotask(() => setCurrent((c) => (c.id ? c : { ...c, id })));
+        const prev = list.find((s) => s.id === id);
+        if (prev && prev.name === displayName && prev.pick.crop === pick.crop && prev.pick.confidence === pick.confidence && formKey(prev.form) === formKey(form)) return list;
+        const snapshot = { id, name: displayName, savedAt: new Date().toISOString(), form, pick: { crop: pick.crop, confidence: pick.confidence } };
         return [snapshot, ...list.filter((s) => s.id !== id && formKey(s.form) !== formKey(form))];
       });
     }, 320);
     return () => window.clearTimeout(timer);
   }, [pick, status, form, displayName, current.id]);
 
-  const tabTitle = (t) => {
-    if (t.key === current.key) return displayName;
-    if (t.name) return t.name;
-    const match = saved.find((s) => s.id === t.id);
-    return match?.name || 'Untitled analysis';
-  };
-
   const open = (entry) => {
-    const existing = tabs.find((t) => t.id === entry.id);
-    if (existing) {
-      setActiveKey(existing.key);
-    } else {
-      const tab = createTab(meta, { id: entry.id, name: entry.name, form: entry.form });
-      setTabs((list) => [...list, tab]);
-      setActiveKey(tab.key);
-    }
+    setCurrent({ id: entry.id, name: entry.name, form: entry.form });
+    setSelectedId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const startNew = () => {
-    const tab = createTab(meta, { form: emptyForm(meta) });
-    setTabs((list) => [...list, tab]);
-    setActiveKey(tab.key);
-  };
-  const closeTab = (key) => {
-    if (tabs.length === 1) {
-      const tab = createTab(meta, { form: emptyForm(meta) });
-      setTabs([tab]);
-      setActiveKey(tab.key);
-      return;
-    }
-    const index = tabs.findIndex((t) => t.key === key);
-    const next = tabs.filter((t) => t.key !== key);
-    setTabs(next);
-    if (key === activeKey) setActiveKey(next[Math.max(0, index - 1)].key);
+    setCurrent({ id: null, name: '', form: emptyForm(meta) });
+    setSelectedId(null);
   };
   const remove = (id) => {
     setSaved((list) => list.filter((s) => s.id !== id));
-    setTabs((list) => list.map((t) => (t.id === id ? { ...t, id: null } : t)));
+    setCurrent((c) => (c.id === id ? { ...c, id: null } : c));
     try {
       if (localStorage.getItem(ACTIVE_KEY) === id) localStorage.removeItem(ACTIVE_KEY);
     } catch {
@@ -387,678 +717,375 @@ function Dashboard({ meta }) {
     }
   };
 
-  return (
-    <div className={`shell${sidebarOpen ? '' : ' is-collapsed'}`}>
-      {sidebarOpen && (
-        <aside className="sidebar">
-          <header className="sidebar-head">
-            <div className="brand">
-              <span className="brand-mark" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-                  <path
-                    d="M5 9.5c4-2.2 9.2-2.2 13.2 0 2.1 1.1 4.4 1.4 6.7.9"
-                    stroke="currentColor"
-                    strokeWidth="2.6"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M3.5 16.2c5-2.5 11.2-2.5 16.2 0 2.4 1.2 5.1 1.5 7.8.9"
-                    stroke="currentColor"
-                    strokeWidth="2.6"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M5.5 22.9c4.2-2.1 9.6-2.1 13.8 0 1.8.9 3.8 1.2 5.8.8"
-                    stroke="currentColor"
-                    strokeWidth="2.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              <span className="brand-name">AgroMind</span>
-            </div>
-          </header>
+  const fieldRow = (f) => <NumField key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} check={selected?.readings.find((r) => r.key === f.key)} cropName={selected?.crop.name} />;
 
-          <div className="sidebar-body">
-            <p className="sidebar-label" id="analyses-label">
-              Analyses
+  return (
+    <>
+      <h1 className="page-title">{t('advisory')}</h1>
+      <div className="grid-advisory">
+        <form
+          className="panel form-panel"
+          onSubmit={(e) => {
+            e.preventDefault();
+            resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          aria-labelledby="form-title"
+        >
+          <h2 className="panel-title" id="form-title">
+            <span>{t('fieldDetails')}</span>
+          </h2>
+          <div className="panel-body">
+            <p className="form-note">
+              Fields marked <span className="req">*</span> are mandatory. Current analysis: <strong>{displayName}</strong>
             </p>
-            <nav className="saved" aria-labelledby="analyses-label">
-              {saved.length === 0 ? (
-                <p className="saved-empty">Your field analyses will land here.</p>
-              ) : (
-                <ul>
-                  {saved.map((s) => (
-                    <SavedItem key={s.id} entry={s} active={s.id === current.id} cropName={meta.crops[s.pick.crop]?.name ?? s.pick.crop} onOpen={() => open(s)} onDelete={() => remove(s.id)} />
-                  ))}
-                </ul>
-              )}
-            </nav>
-          </div>
 
-          <div className="sidebar-end">
-            <button type="button" className="sidebar-new" onClick={startNew}>
-              <Add size={18} variant="Bold" color="currentColor" aria-hidden="true" />
-              New analysis
-            </button>
-            <button type="button" className="sidebar-foot" onClick={() => setDataOpen(true)}>
-              <span>{Object.keys(meta.crops).length} crops</span>
-              <span className="sidebar-foot-sep" aria-hidden="true" />
-              <span>{meta.rows.toLocaleString()} records</span>
-            </button>
-          </div>
-        </aside>
-      )}
-
-      {dataOpen && <DatasetModal meta={meta} onClose={() => setDataOpen(false)} />}
-
-      <div className="container">
-        <div className="app">
-          <ProjectTabs
-            tabs={tabs}
-            activeKey={current.key}
-            titleFor={tabTitle}
-            onSelect={setActiveKey}
-            onClose={closeTab}
-            onAdd={startNew}
-            sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen((o) => !o)}
-          />
-
-          <div className="panes">
-            <div className="workspace">
-          <main className="results">
-            {top ? (
-              <section className="panel panel-results">
-                <div className="metric-shell">
-                  <div className="metric-card bento">
-                    <article className={`bento-tile bento-confidence${top.confidence >= 0.7 ? ' is-strong' : ' is-weak'}`}>
-                      <header className="bento-head">
-                        <span className="bento-ico" aria-hidden="true">
-                          <PercentageCircle size={16} variant="Bold" color="currentColor" />
-                        </span>
-                        <span className="bento-label">Confidence</span>
-                      </header>
-                      <div className="bento-well">
-                        <strong className="bento-value">{pct(top.confidence)}</strong>
-                      </div>
-                      <footer className="bento-foot">
-                        <span className={`bento-pill${top.confidence >= 0.7 ? ' is-up' : ' is-down'}`}>
-                          {top.confidence >= 0.7 ? 'Strong fit' : 'Review'}
-                        </span>
-                        <span className="bento-hint">{top.crop.type}</span>
-                      </footer>
-                    </article>
-
-                    <article className="bento-tile bento-range">
-                      <header className="bento-head">
-                        <span className="bento-ico" aria-hidden="true">
-                          <TaskSquare size={16} variant="Bold" color="currentColor" />
-                        </span>
-                        <span className="bento-label">In range</span>
-                      </header>
-                      <div className="bento-well">
-                        <strong className="bento-value">
-                          {top.inRange}
-                          <small>/{top.readings.length}</small>
-                        </strong>
-                      </div>
-                      <footer className="bento-foot">
-                        <span className="kpi-marks bento-marks" aria-hidden="true">
-                          {top.readings.map((r) => (
-                            <i key={r.key} className={r.status === 'ok' ? 'ok' : 'off'} />
-                          ))}
-                        </span>
-                        <span className="bento-hint">readings</span>
-                      </footer>
-                    </article>
-
-                    <article className="bento-tile bento-sow">
-                      <header className="bento-head">
-                        <span className="bento-ico" aria-hidden="true">
-                          <Drop size={16} variant="Bold" color="currentColor" />
-                        </span>
-                        <span className="bento-label">Sow</span>
-                      </header>
-                      <div className="bento-well">
-                        <strong className="bento-value">{top.crop.sown}</strong>
-                      </div>
-                      <footer className="bento-foot">
-                        <span className="bento-pill">Window</span>
-                        <span className="bento-hint">Planting</span>
-                      </footer>
-                    </article>
-
-                    <article className="bento-tile bento-harvest">
-                      <header className="bento-head">
-                        <span className="bento-ico" aria-hidden="true">
-                          <Award size={16} variant="Bold" color="currentColor" />
-                        </span>
-                        <span className="bento-label">Harvest</span>
-                      </header>
-                      <div className="bento-well">
-                        <strong className="bento-value">{top.crop.harvested}</strong>
-                      </div>
-                      <footer className="bento-foot">
-                        <span className="bento-pill is-up">~{top.crop.duration_days}d</span>
-                        <span className="bento-hint">duration</span>
-                      </footer>
-                    </article>
-
-                    <article className={`bento-tile bento-soil${top.soilOk ? ' is-match' : ' is-weak'}`}>
-                      <header className="bento-head">
-                        <span className="bento-ico" aria-hidden="true">
-                          <Layer size={16} variant="Bold" color="currentColor" />
-                        </span>
-                        <span className="bento-label">Soil</span>
-                      </header>
-                      <div className="bento-well">
-                        <strong className="bento-value">{top.soilOk ? 'Match' : 'Weak'}</strong>
-                      </div>
-                      <footer className="bento-foot">
-                        <span className={`bento-pill${top.soilOk ? ' is-up' : ' is-down'}`}>{top.soilOk ? 'Fit' : 'Check'}</span>
-                        <span className="bento-hint">{result.form.soil}</span>
-                      </footer>
-                    </article>
-
-                    <article className="bento-tile bento-cal">
-                      <div className="overview-chart-head">
-                        <div>
-                          <h2 className="overview-crop">{top.crop.name}</h2>
-                          <p className="overview-sub">Recommended growing calendar for this field</p>
-                        </div>
-                        <p className="legend legend-inline" aria-hidden="true">
-                          <span>
-                            <i className="cal sow" /> Sow
-                          </span>
-                          <span>
-                            <i className="cal grow" /> Grow
-                          </span>
-                          <span>
-                            <i className="cal harvest" /> Harvest
-                          </span>
-                        </p>
-                      </div>
-                      <div className="overview-cal" aria-label={`${top.crop.name} growing window`}>
-                        <Calendar crop={top.crop} />
-                        {selected.id !== top.id && (
-                          <>
-                            <div className="overview-cal-label">{selected.crop.name}</div>
-                            <Calendar crop={selected.crop} />
-                          </>
-                        )}
-                      </div>
-                    </article>
-                  </div>
-                </div>
-
-                <div className="table-shell">
-                  <div className="table-card">
-                    <div className="crop-table" role="list" aria-label="Crops ranked for this field">
-                      <div className="crop-sticky">
-                        <div className="crop-row crop-head" aria-hidden="true">
-                          <span>#</span>
-                          <span>Crop</span>
-                          <span className="marks">
-                            {meta.fields.map((f) => (
-                              <span key={f.key}>{SHORT[f.key] ?? f.key}</span>
-                            ))}
-                          </span>
-                          <span className="fit">Fit</span>
-                        </div>
-                      </div>
-                      {rows.map((row, i) => (
-                        <CropRow
-                          key={row.id}
-                          row={row}
-                          rank={i + 1}
-                          isPick={i === 0}
-                          odd={i % 2 === 1}
-                          active={row.id === selected.id}
-                          onSelect={() => {
-                            setSelectedId(row.id);
-                            setDetailOpen(true);
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            ) : (
-              <EmptyState
-                meta={meta}
-                form={form}
-                done={numericDone + choicesDone}
-                total={totalInputs}
-                status={status}
-                message={message}
-                onFillSample={(id) => {
-                  setForm(sampleValues(meta, id));
-                  setSelectedId(null);
-                  setDetailOpen(false);
-                }}
+            <fieldset>
+              <legend>A. Location &amp; Season</legend>
+              <SelectField label="State" value={form.state} onChange={(v) => set('state', v)} options={meta.options.state.map((s) => [s, s])} />
+              <SelectField label="Season" value={form.season} onChange={(v) => set('season', v)} options={meta.options.season.map((s) => [s, `${SEASONS[s]?.name ?? s} (${SEASONS[s]?.months ?? ''})`])} />
+              <SelectField label="Soil type" value={form.soil} onChange={(v) => set('soil', v)} options={meta.options.soil.map((s) => [s, s])} />
+              <SelectField
+                label="Water source"
+                value={form.water_source}
+                onChange={(v) => set('water_source', v)}
+                options={meta.options.water_source.map((w) => [w, w === 'irrigated' ? 'Irrigated' : 'Rainfed'])}
               />
-            )}
-          </main>
+            </fieldset>
+
+            <fieldset>
+              <legend>B. Soil Test Values</legend>
+              {meta.fields.filter((f) => NUTRIENTS.includes(f.key)).map(fieldRow)}
+            </fieldset>
+
+            <fieldset>
+              <legend>C. Climate</legend>
+              {meta.fields.filter((f) => !NUTRIENTS.includes(f.key)).map(fieldRow)}
+            </fieldset>
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={!complete}>
+                {t('submit')}
+              </button>
+              <button type="button" className="btn btn-plain" onClick={startNew}>
+                {t('reset')}
+              </button>
             </div>
 
-      {detailOpen && selected && (
-        <CropDetailModal row={selected} isPick={selected.id === top?.id} form={result?.form ?? form} onClose={() => setDetailOpen(false)} />
-      )}
+            <div className="samples">
+              <span>Fill with a sample field:</span>
+              {SAMPLES.filter((s) => meta.crops[s]).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="link-btn"
+                  onClick={() => {
+                    setForm(sampleValues(meta, id));
+                    setSelectedId(null);
+                  }}
+                >
+                  {plainName(meta.crops[id])}
+                </button>
+              ))}
+            </div>
+          </div>
+        </form>
 
-      <form className="inputs" onSubmit={(e) => e.preventDefault()}>
-        <div className="inputs-shell">
-          <div className="inputs-card">
-            <section className="input-tile">
-              <header className="bento-head">
-                <span className="bento-ico" aria-hidden="true">
-                  <Location size={16} variant="Bold" color="currentColor" />
-                </span>
-                <span className="bento-label">State</span>
-              </header>
-              <div className="input-well">
-                <label className="state-select">
-                  <span className="visually-hidden">State</span>
-                  <select value={form.state} onChange={(e) => set('state', e.target.value)}>
-                    <option value="">Select state</option>
-                    {(meta.options.state ?? []).map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </section>
+        <div className="stack" ref={resultsRef}>
+          {top ? (
+            <>
+              <Panel title={`${t('recommended')}: ${top.crop.name}`} tone="green" id="rec-title">
+                <table className="kv">
+                  <tbody>
+                    <tr>
+                      <th scope="row">Recommended crop</th>
+                      <td>
+                        <strong className="big">{top.crop.name}</strong> ({top.crop.type})
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Model confidence</th>
+                      <td>
+                        <strong>{pct(top.confidence)}</strong> <span className={`tag ${top.confidence >= 0.7 ? 'tag-ok' : 'tag-warn'}`}>{top.confidence >= 0.7 ? 'Strong fit' : 'Review'}</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Readings in typical range</th>
+                      <td>
+                        {top.inRange} of {top.readings.length}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Soil suitability ({result.form.soil})</th>
+                      <td>{top.soilOk ? <span className="tag tag-ok">Suitable</span> : <span className="tag tag-warn">Not a usual soil for this crop</span>}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Sowing window</th>
+                      <td>{top.crop.sown}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Harvest window</th>
+                      <td>{top.crop.harvested}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Duration</th>
+                      <td>About {top.crop.duration_days} days</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Usually grown</th>
+                      <td className="cap">{top.crop.water_source}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                {status === 'loading' && <p className="muted">Updating…</p>}
+              </Panel>
 
-            <section className="input-tile">
-              <header className="bento-head">
-                <span className="bento-ico" aria-hidden="true">
-                  <CalendarIcon size={16} variant="Bold" color="currentColor" />
-                </span>
-                <span className="bento-label">Season</span>
-              </header>
-              <div className="input-well">
-                <Segmented
-                  label="Season"
-                  value={form.season}
-                  options={meta.options.season}
-                  render={(s) => (
-                    <>
-                      {SEASONS[s]?.name ?? s}
-                      <small>{SEASONS[s]?.months}</small>
-                    </>
-                  )}
-                  onChange={(v) => set('season', v)}
-                />
-              </div>
-            </section>
-
-            <section className="input-tile">
-              <header className="bento-head">
-                <span className="bento-ico" aria-hidden="true">
-                  <Layer size={16} variant="Bold" color="currentColor" />
-                </span>
-                <span className="bento-label">Soil type</span>
-              </header>
-              <div className="input-well">
-                <div className="chips" role="radiogroup" aria-label="Soil type">
-                  {meta.options.soil.map((s) => (
-                    <button key={s} type="button" role="radio" aria-checked={form.soil === s} className={`chip${form.soil === s ? ' is-on' : ''}`} onClick={() => set('soil', s)}>
-                      <span className={`swatch${SOIL_COLORS[s] ? '' : ' swatch-mixed'}`} style={{ background: SOIL_COLORS[s] ?? undefined }} aria-hidden="true" />
-                      {s}
-                    </button>
-                  ))}
+              <Panel title={t('calendar')}>
+                <div className="table-wrap">
+                  <table className="data cal-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Crop</th>
+                        {MONTHS.map((m) => (
+                          <th key={m} scope="col">
+                            {m}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <CalendarRow crop={top.crop} />
+                      {selected.id !== top.id && <CalendarRow crop={selected.crop} />}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            </section>
+                <p className="legend">
+                  <span>
+                    <i className="cal-sow">S</i> Sowing
+                  </span>
+                  <span>
+                    <i className="cal-grow">G</i> Growing
+                  </span>
+                  <span>
+                    <i className="cal-harvest">H</i> Harvest
+                  </span>
+                </p>
+              </Panel>
 
-            <section className="input-tile">
-              <header className="bento-head">
-                <span className="bento-ico" aria-hidden="true">
-                  <Chart size={16} variant="Bold" color="currentColor" />
-                </span>
-                <span className="bento-label">Nutrients</span>
-              </header>
-              <div className="input-well input-well-stack">
-                {meta.fields
-                  .filter((f) => NUTRIENTS.includes(f.key))
-                  .map((f) => (
-                    <BarInput key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} check={selected?.readings.find((r) => r.key === f.key)} />
-                  ))}
-              </div>
-            </section>
+              <Panel title={`${t('ranking')} — ${seasonName} season`}>
+                <div className="table-wrap">
+                  <table className="data rank-table">
+                    <caption className="visually-hidden">Crops ranked for this field. ✓ means the reading is inside the crop's typical range.</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">S.No.</th>
+                        <th scope="col">Crop</th>
+                        <th scope="col" className="hide-sm">
+                          Type
+                        </th>
+                        {meta.fields.map((f) => (
+                          <th key={f.key} scope="col" className="c" title={f.label}>
+                            {SHORT[f.key] ?? f.key}
+                          </th>
+                        ))}
+                        <th scope="col" className="num">
+                          Fit
+                        </th>
+                        <th scope="col">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, i) => {
+                        const fit = i === 0 ? row.confidence : row.inRange / row.readings.length;
+                        return (
+                          <tr key={row.id} className={row.id === selected.id ? 'is-selected' : undefined}>
+                            <td>{i + 1}</td>
+                            <td>
+                              {row.crop.name}
+                              {i === 0 && <span className="tag tag-ok">Model pick</span>}
+                            </td>
+                            <td className="hide-sm">{row.crop.type}</td>
+                            {row.readings.map((r) => (
+                              <td key={r.key} className={`c ${r.status === 'ok' ? 'ok' : 'off'}`} title={`${r.label}: ${advice(r, row.crop.name.toLowerCase())}`}>
+                                {r.status === 'ok' ? '✓' : '✗'}
+                              </td>
+                            ))}
+                            <td className="num">{pct(fit)}</td>
+                            <td>
+                              <button type="button" className="link-btn" onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted small">Fit = model confidence for the pick; share of readings in range for the others. ✓ inside typical range (10th–90th percentile), ✗ outside.</p>
+              </Panel>
 
-            <section className="input-tile">
-              <header className="bento-head">
-                <span className="bento-ico" aria-hidden="true">
-                  <CloudSunny size={16} variant="Bold" color="currentColor" />
-                </span>
-                <span className="bento-label">Climate &amp; water</span>
-              </header>
-              <div className="input-well input-well-stack">
-                {meta.fields
-                  .filter((f) => !NUTRIENTS.includes(f.key))
-                  .map((f) => (
-                    <BarInput key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} check={selected?.readings.find((r) => r.key === f.key)} />
-                  ))}
-                <Segmented label="Water source" value={form.water_source} options={meta.options.water_source} render={(w) => (w === 'irrigated' ? 'Irrigated' : 'Rainfed')} onChange={(v) => set('water_source', v)} />
-              </div>
-            </section>
-          </div>
-        </div>
-      </form>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-/* ── Pieces ───────────────────────────────────────────── */
-
-const TAB_MORPH = 'transform 340ms cubic-bezier(0.32, 0.72, 0, 1), width 340ms cubic-bezier(0.32, 0.72, 0, 1)';
-
-function ProjectTabs({ tabs, activeKey, titleFor, onSelect, onClose, onAdd, sidebarOpen, onToggleSidebar }) {
-  const listRef = useRef(null);
-  const tabRefs = useRef({});
-  const [glider, setGlider] = useState({ x: 0, width: 0, ready: false });
-  const [leaving, setLeaving] = useState(null);
-  const [fade, setFade] = useState({ left: false, right: false });
-
-  const measure = () => {
-    const list = listRef.current;
-    const el = tabRefs.current[activeKey];
-    if (el) {
-      const x = el.offsetLeft;
-      const width = el.offsetWidth;
-      setGlider((prev) => (prev.ready && prev.x === x && prev.width === width ? prev : { x, width, ready: true }));
-    }
-    if (list) {
-      const left = list.scrollLeft > 2;
-      const right = list.scrollLeft + list.clientWidth < list.scrollWidth - 2;
-      setFade((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
-    }
-  };
-
-  useLayoutEffect(() => {
-    measure();
-    const list = listRef.current;
-    if (!list) return undefined;
-    const ro = new ResizeObserver(() => measure());
-    ro.observe(list);
-    Object.values(tabRefs.current).forEach((node) => node && ro.observe(node));
-    list.addEventListener('scroll', measure, { passive: true });
-    return () => {
-      ro.disconnect();
-      list.removeEventListener('scroll', measure);
-    };
-  }, [tabs, activeKey, leaving]);
-
-  useLayoutEffect(() => {
-    const el = tabRefs.current[activeKey];
-    const list = listRef.current;
-    if (!el || !list) return;
-    const left = el.offsetLeft - 12;
-    const right = el.offsetLeft + el.offsetWidth + 12;
-    if (left < list.scrollLeft) list.scrollTo({ left: left, behavior: 'smooth' });
-    else if (right > list.scrollLeft + list.clientWidth) list.scrollTo({ left: right - list.clientWidth, behavior: 'smooth' });
-  }, [activeKey]);
-
-  const close = (key) => {
-    if (leaving) return;
-    if (tabs.length === 1) {
-      onClose(key);
-      return;
-    }
-    if (key === activeKey) {
-      const index = tabs.findIndex((t) => t.key === key);
-      const next = tabs[index + 1] ?? tabs[index - 1];
-      if (next) onSelect(next.key);
-    }
-    setLeaving(key);
-    window.setTimeout(() => {
-      onClose(key);
-      setLeaving(null);
-    }, 240);
-  };
-
-  return (
-    <div className="tabbar">
-      <button
-        type="button"
-        className={`tabbar-btn tabbar-toggle${sidebarOpen ? ' is-open' : ''}`}
-        onClick={onToggleSidebar}
-        aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-        aria-pressed={sidebarOpen}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <rect x="2.25" y="3.25" width="11.5" height="9.5" rx="2" stroke="currentColor" strokeWidth="1.4" />
-          <path d="M6.25 3.25v9.5" stroke="currentColor" strokeWidth="1.4" />
-        </svg>
-      </button>
-
-      <div className={`tabbar-scroll${fade.left ? ' has-left' : ''}${fade.right ? ' has-right' : ''}`}>
-        <div className="tabbar-tabs" ref={listRef} role="tablist" aria-label="Open analyses">
-          <div
-            className={`tab-glider${glider.ready ? ' is-ready' : ''}`}
-            aria-hidden="true"
-            style={{
-              width: Math.max(glider.width + 24, 24),
-              transform: `translate3d(${glider.x - 12}px, 0, 0)`,
-              transition: glider.ready ? TAB_MORPH : 'none',
-            }}
-          >
-            <svg className="tab-glider-curve is-left" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-              <path d="M12 0C12 6.627 6.627 12 0 12H12Z" />
-            </svg>
-            <div className="tab-glider-body" />
-            <svg className="tab-glider-curve is-right" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-              <path d="M12 0C12 6.627 6.627 12 0 12H12Z" />
-            </svg>
-          </div>
-
-          {tabs.map((t) => {
-            const active = t.key === activeKey;
-            const title = titleFor(t);
-            return (
-              <div
-                key={t.key}
-                ref={(node) => {
-                  if (node) tabRefs.current[t.key] = node;
-                  else delete tabRefs.current[t.key];
-                }}
-                className={`tab${active ? ' is-active' : ''}${leaving === t.key ? ' is-leaving' : ''}`}
-                role="presentation"
-              >
-                <button type="button" className="tab-hit" role="tab" aria-selected={active} onClick={() => onSelect(t.key)} title={title}>
-                  <span className="tab-label">{title}</span>
-                </button>
-                <button type="button" className="tab-close" onClick={() => close(t.key)} aria-label={`Close ${title}`}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-                    <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        <button type="button" className="tabbar-btn tabbar-add" onClick={onAdd} aria-label="New analysis">
-          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-            <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ meta, form, done, total, status, message, onFillSample }) {
-  const checks = [
-    { key: 'season', label: 'Season', done: Boolean(form.season) },
-    { key: 'state', label: 'State', done: Boolean(form.state) },
-    { key: 'soil', label: 'Soil type', done: Boolean(form.soil) },
-    { key: 'water_source', label: 'Water source', done: Boolean(form.water_source) },
-    ...meta.fields.map((f) => ({ key: f.key, label: f.label, done: form[f.key] !== '' })),
-  ];
-  const samples = SAMPLES.filter((s) => meta.crops[s]);
-  const remaining = total - done;
-  const isError = status === 'offline' || status === 'invalid';
-  const isLoading = status === 'loading';
-  const isReadyEmpty = done === total && !isLoading && !isError;
-
-  const title = isLoading ? 'Analysing your field…' : isError ? 'Couldn’t load a recommendation' : isReadyEmpty ? 'No recommendation yet' : 'Set up this field';
-  const body = isError
-    ? message
-    : isLoading
-      ? 'Matching crops to your readings.'
-      : isReadyEmpty
-        ? 'Adjust a value on the right to run the model again.'
-        : `${remaining} reading${remaining === 1 ? '' : 's'} left on the right. Or fill with a sample field to preview recommendations.`;
-  const Icon = isError ? Warning2 : isLoading ? StatusUp : isReadyEmpty ? InfoCircle : ClipboardText;
-  const pctDone = total ? Math.round((done / total) * 100) : 0;
-
-  return (
-    <div className="empty-shell">
-      <div className="empty-card">
-        <article className="empty-hero">
-          <span className={`empty-ico${isError ? ' is-warn' : ''}${isReadyEmpty ? ' is-info' : ''}`} aria-hidden="true">
-            <Icon size={22} variant="Bold" color="currentColor" />
-          </span>
-          <div className="empty-copy">
-            <h2>{title}</h2>
-            <p>{body}</p>
-          </div>
-          {!isError && (
-            <div className="empty-progress" aria-label={`${done} of ${total} values set`}>
-              <div className="empty-progress-meta">
-                <span>Progress</span>
-                <strong>
-                  {done}/{total}
-                </strong>
-              </div>
-              <div className="empty-progress-track">
-                <div className="empty-progress-fill" style={{ width: `${pctDone}%` }} />
-              </div>
-            </div>
+              <Panel title={`${t('readings')} — ${selected.crop.name}`}>
+                <div className="table-wrap">
+                  <table className="data">
+                    <thead>
+                      <tr>
+                        <th scope="col">Parameter</th>
+                        <th scope="col" className="num">
+                          Your value
+                        </th>
+                        <th scope="col" className="num">
+                          Typical range
+                        </th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Remark</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selected.readings.map((r) => (
+                        <tr key={r.key}>
+                          <td>{r.label}</td>
+                          <td className="num">{withUnit(fmt(r.v), r.unit)}</td>
+                          <td className="num">{range(r.lo, r.hi, r.unit)}</td>
+                          <td>{r.status === 'ok' ? <span className="tag tag-ok">In range</span> : <span className="tag tag-warn">{r.status === 'low' ? 'Low' : 'High'}</span>}</td>
+                          <td>{advice(r, selected.crop.name.toLowerCase())}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted small">
+                  Suitable soils: {selected.crop.soils.filter((s) => s !== 'Other').join(', ') || 'Varied'}
+                  {!selected.soilOk && ` (not usual for ${result.form.soil.toLowerCase()} soil)`}.
+                </p>
+              </Panel>
+            </>
+          ) : (
+            <Panel title="Result" tone={status === 'offline' || status === 'invalid' ? 'orange' : undefined}>
+              {status === 'offline' || status === 'invalid' ? (
+                <p className="error">{message}</p>
+              ) : status === 'loading' ? (
+                <p>Analysing your field…</p>
+              ) : (
+                <>
+                  <p>
+                    Fill in all {totalInputs} fields of the form to get a recommendation. <strong>{numericDone + choicesDone}</strong> of {totalInputs} filled.
+                  </p>
+                  <ul className="checklist">
+                    {[
+                      ['state', 'State'],
+                      ['season', 'Season'],
+                      ['soil', 'Soil type'],
+                      ['water_source', 'Water source'],
+                      ...meta.fields.map((f) => [f.key, f.label]),
+                    ].map(([k, label]) => (
+                      <li key={k} className={form[k] !== '' ? 'done' : ''}>
+                        {form[k] !== '' ? '✓' : '○'} {label}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </Panel>
           )}
-        </article>
-
-        {!isError && !isLoading && samples.length > 0 && (
-          <section className="empty-samples" aria-label="Fill with sample">
-            <header className="bento-head">
-              <span className="bento-ico" aria-hidden="true">
-                <StatusUp size={16} variant="Bold" color="currentColor" />
-              </span>
-              <span className="bento-label">Fill with sample</span>
-            </header>
-            <div className="empty-well">
-              <div className="empty-sample-grid">
-                {samples.map((id) => (
-                  <button key={id} type="button" className="empty-sample" onClick={() => onFillSample(id)}>
-                    <strong>{meta.crops[id].name.replace(/ \(.*\)$/, '')}</strong>
-                    <span>{SEASONS[meta.crops[id].season]?.name ?? meta.crops[id].season}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {!isError && !isLoading && (
-          <section className="empty-checklist" aria-label="Required readings">
-            <header className="bento-head">
-              <span className="bento-ico" aria-hidden="true">
-                <TaskSquare size={16} variant="Bold" color="currentColor" />
-              </span>
-              <span className="bento-label">Checklist</span>
-            </header>
-            <div className="empty-well">
-              <ul className="empty-checks">
-                {checks.map((item) => (
-                  <li key={item.key} className={`empty-check${item.done ? ' is-done' : ''}`}>
-                    <span className="empty-check-ico" aria-hidden="true">
-                      {item.done ? <TickCircle size={15} variant="Bold" color="currentColor" /> : <span className="empty-check-dot" />}
-                    </span>
-                    <span>{item.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        )}
+        </div>
       </div>
-    </div>
-  );
-}
 
-function SavedItem({ entry, active, cropName, onOpen, onDelete }) {
-  const [confirming, setConfirming] = useState(false);
-  return (
-    <li className={`saved-item${active ? ' is-active' : ''}`} onMouseLeave={() => setConfirming(false)}>
-      <button className="saved-open" onClick={onOpen} aria-current={active ? 'true' : undefined}>
-        <span className="saved-name">{entry.name}</span>
-        <span className="saved-sub">
-          {cropName} · {pct(entry.pick.confidence)} · {shortDate(entry.savedAt)}
-        </span>
-      </button>
-      <button
-        className={`saved-delete${confirming ? ' is-confirming' : ''}`}
-        onClick={() => (confirming ? onDelete() : setConfirming(true))}
-        onBlur={() => setConfirming(false)}
-        aria-label={confirming ? `Confirm delete ${entry.name}` : `Delete ${entry.name}`}
+      <Panel
+        title={`${t('saved')} (${saved.length})`}
+        actions={
+          <button type="button" className="btn btn-small" onClick={startNew}>
+            + New analysis
+          </button>
+        }
       >
-        {confirming ? (
-          'Delete'
+        {saved.length === 0 ? (
+          <p className="muted">No saved analyses yet. Each completed recommendation is saved here automatically (in this browser only).</p>
         ) : (
-          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">S.No.</th>
+                  <th scope="col">Analysis</th>
+                  <th scope="col">Crop</th>
+                  <th scope="col" className="num">
+                    Confidence
+                  </th>
+                  <th scope="col">Saved on</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {saved.map((s, i) => (
+                  <SavedRow key={s.id} index={i + 1} entry={s} active={s.id === current.id} cropName={meta.crops[s.pick.crop]?.name ?? s.pick.crop} onOpen={() => open(s)} onDelete={() => remove(s.id)} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </button>
-    </li>
+      </Panel>
+    </>
   );
 }
 
-// Full-bleed craft slider: drag the whole track, click snaps to deciles.
-function BarInput({ field, value, onChange, check }) {
+function SelectField({ label, value, onChange, options }) {
+  const id = `f-${label.toLowerCase().replace(/\W+/g, '-')}`;
+  return (
+    <div className="field">
+      <label htmlFor={id}>
+        {label} <span className="req">*</span>
+      </label>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} required>
+        <option value="">-- Select --</option>
+        {options.map(([v, text]) => (
+          <option key={v} value={v}>
+            {text}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function NumField({ field, value, onChange, check, cropName }) {
   const num = Number(value);
-  const set = value !== '' && !Number.isNaN(num);
-  const outside = check && set && (num < check.lo || num > check.hi);
-
+  const isSet = value !== '' && !Number.isNaN(num);
+  const outside = check && isSet && (num < check.lo || num > check.hi);
+  const id = `f-${field.key}`;
   return (
-    <div className={`bar-field${outside ? ' is-outside' : ''}${set ? '' : ' is-empty'}`}>
-      <Slider
-        label={field.label}
-        value={value}
-        min={field.min}
-        max={field.max}
-        step={field.step}
-        unit={field.unit}
-        onChange={onChange}
-        band={check ? [check.lo, check.hi] : null}
-        tone={outside ? 'warn' : null}
-      />
+    <div className={`field num-field${outside ? ' is-outside' : ''}`}>
+      <label htmlFor={id}>
+        {field.label}
+        {field.unit ? ` (${field.unit})` : ''} <span className="req">*</span>
+      </label>
+      <div className="num-row">
+        <input
+          type="range"
+          min={field.min}
+          max={field.max}
+          step={field.step}
+          value={isSet ? num : field.min}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={`${field.label} slider`}
+          tabIndex={-1}
+        />
+        <input id={id} type="number" min={field.min} max={field.max} step={field.step} value={value} onChange={(e) => onChange(e.target.value)} required />
+      </div>
+      <small className="hint">
+        Allowed {field.min}–{field.max}
+        {check && (
+          <>
+            {' '}
+            · Typical for {cropName}: {range(check.lo, check.hi, field.unit)}
+            {outside && <strong> (outside)</strong>}
+          </>
+        )}
+      </small>
     </div>
   );
 }
 
-function Segmented({ label, value, options, render, onChange }) {
-  return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
-      {options.map((o) => (
-        <button key={o} type="button" role="radio" aria-checked={value === o} className={value === o ? 'is-on' : ''} onClick={() => onChange(o)}>
-          {render(o)}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Calendar({ crop }) {
+function CalendarRow({ crop }) {
   const sow = new Set(crop.sow_months);
   const harvest = new Set(crop.harvest_months);
   const grow = new Set();
@@ -1069,173 +1096,57 @@ function Calendar({ crop }) {
     for (let m = (last + 1) % 12; m !== first; m = (m + 1) % 12) grow.add(m);
   }
   return (
-    <span className="months" role="img" aria-label={`Sow ${crop.sown}, harvest ${crop.harvested}`}>
+    <tr>
+      <th scope="row">{crop.name}</th>
       {MONTHS.map((label, m) => {
         const kind = sow.has(m) && harvest.has(m) ? 'both' : sow.has(m) ? 'sow' : harvest.has(m) ? 'harvest' : grow.has(m) ? 'grow' : 'idle';
+        const text = { both: 'S/H', sow: 'S', harvest: 'H', grow: 'G', idle: '' }[kind];
         return (
-          <span key={m} className={`cal ${kind}`}>
-            {label}
-          </span>
+          <td key={m} className={`c cal-${kind}`} title={`${label}: ${kind === 'idle' ? '—' : kind}`}>
+            {text}
+          </td>
         );
       })}
-    </span>
+    </tr>
   );
 }
 
-function CropRow({ row, rank, isPick, active, odd, onSelect }) {
-  const { crop, readings } = row;
-  const lower = crop.name.toLowerCase();
-  const fitPct = isPick ? row.confidence : readings.length ? row.inRange / readings.length : 0;
+function SavedRow({ index, entry, active, cropName, onOpen, onDelete }) {
+  const [confirming, setConfirming] = useState(false);
   return (
-    <div className={`crop-item${active ? ' is-active' : ''}${isPick ? ' is-pick' : ''}${odd ? ' is-odd' : ''}`} role="listitem">
-      <div className="crop-row">
-        <span className="rank">{rank}</span>
-        <span className="crop-name">
-          <button type="button" onClick={onSelect} aria-haspopup="dialog">
-            {crop.name}
+    <tr className={active ? 'is-selected' : undefined}>
+      <td>{index}</td>
+      <td>
+        {entry.name}
+        {active && <span className="tag">Open</span>}
+      </td>
+      <td>{cropName}</td>
+      <td className="num">{pct(entry.pick.confidence)}</td>
+      <td>{longDate(entry.savedAt)}</td>
+      <td className="actions">
+        <button type="button" className="link-btn" onClick={onOpen}>
+          Open
+        </button>
+        {confirming ? (
+          <>
+            <button type="button" className="link-btn danger" onClick={onDelete} aria-label={`Confirm delete ${entry.name}`}>
+              Confirm delete
+            </button>
+            <button type="button" className="link-btn" onClick={() => setConfirming(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button type="button" className="link-btn danger" onClick={() => setConfirming(true)} aria-label={`Delete ${entry.name}`}>
+            Delete
           </button>
-          <span className="crop-tags">
-            <small>{crop.type}</small>
-            {isPick && <span className="status-badge is-pick">Pick</span>}
-            {active && !isPick && <span className="status-badge is-open">Selected</span>}
-          </span>
-        </span>
-        <span className="marks" role="img" aria-label={`${row.inRange} of ${readings.length} readings in range`}>
-          {readings.map((r) => (
-            <span key={r.key} className={`mark ${r.status === 'ok' ? 'ok' : 'off'}`} title={`${r.label}: ${advice(r, lower)}`} />
-          ))}
-        </span>
-        <span className={`fit${isPick ? ' is-strong' : fitPct < 0.7 ? ' is-weak' : ''}`}>
-          {pct(fitPct)}
-        </span>
-      </div>
-    </div>
+        )}
+      </td>
+    </tr>
   );
 }
 
-function CropDetailModal({ row, isPick, form, onClose }) {
-  const { crop, readings } = row;
-  const lower = crop.name.toLowerCase();
-  const soils = crop.soils.filter((s) => s !== 'Other');
-  const titleRef = useRef(null);
-
-  useEffect(() => {
-    titleRef.current?.focus();
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div className="crop-modal" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="crop-modal-panel" role="dialog" aria-modal="true" aria-labelledby="crop-modal-title">
-        <header className="crop-modal-head">
-          <div className="crop-modal-title">
-            <p className="crop-modal-kicker">{isPick ? 'Top pick' : 'Crop detail'}</p>
-            <h2 id="crop-modal-title" ref={titleRef} tabIndex={-1}>
-              {crop.name}
-            </h2>
-            <p className="crop-modal-sub">
-              {crop.type}
-              {isPick ? ` · ${pct(row.confidence)} fit` : ` · ${pct(row.inRange / readings.length)} in range`}
-            </p>
-          </div>
-          <button type="button" className="crop-modal-close" onClick={onClose} aria-label="Close details">
-            <CloseCircle size={22} variant="Bold" color="currentColor" />
-          </button>
-        </header>
-
-        <div className="crop-modal-body detail-inner">
-          <section className="showcase-panel showcase-facts" aria-label="Growing profile">
-            <header className="showcase-head">
-              <h3>Growing profile</h3>
-              <p>Season window and field fit</p>
-            </header>
-            <div className="fact-grid">
-              <article className="fact-card">
-                <span className="fact-ico" aria-hidden="true">
-                  <Drop size={15} variant="Bold" color="currentColor" />
-                </span>
-                <div>
-                  <span className="fact-label">Sow</span>
-                  <strong className="fact-value">{crop.sown}</strong>
-                </div>
-              </article>
-              <article className="fact-card">
-                <span className="fact-ico" aria-hidden="true">
-                  <Award size={15} variant="Bold" color="currentColor" />
-                </span>
-                <div>
-                  <span className="fact-label">Harvest</span>
-                  <strong className="fact-value">{crop.harvested}</strong>
-                </div>
-              </article>
-              <article className="fact-card">
-                <span className="fact-ico" aria-hidden="true">
-                  <CalendarIcon size={15} variant="Bold" color="currentColor" />
-                </span>
-                <div>
-                  <span className="fact-label">Duration</span>
-                  <strong className="fact-value">~{crop.duration_days} days</strong>
-                </div>
-              </article>
-              <article className={`fact-card${row.soilOk ? '' : ' is-off'}`}>
-                <span className="fact-ico" aria-hidden="true">
-                  <Layer size={15} variant="Bold" color="currentColor" />
-                </span>
-                <div>
-                  <span className="fact-label">Soils</span>
-                  <strong className="fact-value">{soils.join(', ') || 'Varied'}</strong>
-                  {!row.soilOk && <span className="fact-note">Not ideal for {form.soil.toLowerCase()}</span>}
-                </div>
-              </article>
-              <article className="fact-card fact-card-wide">
-                <span className="fact-ico" aria-hidden="true">
-                  <Drop size={15} variant="Bold" color="currentColor" />
-                </span>
-                <div>
-                  <span className="fact-label">Usually</span>
-                  <strong className="fact-value">{crop.water_source}</strong>
-                </div>
-              </article>
-            </div>
-          </section>
-
-          <section className="showcase-panel showcase-readings" aria-label="Field readings">
-            <header className="showcase-head">
-              <h3>Field readings</h3>
-              <p>
-                {row.inRange}/{readings.length} within typical range
-              </p>
-            </header>
-            <ul className="reading-list">
-              {readings.map((r) => {
-                const ok = r.status === 'ok';
-                return (
-                  <li key={r.key} className={`reading-row${ok ? '' : ' is-off'}`}>
-                    <div className="reading-main">
-                      <span className="reading-label">{r.label}</span>
-                      <span className="reading-yours">{withUnit(fmt(r.v), r.unit)}</span>
-                    </div>
-                    <div className="reading-meta">
-                      <span className="reading-typical">Typical {range(r.lo, r.hi, r.unit)}</span>
-                      <span className={`reading-pill${ok ? ' is-up' : ' is-down'}`}>
-                        {ok ? <TickCircle size={13} variant="Bold" color="currentColor" /> : <Warning2 size={13} variant="Bold" color="currentColor" />}
-                        {ok ? 'In range' : advice(r, lower)}
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-}
+/* ── Dataset ──────────────────────────────────────────── */
 
 const DATA_PAGE = 80;
 
@@ -1257,27 +1168,12 @@ const DATA_HEADERS = {
 
 const DATA_NUM_COLS = new Set(['N', 'P', 'K', 'pH', 'temp', 'RH', 'rain_mm']);
 
-function DatasetModal({ meta, onClose }) {
-  const titleRef = useRef(null);
+function DatasetPage({ meta, t }) {
   const [crop, setCrop] = useState('');
   const [offset, setOffset] = useState(0);
   const [payload, setPayload] = useState(null);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    titleRef.current?.focus();
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1297,7 +1193,7 @@ function DatasetModal({ meta, onClose }) {
       } catch (err) {
         if (err.name === 'AbortError' || !alive) return;
         setStatus('error');
-        setError(err.message || `Can't reach ${API_BASE_URL}`);
+        setError(err.message || `Cannot reach ${API_BASE_URL}`);
       }
     })();
     return () => {
@@ -1312,29 +1208,51 @@ function DatasetModal({ meta, onClose }) {
   const to = Math.min(offset + (payload?.rows?.length ?? 0), total);
   const canPrev = offset > 0;
   const canNext = offset + DATA_PAGE < total;
+  const coverage = Object.entries(meta.coverage ?? {});
 
-  const modal = (
-    <div className="crop-modal data-modal" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="crop-modal-panel data-modal-panel" role="dialog" aria-modal="true" aria-labelledby="data-modal-title">
-        <header className="crop-modal-head">
-          <div className="crop-modal-title">
-            <p className="crop-modal-kicker">Training set</p>
-            <h2 id="data-modal-title" ref={titleRef} tabIndex={-1}>
-              Raw data
-            </h2>
-            <p className="crop-modal-sub">
-              Merged training set · {meta.rows.toLocaleString()} rows · {Object.keys(meta.crops).length} crops
-              {meta.sources?.length ? ` · ${meta.sources.join(' + ')}` : ''}
-            </p>
+  return (
+    <>
+      <h1 className="page-title">{t('dataset')}</h1>
+      <Panel title="Dataset Summary" tone="green">
+        <p>
+          The model is trained on a merged dataset of <strong>{meta.rows.toLocaleString('en-IN')}</strong> rows covering <strong>{crops.length}</strong> crops and{' '}
+          <strong>{meta.options.state.length}</strong> states.
+        </p>
+        {coverage.length > 0 && (
+          <div className="table-wrap">
+            <table className="data narrow">
+              <thead>
+                <tr>
+                  <th scope="col">S.No.</th>
+                  <th scope="col">Source</th>
+                  <th scope="col" className="num">
+                    Rows
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {coverage.map(([key, rows], i) => (
+                  <tr key={key}>
+                    <td>{i + 1}</td>
+                    <td>{meta.sources?.[i] ?? key}</td>
+                    <td className="num">{rows.toLocaleString('en-IN')}</td>
+                  </tr>
+                ))}
+                <tr className="total">
+                  <td />
+                  <th scope="row">Total</th>
+                  <td className="num">{meta.rows.toLocaleString('en-IN')}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <button type="button" className="crop-modal-close" onClick={onClose} aria-label="Close raw data">
-            <CloseCircle size={22} variant="Bold" color="currentColor" />
-          </button>
-        </header>
+        )}
+      </Panel>
 
-        <div className="data-modal-toolbar">
-          <label className="data-filter">
-            <span>Crop</span>
+      <Panel title={t('rawData')}>
+        <div className="toolbar">
+          <label className="inline-field">
+            <span>Filter by crop:</span>
             <select
               value={crop}
               onChange={(e) => {
@@ -1350,59 +1268,382 @@ function DatasetModal({ meta, onClose }) {
               ))}
             </select>
           </label>
-          <p className="data-range" aria-live="polite">
-            {status === 'ready' ? `${from.toLocaleString()}–${to.toLocaleString()} of ${total.toLocaleString()}` : '…'}
+          <p className="range-note" aria-live="polite">
+            {status === 'ready' ? `Showing ${from.toLocaleString('en-IN')}–${to.toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')} records` : '…'}
           </p>
-          <div className="data-pager">
-            <button type="button" className="btn" disabled={!canPrev || status === 'loading'} onClick={() => setOffset((o) => Math.max(0, o - DATA_PAGE))}>
-              Previous
+          <div className="pager">
+            <button type="button" className="btn btn-small" disabled={!canPrev || status === 'loading'} onClick={() => setOffset((o) => Math.max(0, o - DATA_PAGE))}>
+              « Previous
             </button>
-            <button type="button" className="btn" disabled={!canNext || status === 'loading'} onClick={() => setOffset((o) => o + DATA_PAGE)}>
-              Next
+            <button type="button" className="btn btn-small" disabled={!canNext || status === 'loading'} onClick={() => setOffset((o) => o + DATA_PAGE)}>
+              Next »
             </button>
           </div>
         </div>
 
-        <div className="data-modal-body">
-          {status === 'loading' && <p className="data-status">Loading rows…</p>}
-          {status === 'error' && <p className="data-status is-error">{error}</p>}
-          {status === 'ready' && payload?.rows?.length === 0 && <p className="data-status">No rows for this filter.</p>}
-          {status === 'ready' && payload?.rows?.length > 0 && (
-            <div className="data-table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
+        {status === 'loading' && <p>Loading rows…</p>}
+        {status === 'error' && <p className="error">{error}</p>}
+        {status === 'ready' && payload?.rows?.length === 0 && <p>No rows for this filter.</p>}
+        {status === 'ready' && payload?.rows?.length > 0 && (
+          <div className="table-wrap table-scroll">
+            <table className="data dense">
+              <thead>
+                <tr>
+                  <th scope="col">S.No.</th>
+                  {payload.columns.map((col) => (
+                    <th key={col} scope="col" className={DATA_NUM_COLS.has(col) ? 'num' : undefined}>
+                      {DATA_HEADERS[col] ?? col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {payload.rows.map((row, i) => (
+                  <tr key={`${offset}-${i}`}>
+                    <td>{offset + i + 1}</td>
                     {payload.columns.map((col) => (
-                      <th key={col} className={DATA_NUM_COLS.has(col) ? 'is-num' : undefined}>
-                        {DATA_HEADERS[col] ?? col}
-                      </th>
+                      <td key={col} className={DATA_NUM_COLS.has(col) ? 'num' : col === 'season' || col === 'water' ? 'cap' : undefined}>
+                        {row[col]}
+                      </td>
                     ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {payload.rows.map((row, i) => (
-                    <tr key={`${offset}-${i}`}>
-                      {payload.columns.map((col) => {
-                        let value = row[col];
-                        if (col === 'season' || col === 'water') value = String(row[col]).replace(/^./, (c) => c.toUpperCase());
-                        return (
-                          <td key={col} className={DATA_NUM_COLS.has(col) ? 'is-num' : undefined}>
-                            {value}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+    </>
+  );
+}
+
+/* ── Model Report ─────────────────────────────────────── */
+
+const LABELS = { v1: 'Model v1', v1_fixed: 'Model v1 (corrected)', v2: 'Model v2', v3: 'Model v3', loso: 'Leave-one-source-out validation', mcnemar: "McNemar's test", ece: 'ECE' };
+const label = (k) => LABELS[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+const isPlain = (v) => v === null || typeof v !== 'object';
+const cell = (v) => {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'number') return Number.isInteger(v) ? v.toLocaleString('en-IN') : v.toFixed(4);
+  if (Array.isArray(v)) return v.join(', ');
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+};
+
+function RowsTable({ rows, first }) {
+  const cols = [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((c) => c !== first);
+  return (
+    <div className="table-wrap">
+      <table className="data">
+        <thead>
+          <tr>
+            {first && <th scope="col">{label(first)}</th>}
+            {cols.map((c) => (
+              <th key={c} scope="col">
+                {label(c)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>
+              {first && <th scope="row">{label(String(r[first]))}</th>}
+              {cols.map((c) => (
+                <td key={c} className={typeof r[c] === 'number' ? 'num' : undefined}>
+                  {cell(r[c])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
+}
 
-  return createPortal(modal, document.body);
+// Render any results.json value: arrays of rows and {name: {metric: n}} maps become tables, flat maps become key/value tables.
+function ReportValue({ value }) {
+  if (isPlain(value)) return <p>{cell(value)}</p>;
+  if (Array.isArray(value)) return value.every((v) => v && typeof v === 'object') ? <RowsTable rows={value} /> : <p>{cell(value)}</p>;
+  const entries = Object.entries(value);
+  if (entries.every(([, v]) => isPlain(v) || Array.isArray(v))) {
+    return (
+      <table className="kv">
+        <tbody>
+          {entries.map(([k, v]) => (
+            <tr key={k}>
+              <th scope="row">{label(k)}</th>
+              <td>{cell(v)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  if (entries.every(([, v]) => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).every(isPlain))) {
+    return <RowsTable first="name" rows={entries.map(([k, v]) => ({ name: k, ...v }))} />;
+  }
+  return entries.map(([k, v]) => (
+    <div key={k} className="sub-section">
+      <h3>{label(k)}</h3>
+      <ReportValue value={v} />
+    </div>
+  ));
+}
+
+function ReportPage({ t }) {
+  const [info, setInfo] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/model-info`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setInfo)
+      .catch(() => setFailed(true));
+  }, []);
+
+  const { _placeholder, note, figures = [], meta: runMeta, ...sections } = research;
+  const order = ['improvement', 'v1', 'v1_fixed', 'models'];
+  const keys = [...order.filter((k) => k in sections), ...Object.keys(sections).filter((k) => !order.includes(k))];
+
+  return (
+    <>
+      <h1 className="page-title">{t('report')}</h1>
+      {_placeholder && (
+        <div className="notice notice-orange" role="note">
+          <strong>Placeholder data.</strong> {note}
+        </div>
+      )}
+
+      <Panel title="Deployed Model (live from server)" tone="green">
+        {info ? (
+          <table className="kv">
+            <tbody>
+              <tr>
+                <th scope="row">Algorithm</th>
+                <td>{info.model}</td>
+              </tr>
+              <tr>
+                <th scope="row">Input features</th>
+                <td>{info.features.join(', ')}</td>
+              </tr>
+              {Object.entries(info.metrics ?? {}).map(([k, v]) => (
+                <tr key={k}>
+                  <th scope="row">{label(k)}</th>
+                  <td>{k.includes('accuracy') ? `${(v * 100).toFixed(2)}%` : cell(v)}</td>
+                </tr>
+              ))}
+              <tr>
+                <th scope="row">Data sources</th>
+                <td>{info.sources.map((s) => `${s.name} (${s.rows.toLocaleString('en-IN')} rows)`).join('; ')}</td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          <p>{failed ? `Cannot reach the model server at ${API_BASE_URL}.` : 'Loading…'}</p>
+        )}
+      </Panel>
+
+      {runMeta && (
+        <Panel title="Experiment Setup">
+          <ReportValue value={runMeta} />
+        </Panel>
+      )}
+
+      {keys.map((k) => (
+        <Panel key={k} title={label(k)}>
+          <ReportValue value={sections[k]} />
+        </Panel>
+      ))}
+
+      <Panel title="Figures">
+        <div className="figures">
+          {(figures.length ? figures : [{ caption: 'Figure to be added' }]).map((f, i) => (
+            <figure key={i} className="figure">
+              {/* Figure images are served from frontend/public/research/. */}
+              {f.file ? <img src={`/research/${f.file.split('/').pop()}`} alt={f.caption} loading="lazy" /> : <div className="figure-empty">Figure {i + 1}</div>}
+              <figcaption>
+                Fig. {i + 1}: {f.caption}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+/* ── Static pages ─────────────────────────────────────── */
+
+function AboutPage() {
+  return (
+    <>
+      <h1 className="page-title">About the Project</h1>
+      <div className="grid-home">
+        <Panel title="Project Overview">
+          <p>
+            AgroMind is a final year project of the Department of {SITE.department}, {SITE.college}, session {SITE.session}. It applies machine learning to recommend crops for Indian
+            fields from soil test values, climate, soil type, season, water source and state.
+          </p>
+          <h3>Technology used</h3>
+          <table className="kv">
+            <tbody>
+              <tr>
+                <th scope="row">Frontend</th>
+                <td>React 18, Vite</td>
+              </tr>
+              <tr>
+                <th scope="row">Backend</th>
+                <td>Python, FastAPI</td>
+              </tr>
+              <tr>
+                <th scope="row">Model</th>
+                <td>scikit-learn Random Forest (see Model Report)</td>
+              </tr>
+              <tr>
+                <th scope="row">Data</th>
+                <td>Merged Indian crop datasets (see Dataset)</td>
+              </tr>
+            </tbody>
+          </table>
+        </Panel>
+        <Panel title="Project Team" tone="green">
+          <table className="data">
+            <thead>
+              <tr>
+                <th scope="col">S.No.</th>
+                <th scope="col">Name</th>
+                <th scope="col">Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SITE.team.map((name, i) => (
+                <tr key={name}>
+                  <td>{i + 1}</td>
+                  <td>{name}</td>
+                  <td>Student</td>
+                </tr>
+              ))}
+              <tr>
+                <td>{SITE.team.length + 1}</td>
+                <td>{SITE.guide}</td>
+                <td>Project Guide</td>
+              </tr>
+            </tbody>
+          </table>
+        </Panel>
+      </div>
+    </>
+  );
+}
+
+function ContactPage() {
+  return (
+    <>
+      <h1 className="page-title">Contact Us</h1>
+      <Panel title="Project Contact">
+        <table className="kv">
+          <tbody>
+            <tr>
+              <th scope="row">Department</th>
+              <td>Dept. of {SITE.department}</td>
+            </tr>
+            <tr>
+              <th scope="row">Institution</th>
+              <td>{SITE.college}</td>
+            </tr>
+            <tr>
+              <th scope="row">Address</th>
+              <td>{SITE.address}</td>
+            </tr>
+            <tr>
+              <th scope="row">Project guide</th>
+              <td>{SITE.guide}</td>
+            </tr>
+            <tr>
+              <th scope="row">E-mail</th>
+              <td>{SITE.email}</td>
+            </tr>
+            <tr>
+              <th scope="row">Phone</th>
+              <td>{SITE.phone}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="muted small">For farming queries, please contact your nearest Krishi Vigyan Kendra or state agriculture department.</p>
+      </Panel>
+    </>
+  );
+}
+
+function InfoPage({ route, t }) {
+  const body = {
+    disclaimer: (
+      <>
+        <p>
+          <strong>This is an academic project and is not an official Government of India website.</strong> It is not affiliated with, endorsed by or operated by any ministry,
+          department or government body.
+        </p>
+        <p>
+          Crop recommendations are produced by a machine-learning model for demonstration and evaluation purposes. They may be inaccurate and must not be used as the sole basis for
+          farming, financial or policy decisions. The project team accepts no liability for any loss arising from use of this website.
+        </p>
+      </>
+    ),
+    privacy: (
+      <>
+        <p>This website does not collect personal information and uses no cookies or analytics.</p>
+        <p>
+          Field values you enter are sent to the project's model server only to compute a recommendation and are not stored there. Saved analyses, display preferences and the visit
+          count are kept in your own browser (local storage) and can be removed by clearing site data.
+        </p>
+      </>
+    ),
+    help: (
+      <>
+        <table className="kv">
+          <tbody>
+            <tr>
+              <th scope="row">N, P, K</th>
+              <td>Nitrogen, phosphorus and potassium values from the soil test report (Soil Health Card).</td>
+            </tr>
+            <tr>
+              <th scope="row">Soil pH</th>
+              <td>Acidity / alkalinity of the soil, 3–10.</td>
+            </tr>
+            <tr>
+              <th scope="row">Temperature, Humidity</th>
+              <td>Average temperature (°C) and relative humidity (%) during the growing season.</td>
+            </tr>
+            <tr>
+              <th scope="row">Seasonal rainfall</th>
+              <td>Total rainfall expected over the season, in mm.</td>
+            </tr>
+            <tr>
+              <th scope="row">Season</th>
+              <td>Kharif (Jun–Oct), Rabi (Oct–Mar), Zaid (Mar–Jun).</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Use the A-, A, A+ buttons at the top to change text size, and the contrast button for a high-contrast view.</p>
+      </>
+    ),
+    sitemap: (
+      <ul className="link-list">
+        {[...PAGES, ...INFO_PAGES].map((p) => (
+          <li key={p}>
+            <a href={p === 'home' ? '#/' : `#/${p}`}>{t(p)}</a>
+          </li>
+        ))}
+      </ul>
+    ),
+  }[route];
+  return (
+    <>
+      <h1 className="page-title">{t(route)}</h1>
+      <Panel title={t(route)}>{body}</Panel>
+    </>
+  );
 }
 
 export default App;

@@ -1,0 +1,19 @@
+{
+  "_placeholder": true,
+  "note": "These tables are empty until the research notebook publishes docs/research/results.json; copy that file over frontend/src/research.json (and its figures into frontend/public/research/).",
+  "improvement": [
+    { "metric": "Accuracy", "v1": null, "v2": null, "note": null },
+    { "metric": "Macro F1", "v1": null, "v2": null, "note": null },
+    { "metric": "Top-3 accuracy", "v1": null, "v2": null, "note": null }
+  ],
+  "models": {
+    "Random Forest": { "accuracy_mean": null, "macro_f1_mean": null, "top3_mean": null, "fit_seconds": null },
+    "Logistic Regression": { "accuracy_mean": null, "macro_f1_mean": null, "top3_mean": null, "fit_seconds": null },
+    "Decision Tree": { "accuracy_mean": null, "macro_f1_mean": null, "top3_mean": null, "fit_seconds": null }
+  },
+  "figures": [
+    { "file": null, "caption": "Confusion matrix (to be added)" },
+    { "file": null, "caption": "Feature importance (to be added)" },
+    { "file": null, "caption": "Model comparison (to be added)" }
+  ]
+}
