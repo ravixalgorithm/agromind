@@ -1,0 +1,106 @@
+  @page { size: A4; margin: 13mm 14mm 14mm; }
+  :root {
+    --ink: #1d1b18;
+    --muted: #5b564e;
+    --maroon: #7a1d1d;
+    --green: #2f5d34;
+    --rule: #b9ae9b;
+    --tint: #f4efe4;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; background: #fff; color: var(--ink);
+    font: 9.6pt/1.42 "Source Serif 4", Georgia, "Times New Roman", serif;
+    hyphens: auto; text-align: justify;
+  }
+  .page { width: 182mm; margin: 0 auto; }
+  .page + .page { break-before: page; }
+  h1, h2, h3 { text-align: left; hyphens: manual; }
+
+  /* masthead */
+  .mast { text-align: center; border-bottom: 3px double var(--maroon); padding-bottom: 2.5mm; }
+  .mast .inst { display: flex; align-items: center; justify-content: center; gap: 4mm;
+    font: 600 8.6pt/1.3 "Source Serif 4", serif; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .crest { width: 13mm; height: 13mm; border: 1.2px solid var(--maroon); border-radius: 50%;
+    display: grid; place-items: center; font: 600 6pt/1.1 "Source Serif 4", serif; color: var(--maroon); text-align: center; }
+  .mast h1 { text-align: center; margin: 1.5mm 0 0; font: 900 40pt/1 "Playfair Display", Georgia, serif; color: var(--maroon); letter-spacing: .01em; }
+  .mast h1 span { color: var(--green); }
+  .mast .tag { margin: 1mm 0 0; font-style: italic; color: var(--muted); }
+  .dateline { display: flex; justify-content: space-between; border-bottom: 1px solid var(--ink);
+    padding: 1.2mm 0; font: 600 8pt/1 "Source Serif 4", serif; letter-spacing: .08em; text-transform: uppercase; }
+  .runhead { display: flex; justify-content: space-between; border-bottom: 1px solid var(--maroon);
+    padding-bottom: 1.2mm; margin-bottom: 3mm; font: 600 7.6pt/1 "Source Serif 4", serif;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--maroon); }
+
+  /* type */
+  .kicker { font: 700 7.6pt/1 "Source Serif 4", serif; letter-spacing: .12em; text-transform: uppercase; color: var(--green); margin: 0 0 1mm; }
+  h2 { font: 700 15pt/1.15 "Playfair Display", Georgia, serif; margin: 0 0 2mm; color: var(--ink); }
+  h2.lead { font-size: 21pt; margin-top: 3mm; }
+  h3 { font: 700 10.4pt/1.25 "Source Serif 4", serif; margin: 2.5mm 0 1mm; color: var(--maroon); }
+  p { margin: 0 0 1.6mm; }
+  .standfirst { font-size: 11pt; line-height: 1.4; font-style: italic; color: var(--muted); text-align: left; margin-bottom: 3mm; }
+  .cols { column-count: 2; column-gap: 7mm; column-rule: .6px solid var(--rule); }
+  .cols3 { column-count: 3; column-gap: 6mm; column-rule: .6px solid var(--rule); }
+  .cols h3:first-child, .cols3 h3:first-child { margin-top: 0; }
+  .drop::first-letter { float: left; font: 700 30pt/.85 "Playfair Display", serif; color: var(--maroon); padding: 1mm 1.5mm 0 0; }
+  section { margin-bottom: 4mm; }
+  .sep { border: 0; border-top: 1px solid var(--rule); margin: 3.5mm 0; }
+  sup, .cite { font-size: 7.4pt; color: var(--maroon); }
+  ul { margin: 0 0 1.6mm; padding-left: 4.5mm; }
+  li { margin-bottom: .6mm; }
+  .avoid { break-inside: avoid; }
+
+  /* boxes */
+  .box { border: 1.2px solid var(--maroon); background: var(--tint); padding: 3mm 3.5mm; break-inside: avoid; }
+  .box h3 { margin-top: 0; }
+  .box-title { margin: -3mm -3.5mm 2.5mm; padding: 1.4mm 3.5mm; background: var(--maroon); color: #fff;
+    font: 700 8.4pt/1 "Source Serif 4", serif; letter-spacing: .1em; text-transform: uppercase; }
+  .inissue { font-size: 8.8pt; }
+  .inissue ol { padding-left: 4mm; margin: 0; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 8.6pt; text-align: left; }
+  th, td { padding: 1.1mm 1.6mm; border-bottom: .6px solid var(--rule); vertical-align: top; }
+  thead th { border-bottom: 1.2px solid var(--ink); font-weight: 700; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.best td { font-weight: 700; }
+  .lit td, .lit th { font-size: 7.8pt; padding: .9mm 1.2mm; }
+
+  figure { margin: 0 0 3mm; break-inside: avoid; }
+  figure img { width: 100%; display: block; border: .6px solid var(--rule); }
+  figcaption { font-size: 7.8pt; line-height: 1.3; color: var(--muted); margin-top: 1mm; text-align: left; }
+  figcaption b { color: var(--ink); }
+  .figrow { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+
+  .quote { border-left: 3px solid var(--green); padding: 1mm 0 1mm 3mm; font-style: italic; color: var(--muted); margin: 2mm 0; text-align: left; }
+  .team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; text-align: center; font-size: 8.6pt; }
+  .team div { border: .6px solid var(--rule); padding: 1.4mm 1mm; }
+  .team b { display: block; font-size: 9pt; }
+  .refs { font-size: 6.7pt; line-height: 1.2; column-count: 3; column-gap: 5mm; hyphens: auto; text-align: left; }
+  .refs p { overflow-wrap: anywhere; margin: 0 0 1mm; padding-left: 6mm; text-indent: -6mm; break-inside: avoid; }
+  .foot { margin-top: 3mm; border-top: 3px double var(--maroon); padding-top: 1.5mm; font-size: 7.6pt; color: var(--muted); text-align: center; }
+  table.kr th, table.kr td { font-size: 8.2pt; padding: .9mm 1.4mm; }
+  table.kr tbody th { font-weight: 700; color: var(--maroon); width: 22%; }
+  table.kr small { color: var(--muted); font-size: 7pt; }
+  tr.best td { font-weight: 700; }
+  .fw { font-size: 8.8pt; text-align: left; } .fw ul { margin: 0; } .fw li { break-inside: avoid; }
+  .note { font-size: 7.6pt; color: var(--muted); margin: 1.5mm 0 0; text-align: left; }
+  code { font-size: .92em; }
+  .inissue-row { margin-top: 3mm; padding-top: 1.5mm; border-top: 1px solid var(--rule); font-size: 8.4pt; color: var(--muted); text-align: center; }
+  /* v4 layout */
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; align-items: start; margin-top: 3mm; }
+  .duo figure { margin: 0; }
+  .duo figure img { border: .6px solid var(--rule); }
+  .box ul { margin: 0; padding-left: 4mm; text-align: left; }
+  .box li { margin-bottom: 1mm; }
+  .why { font-size: 8.8pt; line-height: 1.35; }
+  table.mc th, table.mc td { font-size: 8.2pt; padding: .9mm 1.3mm; }
+  table.gaps td { font-size: 8.2pt; padding: .7mm 1.2mm; }
+  .cols1 p { font-size: 9pt; }
+  .limits { font-size: 8.8pt; line-height: 1.35; }
+  .limits ul.cols { column-count: 2; column-gap: 7mm; padding-left: 4mm; }
+  .limits li { break-inside: avoid; }
+  table.kr th:first-child { width: 15%; }
+  ul.cols, ul.fw, .limits ul.cols { column-rule: none; }
+  sup { line-height: 0; }
+  .note sup { color: inherit; font-size: 75%; }

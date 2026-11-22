@@ -1,0 +1,19 @@
+% Related-work paragraph on 2024--2026 crop recommenders, generated from docs/research/related_work.json
+% (gap counts computed from the gap codes there; every claim is quoted with section/table in docs/research/RECENT_WORK.md).
+% Bib keys are in docs/research/references.bib ([39]--[51] there); dey2024 and sam2025 already exist.
+
+\textbf{Recent crop recommenders (2024--2026).} We read the full text of 15 recent papers
+\cite{dey2024,senapaty2024,sam2025,ahmed2025,afzal2025,shastri2025,singh2025,gunasekaran2025,bakr2025,piyar2026,mahesh2026,latha2026,reddy2026,sharma2026,pandey2026}. Their models span voting and stacking ensembles \cite{ahmed2025,afzal2025,gunasekaran2025},
+gradient boosting explained with SHAP or LIME \cite{shastri2025,sharma2026}, a CatBoost surrogate of an expert
+suitability score \cite{mahesh2026}, transformer, CNN--LSTM and LLM classifiers \cite{bakr2025,piyar2026,latha2026,pandey2026},
+and deep Q-learning \cite{reddy2026}. Nine of the 15 report their headline on the Kaggle crop table
+\cite{ingle2020kaggle} or a variant of it \cite{dey2024,ahmed2025,afzal2025,shastri2025,gunasekaran2025,bakr2025,piyar2026,latha2026,pandey2026}, where accuracies cluster at 98--99.6\% whatever the model;
+a Random Forest with two trees already reaches 96\% F1 \cite{afzal2025}. Thirteen use only random
+splits. The exceptions are a chronological split, under which Random Forest falls from 99.96\% to 78.55\% \cite{sam2025},
+and 250\,m spatial blocks \cite{reddy2026}; none holds out states or regions. Thirteen never check whether
+the recommended crop yields well, all fifteen give no per-prediction uncertainty or prediction set,
+eleven report no significance test, and four describe preprocessing, feature
+selection or tuning that used the test data \cite{singh2025,piyar2026,latha2026,reddy2026}. Only one links its code
+\cite{reddy2026}. Because these papers score accuracy over crop labels rather than whether the best-yielding crop
+is ranked first, their numbers are not directly comparable with ours. Instead, we retrain the classifier families they use
+on our data and splits (see Method).
