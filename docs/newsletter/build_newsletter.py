@@ -132,6 +132,15 @@ def cite(*ns):
     return '<span class="cite">' + ", ".join(f"[{n}]" for n in ns) + "</span>"
 
 
+# ---------------------------------------------------------------- team (from the lead, 2026-11-23)
+UNIV = "Harcourt Butler Technical University (HBTU), Kanpur"
+DEPT = "Department of Computer Science and Engineering"
+PROGRAMME = "B.Tech, Computer Science and Engineering · Semester VII · Academic session 2026–27"
+SUPERVISOR = ("Dr. Imran Khan", "Dept. of CSE, HBTU Kanpur")
+TEAM = [("Rajat Patel", "230104046"), ("Harshit Jain", "230104023"), ("Sanyam Jain", "230104055"), ("Ravi Pratap Singh", "230104047")]
+CONTACT = ("230104047@hbtu.ac.in", "Ravi Pratap Singh")
+TEAM_HTML = "\n".join(f"    <div><b>{n}</b>Roll No. {r}</div>" for n, r in TEAM)
+
 # ---------------------------------------------------------------- page content
 GAP_TABLE = "\n".join(f"<tr><td>{GAP_LABEL[c]}</td><td class=\"num\">{GAPS[c]} / {NPAPERS}</td></tr>" for c in CODES)
 MC = method_rows()
@@ -144,9 +153,7 @@ BODY = f"""
 <div class="page">
   <header class="mast">
     <div class="inst">
-      <div class="crest">College<br>Crest</div>
-      <div>[College Name] · Department of [Department Name]<br>[University Name], [City]</div>
-      <div class="crest">Dept.<br>Logo</div>
+      <div>{UNIV}<br>{DEPT}</div>
     </div>
     <h1>Agro<span>Mind</span> Bulletin</h1>
     <p class="tag">A newsletter on data-driven crop recommendation for Indian fields</p>
@@ -349,15 +356,12 @@ BODY = f"""
   <div class="runhead"><span>AgroMind Bulletin</span><span>Team · References</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
   <p class="kicker">The Team</p>
   <div class="team avoid">
-    <div><b>[Guide Name]</b>Project Guide<br>[Designation]</div>
-    <div><b>[Student Name 1]</b>[Roll No.]<br>Model &amp; data</div>
-    <div><b>[Student Name 2]</b>[Roll No.]<br>Backend &amp; API</div>
-    <div><b>[Student Name 3]</b>[Roll No.]<br>Frontend &amp; UI</div>
+{TEAM_HTML}
   </div>
-  <p style="margin-top:2mm;font-size:8.4pt;text-align:center">Head of Department: <b>[HoD Name]</b> · Project
-    Coordinator: <b>[Coordinator Name]</b> · Contact: [email@college.edu]</p>
+  <p style="margin-top:2mm;font-size:8.4pt;text-align:center">Project supervisor: <b>{SUPERVISOR[0]}</b>, {SUPERVISOR[1]}<br>
+    {PROGRAMME}<br>Contact: {CONTACT[0]} ({CONTACT[1]})</p>
   <p style="font-size:7.4pt;line-height:1.3;color:var(--muted);text-align:center"><i>Disclaimer:</i> AgroMind is an academic
-    project. Recommendations are for education and demonstration only and are not validated agronomic advice.
+    project, not an official Government of India service. Recommendations are for education and demonstration only and are not validated agronomic advice.
     Paper in preparation: "Beyond 99%: Yield-Grounded Crop Ranking with Conformal Prediction Sets, Evaluated on Unseen
     Indian States and Years", targeting IATMSI-2027 (IEEE).</p>
 
@@ -368,7 +372,7 @@ BODY = f"""
   <div class="refs">
     {{REFS}}
   </div>
-  <div class="foot">AgroMind Bulletin · [College Name], Department of [Department Name] · Vol. 1, Issue 1 · November 2026<br>
+  <div class="foot">AgroMind Bulletin · {DEPT}, {UNIV} · Vol. 1, Issue 1 · November 2026<br>
     Built by docs/newsletter/build_newsletter.py from docs/research/results.json</div>
 </div>
 """
