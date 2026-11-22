@@ -175,6 +175,11 @@ def main():
     import run
     d = run.load()
     cold = d.groupby("qid").lag1_pct.apply(lambda x: x.isna().any())
+    nc = d.groupby("qid").size()
+    qs = d.groupby("qid")[["state", "year"]].first()
+    ws = st.iid.idxmin()  # worst-covered state under leave-states-out
+    mac |= {"MedianCand": f"{nc.median():.0f}", "MaxCand": f"{nc.max()}", "MeanCand": f"{nc.mean():.1f}",
+            "WorstFirstYear": f"{qs[qs.state == ws].year.min()}", "WorstCand": f"{nc[qs.state == ws].mean():.1f}"}
     P = pd.read_parquet(RES / f"per_query_{TAG}.parquet")
     P["cold"] = P.qid.map(cold)
     for p, ab in zip(PROTO, ("R", "LSO", "LYO")):
@@ -207,6 +212,10 @@ def main():
     for p, ab in zip(PROTO, ("R", "LSO", "LYO")):
         for m, k in (("RandomForest [8,21]", "RF"), ("MLP [13]", "MLP"), ("GaussianNB [6,12]", "NB"), ("XGBoost [11,22]", "XGB")):
             mac[f"{k}Hit{ab}"] = f"{100*met[p][m]['mean']['hit@1']:.1f}"
+    sc = meta["soil_coverage"]
+    tot = sum(sc.values())
+    mac["SoilOwnPct"] = f"{100*sc.get('soilgrids_centroid', 0)/tot:.1f}"
+    mac["SoilMedPct"] = f"{100*sc.get('state_median', 0)/tot:.1f}"
     for p, ab in zip(PROTO, ("R", "LSO", "LYO")):
         mac[f"PriorHit{ab}"] = f"{100*met[p]['Crop prior']['mean']['hit@1']:.1f}"
     clf = [m for m in models if "[" in m]

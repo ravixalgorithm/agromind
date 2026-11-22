@@ -3,3 +3,4 @@ __pycache__/
 results/*.parquet
 results/*quick*
 lit_raw.json
+results/prev_interim/

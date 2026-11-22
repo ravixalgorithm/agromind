@@ -146,20 +146,22 @@ Ref. & Data & Split & Metric & Reported \\
 
 \textbf{Crop statistics.} District-wise, season-wise area and production published by the
 Directorate of Economics and Statistics, Ministry of Agriculture \& Farmers Welfare
-\cite{ogdindia}, crop years 1997-98 to 2020-21 (a 1997--2021 compilation cross-checked row-wise
-against the official API). Yield is production/area. Records with area below 100\,ha are dropped
+\cite{desagri,ogdindia}, crop years 1997-98 to 2022-23, downloaded from the official DES
+portal. On the 333,468 district-season-crop rows it shares with a widely used public
+1997--2021 compilation \cite{pyatakov2023}, area and production agree in 99.88\% of rows. Yield
+is production/area. Records with area below 100\,ha are dropped
 as noisy. Crop names are folded to \NCrops{} slugs.
 
 \textbf{Climate and soil.} Each of \NDistricts{} APY district names is matched to a district
 polygon centroid. NASA POWER monthly temperature, relative humidity and corrected precipitation
 \cite{nasapower,sparks2018} are aggregated over each season's months (e.g.\ Kharif Jun--Oct). Soil
 pH, total N, organic carbon, clay, sand and CEC (0--30\,cm) come from SoilGrids 2.0
-\cite{poggio2021} at the centroid. In this version soil is available for only part of the
-districts (state medians elsewhere). We flag this as a limitation and rerun when coverage is
-complete.
+\cite{poggio2021} at the centroid. For \SoilOwnPct\% of rows the soil comes from the
+district's own SoilGrids point. The rest (districts whose centroid returned no data) use the
+state median.
 
 \textbf{Task.} A \emph{query} is one district $\times$ season $\times$ year. Its
-\emph{candidates} are the crops actually grown there (median 5, max 27). The relevance of crop $c$
+\emph{candidates} are the crops actually grown there (median \MedianCand, max \MaxCand). The relevance of crop $c$
 in query $q$ is its \emph{yield percentile}: the rank of its yield among all districts that grew
 $c$ that year, scaled to $[0,1]$. Percentiles make yields comparable across crops with very
 different units (t/ha of sugarcane vs pulses) and express comparative advantage. The
@@ -222,7 +224,7 @@ folds) between YieldRank and each baseline.
 accuracy (Gaussian NB \KaggleNB\%), matching the literature. On real district data, even under a
 random split, the best classifier (\BaseNameR) puts the best-yielding crop first in only
 \BaseHitR\% of district-season-years (Table~\ref{tab:rank}). Per-query candidate lists are
-short (about six crops), yet the task is far from trivial: ranking by each crop's average
+short (\MeanCand{} crops on average), yet the task is far from trivial: ranking by each crop's average
 percentile (crop prior) gets only \PriorHitR\%.
 
 \textbf{Spatial shift hurts classifiers most.} Moving from random to leave-states-out, Random
@@ -258,9 +260,7 @@ Environmental features alone thus carry little \emph{transferable} signal about 
 yields best, and history does most of the work. Dropping soil does the opposite of what
 random splits suggest: it lowers random-split Hit@1 (RF \NSRFHitR\% vs \RFHitR\%) but raises
 it on held-out states (RF \NSRFHitLSO\% vs \RFHitLSO\%; XGBoost \NSXGBHitLSO\% vs
-\XGBHitLSO\%). Soil, mostly a state median in this version, acts as a location proxy that
-the classifiers overfit, as Meyer et al.\ warn \cite{meyer2019}. YieldRank barely changes
-(\NSOursHitLSO\% vs \OursHitLSO\%).
+\XGBHitLSO\%). \SOILSENTENCE
 
 \begin{table}[t]
 \caption{YieldRank on held-out states: 90\% LAC sets under different calibration schemes
@@ -272,7 +272,7 @@ coverage, and worst state coverage).}
 \end{table}
 
 \textbf{Conformal sets.} With i.i.d.\ calibration, YieldRank's 90\% LAC sets keep near-nominal
-\emph{marginal} coverage on unseen states (\CovIIDLSO\%, \SizeIIDLSO{} crops of about six;
+\emph{marginal} coverage on unseen states (\CovIIDLSO\%, \SizeIIDLSO{} crops of \MeanCand{} on average;
 Table~\ref{tab:conf}). The classifiers' sets do not: Random Forest covers only \RFCovIIDMean\%
 (\RFCovIIDMin--\RFCovIIDMax\% across folds). Calibrating on held-out training states restores
 it to \RFCovGRPMean\% (\RFCovGRPMin--\RFCovGRPMax\%). Its confidence learned on seen states is
@@ -282,9 +282,7 @@ then its sets are much larger than YieldRank's at similar coverage (\RFSizeGRPLS
 more informative sets. Marginal
 coverage hides state-level failures, though (Fig.~\ref{fig:cov}). The median state is covered
 at \MedianStateCovIID\%, but \StatesBelowIID{} of \StatesN{} states fall below 85\%, worst
-\WorstState{} (\WorstIID\%). Telangana has records only from 2013 (it was formed in 2014) and
-about nine candidate crops per query against six on average, so its queries are harder than
-the calibration pool. Table~\ref{tab:conflso} compares remedies. Pooling all training states through cross-group calibration (out-of-fold
+\WorstState{} (\WorstIID\%). \WORSTSENTENCE Table~\ref{tab:conflso} compares remedies. Pooling all training states through cross-group calibration (out-of-fold
 scores from rankers that never saw the state) keeps marginal coverage at \CCLACCovLSO\% but
 leaves \CCWorstState{} at \CCWorstCov\%. A Mondrian threshold per number of candidate crops,
 which is known before predicting, lifts the worst state to \MNWorstCov\% (Telangana
@@ -336,10 +334,10 @@ measures comparative advantage, not profit or risk. MSP/cost-of-cultivation and 
 constraints \cite{sam2025,devineni2022,dangar2024} are natural re-ranking terms that we leave to
 future work. (iii) Climate and soil are taken at district centroids. Season weather is the
 \emph{realised} one, as in prior work, whereas a deployed system would use forecasts. Soil
-currently comes from the district's own SoilGrids point for about a fifth of rows and a state
-median elsewhere. (iv) Conformal guarantees assume exchangeability of states. India's states
+is a single SoilGrids point per district (a state median for \SoilMedPct\% of rows), not a
+field measurement such as a Soil Health Card. (iv) Conformal guarantees assume exchangeability of states. India's states
 differ in size and history, and our per-state audit shows the guarantee is marginal, not
-conditional \cite{barber2023}. (v) District boundaries changed over 1997--2020, and new districts
+conditional \cite{barber2023}. (v) District boundaries changed over \YearA--\YearB, and new districts
 appear as cold-start queries.
 
 
