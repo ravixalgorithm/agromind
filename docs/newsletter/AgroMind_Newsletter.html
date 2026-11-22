@@ -146,7 +146,7 @@
         <tr><th>Headline score</th><td class="num">98.00%<br><small>one 75/25 split, as reported</small></td><td class="num">94.33 ± 0.12%<br><small>5-fold accuracy</small></td><td class="num">72.66%<br><small>hit@1, unseen districts</small></td></tr>
         <tr><th>Top-3</th><td class="num">not reported</td><td class="num">99.18%</td><td class="num">93.53%<br><small>hit@3, unseen districts</small></td></tr>
         <tr><th>Simple baseline</th><td class="num">88%<br><small>box-lookup rule</small></td><td class="num">—</td><td class="num">61.69% / 88.26%<br><small>state × season popularity</small></td></tr>
-        <tr class="best"><th>Hardest honest test</th><td class="num">86.91%<br><small>GaussianNB exact match (97.09% reported)</small></td><td class="num">7.0–12.9%<br><small>leave-one-source-out</small></td><td class="num">40.40% / 65.20%<br><small>unseen states / future years</small></td></tr>
+        <tr class="best"><th>Hardest honest test</th><td class="num">86.91%<br><small>GaussianNB exact match (97.09% reported)</small></td><td class="num">7.0–12.9%<br><small>leave-one-source-out</small></td><td class="num">41.80% / 65.34%<br><small>unseen states / future years</small></td></tr>
       </tbody>
     </table>
     <p class="note">All figures from <code>docs/research/results.json</code>. v1 to v3 answer increasingly hard
@@ -242,8 +242,8 @@
     <h3>3. v3 holds up on districts it has never seen</h3>
     <p>With whole districts held out, the best model's first suggestion is a top-yielding crop 72.66% of the time
       (93.53% within its top three), against 61.69% / 88.26% for a baseline that simply recommends what the state
-      grows most that season. The advantage persists for future years (65.20% vs 55.49% when trained up to 2014
-      and tested on 2015–2022) and for states it has never seen (40.40% vs 30.46% for a season-popularity baseline). These are lower numbers than
+      grows most that season. The advantage persists for future years (65.34% vs 55.49% when trained up to 2014
+      and tested on 2015–2022) and for states it has never seen (41.80% vs 30.46% for a season-popularity baseline). These are lower numbers than
       v2's, but they answer the question a farmer actually asks.</p>
     <h3>4. Confidence is under-stated</h3>
     <p>The deployed v2 model's average confidence is 87.04%, but it is right 94.62% of the time (Expected
@@ -256,7 +256,7 @@
     <figure><img src="../research/figures/07_loso.png" alt="Bar chart comparing in-distribution accuracy of 0.71 to 0.99 with leave-one-source-out accuracy of 0.07 to 0.14">
       <figcaption><b>Fig. 1.</b> Leave-one-source-out: in-distribution accuracy (blue) versus accuracy on a source the model never saw.</figcaption></figure>
     <figure><img src="../research/figures/13_v3_generalisation.png" alt="v3 hit@1 for unseen districts 0.73, unseen states 0.39 and future years 0.66 against popularity baselines, and hit@1 per held-out state">
-      <figcaption><b>Fig. 2.</b> v3 hit@1 for unseen districts, states and years against the best popularity baseline, and per held-out state. Bars show Random Forest; the text quotes the best model (ExtraTrees).</figcaption></figure>
+      <figcaption><b>Fig. 2.</b> v3 hit@1 of ExtraTrees (the model quoted in the text), Random Forest and the best popularity baseline for unseen districts, states and years, and ExtraTrees per held-out state.</figcaption></figure>
   </div>
 
 <!--V4BOX-->
