@@ -1,7 +1,7 @@
 # AgroMind — Literature Review
 
 Related work for AgroMind, a state-aware Random Forest crop recommender for Indian fields.
-References are numbered [1]–[36] in IEEE style; [`references.bib`](references.bib) lists the same
+References are numbered [1]–[37] in IEEE style; [`references.bib`](references.bib) lists the same
 entries in the same order.
 
 **How citations were checked (2026-11-22).** Every DOI was looked up in Crossref (DataCite for the
@@ -66,7 +66,7 @@ beat linear and nearest-neighbour ones.
 
 ### 1.6 Evaluation methodology
 
-Roberts et al. [18] show that random cross-validation overstates accuracy when data have spatial,
+Sam and D'Abreo [37] give the clearest crop-recommendation example: on 19 crops across 15 Indian states, Random Forest scores 99.96% under 10-fold cross-validation but 78.55% when the split respects time order (83.62% with lag variables). Roberts et al. [18] show more generally that random cross-validation overstates accuracy when data have spatial,
 temporal or grouped structure, and recommend blocked (grouped) validation instead. Meyer et al.
 [19] show the same for spatial ML: features that encode *where* a sample came from can raise
 random-split scores while hurting prediction at new locations. Niculescu-Mizil and Caruana [20]
@@ -103,10 +103,11 @@ POWER [29] provides daily climate for any location, for example through the `nas
 | [15] | Turgut et al. (AgroXAI) | 2024 | Weather + soil (IoT / edge) | ML + LIME, SHAP, ELI5, counterfactuals | No figure in abstract | Explains predictions, but probabilities are not calibrated |
 | [16] | De Clercq & Mahdi | 2024 | 247 Indian rice districts, 20 yrs; reanalysis + satellite | 19 models (CatBoost, LightGBM, Extra Trees, …) | Out-of-sample R² ≤ 0.82, MAPE 0.16 | Yield regression for one crop; shows the real-data ceiling |
 | [17] | Nikhil et al. | 2024 | South Indian states: weather, soil, crop | Regressors (Extra Trees, RF, LGBM, …) | Extra Trees R² 0.9615 | Yield, not recommendation; state level only |
+| [37] | Sam & D'Abreo | 2025 | 19 crops, 15 Indian states; environmental + economic factors | RF, SVM; 10-fold CV vs time-series split vs lag variables | RF 99.96% (10-fold) → 78.55% (time-series split); 83.62% with lags | Holds out time, not states; top-1 only |
 
 **What the table shows.** Classifiers trained on curated soil–climate tables, especially the
 Kaggle set [11], [12] and similar data [8], cluster at 97–99.9% accuracy under a random train/test
-split. Studies on real, location-indexed Indian data [16] report much lower out-of-sample skill.
+split. Studies on real, location-indexed Indian data [16] report much lower out-of-sample skill, and the one crop-recommendation study with a temporal split [37] loses about 21 points of accuracy.
 By its own description the Kaggle set was *augmented*. It is perfectly balanced (100 rows per crop)
 and has no location, season or year. Near-perfect scores on it show how separable its feature bands
 are, not how a model would do in a new district. We treat those numbers as an upper bound, not a
@@ -120,7 +121,7 @@ benchmark to beat.
 |-----|----------|---------------------|
 | **G1. Location-blind models.** Most Kaggle-based recommenders use only N, P, K, pH, temperature, humidity and rainfall, so a reading gets the same answer in Punjab and in Kerala. | [11]–[13]; location appears in only a few systems [7], [9] | **State-aware features.** State, season and soil type are one-hot model inputs, not just UI labels. |
 | **G2. Single-source, near-synthetic training data.** Results come from one dataset, often the augmented Kaggle set. | [11], [12], [31] | **Multi-source merge.** Kaggle (2,200 rows), the India multi-state set (8,000) and Tamil Nadu field records (57,000) are normalised into one schema: 67,200 rows, 74 crops, 16 states. A v3 dataset joins district-season-year production statistics [30], [36] with NASA POWER climate [29] and SoilGrids soil [27]. |
-| **G3. Random splits overstate accuracy.** Random cross-validation on grouped data leaks structure between train and test. | [18], [19]; none of [6]–[15] report a grouped test | **Leave-one-source-out (LOSO) test.** Train on two sources, test on the third, and report the drop next to the random-split score. |
+| **G3. Random splits overstate accuracy.** Random cross-validation on grouped data leaks structure between train and test. | [18], [19], [37]; none of [6]–[15] report a grouped test, and [37] holds out time but not states | **Leave-one-source-out (LOSO) test.** Train on two sources, test on the third, and report the drop next to the random-split score. |
 | **G4. Uncalibrated confidence.** Recommenders show a "confidence %", but tree-ensemble probabilities are distorted. | [20]; no calibration reported in [8]–[15] | **Calibration.** Reliability diagrams and Expected Calibration Error for the Random Forest [21], with isotonic or sigmoid calibration. |
 | **G5. Top-1 accuracy only.** Farmers choose among several viable crops, and a single label hides the alternatives. | [6]–[13] report top-1 only | **Ranked output.** Top-3 accuracy, plus same-season alternatives in the UI. |
 | **G6. Weak link to Indian government data.** Few recommenders connect to Soil Health Card readings or official district statistics. | [24]–[26], [30] | **Inputs match Soil Health Card fields** (N, P, K, pH), so a card can be typed in directly. v3 trains on official DES production data. |
@@ -201,3 +202,5 @@ benchmark to beat.
 [35] G. Ke et al., "LightGBM: A highly efficient gradient boosting decision tree," in *Advances in Neural Information Processing Systems 30 (NIPS)*, 2017. [Online]. Available: https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html
 
 [36] pyatakov, "India Agriculture Crop Production: District-wise crop area and production 1997–2021 (updated Feb. 2023)," Kaggle. [Online]. Available: https://www.kaggle.com/datasets/pyatakov/india-agriculture-crop-production (accessed Nov. 22, 2026).
+
+[37] S. Sam and S. M. D'Abreo, "Crop recommendation with machine learning: Leveraging environmental and economic factors for optimal crop selection," arXiv:2505.21201, 2025, doi: 10.48550/arXiv.2505.21201.
