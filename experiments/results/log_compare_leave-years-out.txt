@@ -1,0 +1,6 @@
+leave-years-out f0 Crop prior                             Hit@1  27.9%  Hit@3  68.0%  NDCG@3 0.794  cold  23.9%  cov90  90.4% size 4.47  train    0.0s  infer 0.006 ms/q
+leave-years-out f0 Persistence                            Hit@1  59.9%  Hit@3  89.2%  NDCG@3 0.926  cold  47.9%  cov90  92.2% size 3.12  train    0.0s  infer 0.006 ms/q
+leave-years-out f0 Gaussian NB                            Hit@1  31.1%  Hit@3  72.1%  NDCG@3 0.813  cold  26.0%  cov90  91.0% size 4.46  train    0.0s  infer 0.005 ms/q
+leave-years-out f0 Random Forest                          Hit@1  53.4%  Hit@3  86.4%  NDCG@3 0.903  cold  42.7%  cov90  89.4% size 3.03  train    3.5s  infer 0.025 ms/q
+leave-years-out f0 XGBoost                                Hit@1  54.4%  Hit@3  86.5%  NDCG@3 0.905  cold  42.3%  cov90  89.8% size 3.11  train   45.1s  infer 0.039 ms/q
+leave-years-out f0 MLP                                    Hit@1  52.9%  Hit@3  85.5%  NDCG@3 0.896  cold  42.8%  cov90  90.0% size 3.26  train    2.3s  infer 0.004 ms/q

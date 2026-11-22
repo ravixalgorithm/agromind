@@ -15,13 +15,9 @@
 
 \title{Beyond 99\%: Yield-Grounded Crop Ranking with Conformal Prediction Sets, Evaluated on Unseen Indian States and Years}
 
-\author{\IEEEauthorblockN{[Student Names]}
-\IEEEauthorblockA{Department of Computer Science and Engineering\\
-{[College Name]}, India}
-\and
-\IEEEauthorblockN{[Guide Name]}
-\IEEEauthorblockA{Department of Computer Science and Engineering\\
-{[College Name]}, India}}
+\author{\IEEEauthorblockN{Rajat Patel, Harshit Jain, Sanyam Jain, Ravi Pratap Singh\IEEEauthorrefmark{1}, and Dr.\ Imran Khan (Supervisor)}
+\IEEEauthorblockA{Department of Computer Science and Engineering, Harcourt Butler Technical University (HBTU), Kanpur, India\\
+\IEEEauthorrefmark{1}Corresponding author: 230104047@hbtu.ac.in}}
 
 \maketitle
 
@@ -344,7 +340,9 @@ is a single SoilGrids point per district (a state median for \SoilMedPct\% of ro
 field measurement such as a Soil Health Card. (iv) Conformal guarantees assume exchangeability of states. India's states
 differ in size and history, and our per-state audit shows the guarantee is marginal, not
 conditional \cite{barber2023}. (v) District boundaries changed over \YearA--\YearB, and new districts
-appear as cold-start queries.
+appear as cold-start queries. (vi) All data come from one country: Indian districts, \YearA--\YearB. Whether the ranking
+and calibration findings transfer to other agro-climates is untested, and no field trial has been
+run.
 
 
 %=====================================================================
