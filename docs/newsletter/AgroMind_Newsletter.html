@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AgroMind Bulletin — Vol. 1, Issue 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 13mm 14mm 14mm; }
+  :root {
+    --ink: #1d1b18;
+    --muted: #5b564e;
+    --maroon: #7a1d1d;
+    --green: #2f5d34;
+    --rule: #b9ae9b;
+    --tint: #f4efe4;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; background: #fff; color: var(--ink);
+    font: 9.6pt/1.42 "Source Serif 4", Georgia, "Times New Roman", serif;
+    hyphens: auto; text-align: justify;
+  }
+  .page { width: 182mm; margin: 0 auto; }
+  .page + .page { break-before: page; }
+  h1, h2, h3 { text-align: left; hyphens: manual; }
+
+  /* masthead */
+  .mast { text-align: center; border-bottom: 3px double var(--maroon); padding-bottom: 2.5mm; }
+  .mast .inst { display: flex; align-items: center; justify-content: center; gap: 4mm;
+    font: 600 8.6pt/1.3 "Source Serif 4", serif; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .crest { width: 13mm; height: 13mm; border: 1.2px solid var(--maroon); border-radius: 50%;
+    display: grid; place-items: center; font: 600 6pt/1.1 "Source Serif 4", serif; color: var(--maroon); text-align: center; }
+  .mast h1 { text-align: center; margin: 1.5mm 0 0; font: 900 40pt/1 "Playfair Display", Georgia, serif; color: var(--maroon); letter-spacing: .01em; }
+  .mast h1 span { color: var(--green); }
+  .mast .tag { margin: 1mm 0 0; font-style: italic; color: var(--muted); }
+  .dateline { display: flex; justify-content: space-between; border-bottom: 1px solid var(--ink);
+    padding: 1.2mm 0; font: 600 8pt/1 "Source Serif 4", serif; letter-spacing: .08em; text-transform: uppercase; }
+  .runhead { display: flex; justify-content: space-between; border-bottom: 1px solid var(--maroon);
+    padding-bottom: 1.2mm; margin-bottom: 3mm; font: 600 7.6pt/1 "Source Serif 4", serif;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--maroon); }
+
+  /* type */
+  .kicker { font: 700 7.6pt/1 "Source Serif 4", serif; letter-spacing: .12em; text-transform: uppercase; color: var(--green); margin: 0 0 1mm; }
+  h2 { font: 700 15pt/1.15 "Playfair Display", Georgia, serif; margin: 0 0 2mm; color: var(--ink); }
+  h2.lead { font-size: 21pt; margin-top: 3mm; }
+  h3 { font: 700 10.4pt/1.25 "Source Serif 4", serif; margin: 2.5mm 0 1mm; color: var(--maroon); }
+  p { margin: 0 0 1.6mm; }
+  .standfirst { font-size: 11pt; line-height: 1.4; font-style: italic; color: var(--muted); text-align: left; margin-bottom: 3mm; }
+  .cols { column-count: 2; column-gap: 7mm; column-rule: .6px solid var(--rule); }
+  .cols3 { column-count: 3; column-gap: 6mm; column-rule: .6px solid var(--rule); }
+  .cols h3:first-child, .cols3 h3:first-child { margin-top: 0; }
+  .drop::first-letter { float: left; font: 700 30pt/.85 "Playfair Display", serif; color: var(--maroon); padding: 1mm 1.5mm 0 0; }
+  section { margin-bottom: 4mm; }
+  .sep { border: 0; border-top: 1px solid var(--rule); margin: 3.5mm 0; }
+  sup, .cite { font-size: 7.4pt; color: var(--maroon); }
+  ul { margin: 0 0 1.6mm; padding-left: 4.5mm; }
+  li { margin-bottom: .6mm; }
+  .avoid { break-inside: avoid; }
+
+  /* boxes */
+  .box { border: 1.2px solid var(--maroon); background: var(--tint); padding: 3mm 3.5mm; break-inside: avoid; }
+  .box h3 { margin-top: 0; }
+  .box-title { margin: -3mm -3.5mm 2.5mm; padding: 1.4mm 3.5mm; background: var(--maroon); color: #fff;
+    font: 700 8.4pt/1 "Source Serif 4", serif; letter-spacing: .1em; text-transform: uppercase; }
+  .inissue { font-size: 8.8pt; }
+  .inissue ol { padding-left: 4mm; margin: 0; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 8.6pt; text-align: left; }
+  th, td { padding: 1.1mm 1.6mm; border-bottom: .6px solid var(--rule); vertical-align: top; }
+  thead th { border-bottom: 1.2px solid var(--ink); font-weight: 700; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.best td { font-weight: 700; }
+  .lit td, .lit th { font-size: 7.8pt; padding: .9mm 1.2mm; }
+
+  figure { margin: 0 0 3mm; break-inside: avoid; }
+  figure img { width: 100%; display: block; border: .6px solid var(--rule); }
+  figcaption { font-size: 7.8pt; line-height: 1.3; color: var(--muted); margin-top: 1mm; text-align: left; }
+  figcaption b { color: var(--ink); }
+  .figrow { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+
+  .quote { border-left: 3px solid var(--green); padding: 1mm 0 1mm 3mm; font-style: italic; color: var(--muted); margin: 2mm 0; text-align: left; }
+  .team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; text-align: center; font-size: 8.6pt; }
+  .team div { border: .6px solid var(--rule); padding: 2mm 1mm; }
+  .team b { display: block; font-size: 9pt; }
+  .refs { font-size: 7.1pt; line-height: 1.28; column-count: 3; column-gap: 5mm; hyphens: auto; text-align: left; }
+  .refs p { margin: 0 0 1mm; padding-left: 6mm; text-indent: -6mm; break-inside: avoid; }
+  .foot { margin-top: 3mm; border-top: 3px double var(--maroon); padding-top: 1.5mm; font-size: 7.6pt; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <header class="mast">
+    <div class="inst">
+      <div class="crest">College<br>Crest</div>
+      <div>[College Name] · Department of [Department Name]<br>[University Name], [City]</div>
+      <div class="crest">Dept.<br>Logo</div>
+    </div>
+    <h1>Agro<span>Mind</span> Bulletin</h1>
+    <p class="tag">A newsletter on data-driven crop recommendation for Indian fields</p>
+  </header>
+  <div class="dateline"><span>Vol. 1 · Issue 1</span><span>Final-Year Project Edition</span><span>November 2026</span></div>
+
+  <h2 class="lead">Teaching a crop advisor which state it is farming in</h2>
+  <p class="standfirst">AgroMind recommends crops from soil nutrients, climate, soil type, season and state. This
+    issue covers how the model was built, how it was tested beyond the usual random split, and what the
+    research literature says about the problem.</p>
+
+  <div class="cols">
+    <p class="drop">Choosing what to sow is one of the most consequential decisions an Indian farmer makes
+      each season. Published crop recommenders mostly learn a mapping from soil nitrogen (N), phosphorus (P),
+      potassium (K), pH, temperature, humidity and rainfall to a crop name, and many report accuracies close to
+      99% <span class="cite">[8], [11], [12]</span>. Most of those numbers come from a single public dataset whose
+      Kaggle page says it was built by <i>augmenting</i> Indian rainfall, climate and fertiliser data
+      <span class="cite">[31]</span>. It has exactly 100 rows per crop and no record of where or when each row
+      was measured.</p>
+    <p>AgroMind asks a harder question: does a recommendation still hold when the model must also respect the
+      state, the season and the soil class, and when it is tested on data from a source it has never seen?</p>
+
+    <h3>What we built</h3>
+    <p>A Random Forest <span class="cite">[21]</span> trained on <b>67,200 rows</b>, merged from three sources:
+      the Kaggle agronomy set, a 16-state India set and Tamil Nadu field records. It covers <b>74 crops</b> across
+      <b>16 states</b>. State, season and soil type are model inputs, not just display labels. A FastAPI backend
+      serves ranked recommendations with confidence, sowing calendars and crop profiles to a React dashboard.</p>
+
+    <h3>Why it matters</h3>
+    <p>The inputs line up with what a farmer's Soil Health Card reports <span class="cite">[24], [25]</span>, so
+      a card can be typed straight into the app. Ranked alternatives within the same season reflect how
+      farmers actually choose among several workable crops.</p>
+  </div>
+
+  <hr class="sep">
+
+  <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:6mm;align-items:start">
+    <div class="box" id="key-results">
+      <div class="box-title">Key Results</div>
+      <!--KEY_RESULTS-->
+    </div>
+    <div>
+      <div class="box inissue">
+        <div class="box-title">In this issue</div>
+        <ol>
+          <li>Lead story: a state-aware crop advisor</li>
+          <li>Key results, v1 → v2 → v3</li>
+          <li>Methodology and data pipeline</li>
+          <li>From the literature</li>
+          <li>Testing beyond the random split</li>
+          <li>Future work · Team · References</li>
+        </ol>
+      </div>
+      <p class="quote" style="margin-top:4mm">"A recommendation is only as useful as the honesty of its
+        confidence figure."</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <div class="runhead"><span>AgroMind Bulletin</span><span>Methodology</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
+
+  <p class="kicker">Methodology</p>
+  <h2>From three spreadsheets to one model</h2>
+  <div class="cols">
+    <h3>1. Data sources</h3>
+    <ul>
+      <li><b>Kaggle Crop Recommendation</b> <span class="cite">[31]</span>: 2,200 rows, 22 crops, N-P-K, pH, climate; no location.</li>
+      <li><b>India multi-state set</b>: 8,000 rows over 16 states with soil, season and climate.</li>
+      <li><b>Tamil Nadu field records</b>: 57,000 rows with free-text soil descriptions and month-level sowing and harvest dates.</li>
+      <!--V3_SOURCE-->
+    </ul>
+    <h3>2. Normalisation</h3>
+    <p>All sources are mapped to one schema (N, P, K, temperature, humidity, pH, rainfall, soil, season, state,
+      crop). Thirty-four free-text soil strings are folded into 10 canonical classes. Crop spelling variants
+      (<i>bengalgram</i> → chickpea, <i>gingely</i> → sesame, <i>redgram</i> → pigeon pea) reduce 100+ raw
+      labels to 74 crops. Kaggle rows, which carry no location, go into an <i>Unspecified</i> state bucket that
+      the app never offers.</p>
+    <h3>3. Model</h3>
+    <p>A 300-tree Random Forest <span class="cite">[21]</span> with one-hot encoded soil, season and state.
+      Tree ensembles are strong on tabular agronomic data <span class="cite">[3], [17]</span> and need little
+      tuning. XGBoost <span class="cite">[22]</span> serves as a comparison baseline.</p>
+    <h3>4. Evaluation</h3>
+    <p>Beyond the usual stratified 80/20 split we report <b>top-3 accuracy</b>, a <b>leave-one-source-out</b>
+      (LOSO) test that trains on two sources and tests on the third, following the grouped-validation advice of
+      Roberts et&nbsp;al. <span class="cite">[18]</span>, and <b>probability calibration</b> (reliability curves,
+      Expected Calibration Error), since tree ensembles are known to give distorted probabilities
+      <span class="cite">[20]</span>.</p>
+  </div>
+
+  <!--FIG_PAGE2-->
+
+  <hr class="sep">
+
+  <p class="kicker">From the Literature</p>
+  <h2>What earlier crop recommenders found, and missed</h2>
+  <div class="cols">
+    <p>We reviewed 35 sources (all DOIs verified), with an emphasis on Indian work. Early Indian systems used
+      majority-vote ensembles over soil data <span class="cite">[6], [8]</span> and added sowing season and
+      location <span class="cite">[7], [9]</span>. Recent work on the Kaggle dataset reports 98–99.6% accuracy
+      with XGBoost and Bayesian classifiers <span class="cite">[11], [12]</span>. Explainable systems such as
+      XAI-CROP and AgroXAI attach SHAP and LIME explanations <span class="cite">[14], [15], [23]</span>.</p>
+    <p>Studies on real district-level Indian data paint a different picture. On 20 years of data from 247 rice
+      districts, the best out-of-sample R² was 0.82 <span class="cite">[16]</span>. The gap between
+      near-perfect benchmark scores and real-world skill is the main motivation for AgroMind's evaluation design.</p>
+  </div>
+  <table class="lit avoid" style="margin-top:2mm">
+    <thead><tr><th>Ref</th><th>Study</th><th>Data</th><th>Method</th><th>Reported</th><th>Gap AgroMind targets</th></tr></thead>
+    <tbody>
+      <tr><td>[6]</td><td>Pudumalar et al., 2017</td><td>Soil data, Tamil Nadu</td><td>Vote ensemble</td><td>"High accuracy"</td><td>Single region, random split</td></tr>
+      <tr><td>[7]</td><td>Doshi et al., 2018</td><td>Soil, weather, location</td><td>ML classifiers</td><td>—</td><td>No unseen-region test</td></tr>
+      <tr><td>[8]</td><td>Kulkarni et al., 2018</td><td>Soil + rainfall, temp.</td><td>RF + NB + SVM vote</td><td>99.91%</td><td>Near-ceiling random split</td></tr>
+      <tr><td>[11]</td><td>Dey et al., 2024</td><td>Kaggle set</td><td>XGBoost, RF, SVM</td><td>99.09%</td><td>No location / season</td></tr>
+      <tr><td>[12]</td><td>Elbasi et al., 2023</td><td>Soil–climate crops</td><td>15 classifiers</td><td>99.59%</td><td>No out-of-distribution test</td></tr>
+      <tr><td>[14]</td><td>Shams et al., 2024</td><td>Soil, weather</td><td>XAI-CROP</td><td>MSE 0.94</td><td>No calibration</td></tr>
+      <tr><td>[16]</td><td>De Clercq &amp; Mahdi, 2024</td><td>247 districts, 20 yrs</td><td>19 regressors</td><td>R² ≤ 0.82</td><td>Real-data ceiling (yield)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <div class="runhead"><span>AgroMind Bulletin</span><span>Results &amp; Outlook</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
+
+  <p class="kicker">Evaluation</p>
+  <h2>Testing beyond the random split</h2>
+  <!--RESULTS_BODY-->
+
+  <hr class="sep">
+
+  <div class="cols">
+    <p class="kicker">Research gaps addressed</p>
+    <ul>
+      <li><b>Location-blind models</b> <span class="cite">[11]–[13]</span> → state, season and soil as model inputs.</li>
+      <li><b>Single, near-synthetic source</b> <span class="cite">[11], [31]</span> → a three-source merge plus a real-data v3.</li>
+      <li><b>Random splits overstate skill</b> <span class="cite">[18], [19]</span> → leave-one-source-out test.</li>
+      <li><b>Uncalibrated confidence</b> <span class="cite">[20]</span> → reliability curves and ECE.</li>
+      <li><b>Top-1 only</b> → top-3 accuracy and ranked same-season alternatives.</li>
+    </ul>
+
+    <p class="kicker" style="margin-top:3mm">Future work</p>
+    <ul>
+      <li>Read Soil Health Card PDFs directly <span class="cite">[25]</span> to pre-fill N, P, K and pH.</li>
+      <li>Replace seasonal averages with IMD gridded rainfall <span class="cite">[26]</span> and NASA POWER climate <span class="cite">[29]</span> at district level.</li>
+      <li>Add SHAP explanations <span class="cite">[23]</span> for each recommendation.</li>
+      <li>Field validation with Krishi Vigyan Kendra (KVK) extension staff before any advisory use.</li>
+      <li>Hindi and regional-language interfaces.</li>
+    </ul>
+  </div>
+
+  <hr class="sep">
+
+  <p class="kicker">The Team</p>
+  <div class="team avoid">
+    <div><b>[Guide Name]</b>Project Guide<br>[Designation], Dept. of [Dept.]</div>
+    <div><b>[Student Name 1]</b>[Roll No.]<br>Model &amp; data</div>
+    <div><b>[Student Name 2]</b>[Roll No.]<br>Backend &amp; API</div>
+    <div><b>[Student Name 3]</b>[Roll No.]<br>Frontend &amp; UI</div>
+  </div>
+  <p style="margin-top:2mm;font-size:8.4pt;text-align:center">Head of Department: <b>[HoD Name]</b> · Project
+    Coordinator: <b>[Coordinator Name]</b> · Contact: [email@college.edu]</p>
+  <p style="font-size:8pt;color:var(--muted);text-align:center"><i>Disclaimer:</i> AgroMind is an academic
+    project trained on public and partly synthetic datasets. Its recommendations are for education and
+    demonstration only and are not validated agronomic advice.</p>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <div class="runhead"><span>AgroMind Bulletin</span><span>References</span><span>Vol. 1 · Issue 1 · Nov 2026</span></div>
+  <p class="kicker">References</p>
+  <div class="refs">
+    <p>[1] K. G. Liakos, P. Busato, D. Moshou, S. Pearson, and D. Bochtis, &quot;Machine learning in agriculture: A review,&quot; <i>Sensors</i>, vol. 18, no. 8, p. 2674, 2018, doi: 10.3390/s18082674.</p>
+    <p>[2] A. Sharma, A. Jain, P. Gupta, and V. Chowdary, &quot;Machine learning applications for precision agriculture: A comprehensive review,&quot; <i>IEEE Access</i>, vol. 9, pp. 4843–4873, 2021, doi: 10.1109/ACCESS.2020.3048415.</p>
+    <p>[3] T. van Klompenburg, A. Kassahun, and C. Catal, &quot;Crop yield prediction using machine learning: A systematic literature review,&quot; <i>Comput. Electron. Agric.</i>, vol. 177, p. 105709, 2020, doi: 10.1016/j.compag.2020.105709.</p>
+    <p>[4] K. Patel and H. B. Patel, &quot;A state-of-the-art survey on recommendation system and prospective extensions,&quot; <i>Comput. Electron. Agric.</i>, vol. 178, p. 105779, 2020, doi: 10.1016/j.compag.2020.105779.</p>
+    <p>[5] R. Kumar, M. P. Singh, P. Kumar, and J. P. Singh, &quot;Crop selection method to maximize crop yield rate using machine learning technique,&quot; in <i>Proc. Int. Conf. Smart Technol. Manage. Comput., Commun., Controls, Energy Mater. (ICSTM)</i>, 2015, pp. 138–145, doi: 10.1109/ICSTM.2015.7225403.</p>
+    <p>[6] S. Pudumalar, E. Ramanujam, R. H. Rajashree, C. Kavya, T. Kiruthika, and J. Nisha, &quot;Crop recommendation system for precision agriculture,&quot; in <i>Proc. 8th Int. Conf. Advanced Computing (ICoAC)</i>, 2017, pp. 32–36, doi: 10.1109/ICoAC.2017.7951740.</p>
+    <p>[7] Z. Doshi, S. Nadkarni, R. Agrawal, and N. Shah, &quot;AgroConsultant: Intelligent crop recommendation system using machine learning algorithms,&quot; in <i>Proc. 4th Int. Conf. Computing Communication Control and Automation (ICCUBEA)</i>, 2018, pp. 1–6, doi: 10.1109/ICCUBEA.2018.8697349.</p>
+    <p>[8] N. H. Kulkarni, G. N. Srinivasan, B. M. Sagar, and N. K. Cauvery, &quot;Improving crop productivity through a crop recommendation system using ensembling technique,&quot; in <i>Proc. 3rd Int. Conf. Computational Systems and Information Technology for Sustainable Solutions (CSITSS)</i>, 2018, pp. 114–119, doi: 10.1109/CSITSS.2018.8768790.</p>
+    <p>[9] A. Priyadharshini, S. Chakraborty, A. Kumar, and O. R. Pooniwala, &quot;Intelligent crop recommendation system using machine learning,&quot; in <i>Proc. 5th Int. Conf. Computing Methodologies and Communication (ICCMC)</i>, 2021, pp. 843–848, doi: 10.1109/ICCMC51019.2021.9418375.</p>
+    <p>[10] Y. Akkem, S. K. Biswas, and A. Varanasi, &quot;Streamlit application for advanced ensemble learning methods in crop recommendation systems – A review and implementation,&quot; <i>Indian J. Sci. Technol.</i>, vol. 16, no. 48, pp. 4688–4702, 2023, doi: 10.17485/IJST/v16i48.2850.</p>
+    <p>[11] B. Dey, J. Ferdous, and R. Ahmed, &quot;Machine learning based recommendation of agricultural and horticultural crop farming in India under the regime of NPK, soil pH and three climatic variables,&quot; <i>Heliyon</i>, vol. 10, no. 3, p. e25112, 2024, doi: 10.1016/j.heliyon.2024.e25112.</p>
+    <p>[12] E. Elbasi et al., &quot;Crop prediction model using machine learning algorithms,&quot; <i>Appl. Sci.</i>, vol. 13, no. 16, p. 9288, 2023, doi: 10.3390/app13169288.</p>
+    <p>[13] C. Musanase, A. Vodacek, D. Hanyurwimfura, A. Uwitonze, and I. Kabandana, &quot;Data-driven analysis and machine learning-based crop and fertilizer recommendation system for revolutionizing farming practices,&quot; <i>Agriculture</i>, vol. 13, no. 11, p. 2141, 2023, doi: 10.3390/agriculture13112141.</p>
+    <p>[14] M. Y. Shams, S. A. Gamel, and F. M. Talaat, &quot;Enhancing crop recommendation systems with explainable artificial intelligence: A study on agricultural decision-making,&quot; <i>Neural Comput. Appl.</i>, vol. 36, no. 11, pp. 5695–5714, 2024, doi: 10.1007/s00521-023-09391-2.</p>
+    <p>[15] Ö. Turgut, İ. Kök, and S. Özdemir, &quot;AgroXAI: Explainable AI-driven crop recommendation system for Agriculture 4.0,&quot; in <i>Proc. IEEE Int. Conf. Big Data (BigData)</i>, 2024, pp. 7208–7217, doi: 10.1109/BigData62323.2024.10825771.</p>
+    <p>[16] D. De Clercq and A. Mahdi, &quot;Feasibility of machine learning-based rice yield prediction in India at the district level using climate reanalysis and remote sensing data,&quot; <i>Agric. Syst.</i>, vol. 220, p. 104099, 2024, doi: 10.1016/j.agsy.2024.104099.</p>
+    <p>[17] U. Nikhil, A. Pandiyan, S. Raja, and Z. Stamenkovic, &quot;Machine learning-based crop yield prediction in South India: Performance analysis of various models,&quot; <i>Computers</i>, vol. 13, no. 6, p. 137, 2024, doi: 10.3390/computers13060137.</p>
+    <p>[18] D. R. Roberts et al., &quot;Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure,&quot; <i>Ecography</i>, vol. 40, no. 8, pp. 913–929, 2017, doi: 10.1111/ecog.02881.</p>
+    <p>[19] H. Meyer, C. Reudenbach, S. Wöllauer, and T. Nauss, &quot;Importance of spatial predictor variable selection in machine learning applications – Moving from data reproduction to spatial prediction,&quot; <i>Ecol. Model.</i>, vol. 411, p. 108815, 2019, doi: 10.1016/j.ecolmodel.2019.108815.</p>
+    <p>[20] A. Niculescu-Mizil and R. Caruana, &quot;Predicting good probabilities with supervised learning,&quot; in <i>Proc. 22nd Int. Conf. Machine Learning (ICML)</i>, 2005, pp. 625–632, doi: 10.1145/1102351.1102430.</p>
+    <p>[21] L. Breiman, &quot;Random forests,&quot; <i>Mach. Learn.</i>, vol. 45, no. 1, pp. 5–32, 2001, doi: 10.1023/A:1010933404324.</p>
+    <p>[22] T. Chen and C. Guestrin, &quot;XGBoost: A scalable tree boosting system,&quot; in <i>Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining</i>, 2016, pp. 785–794, doi: 10.1145/2939672.2939785.</p>
+    <p>[23] S. Lundberg and S.-I. Lee, &quot;A unified approach to interpreting model predictions,&quot; in <i>Advances in Neural Information Processing Systems 30 (NeurIPS)</i>, 2017; arXiv:1705.07874, doi: 10.48550/arXiv.1705.07874.</p>
+    <p>[24] A. A. Reddy, &quot;Impact study of Soil Health Card scheme,&quot; National Institute of Agricultural Extension Management (MANAGE), Hyderabad, India, 2020, doi: 10.31220/osf.io/n3d2m.</p>
+    <p>[25] Department of Agriculture and Farmers Welfare, Government of India, &quot;Soil Health Card portal.&quot; [Online]. Available: https://soilhealth.dac.gov.in/ (accessed Nov. 22, 2026).</p>
+    <p>[26] D. S. Pai, M. Rajeevan, O. P. Sreejith, B. Mukhopadhyay, and N. S. Satbha, &quot;Development of a new high spatial resolution (0.25° × 0.25°) long period (1901–2010) daily gridded rainfall data set over India and its comparison with existing data sets over the region,&quot; <i>MAUSAM</i>, vol. 65, no. 1, pp. 1–18, 2014, doi: 10.54302/mausam.v65i1.851.</p>
+    <p>[27] L. Poggio et al., &quot;SoilGrids 2.0: Producing soil information for the globe with quantified spatial uncertainty,&quot; <i>SOIL</i>, vol. 7, no. 1, pp. 217–240, 2021, doi: 10.5194/soil-7-217-2021.</p>
+    <p>[28] A. H. Sparks, &quot;nasapower: A NASA POWER global meteorology, surface solar energy and climatology data client for R,&quot; <i>J. Open Source Softw.</i>, vol. 3, no. 30, p. 1035, 2018, doi: 10.21105/joss.01035.</p>
+    <p>[29] NASA Langley Research Center, &quot;POWER: Prediction Of Worldwide Energy Resources.&quot; [Online]. Available: https://power.larc.nasa.gov/ (accessed Nov. 22, 2026).</p>
+    <p>[30] National Informatics Centre, Government of India, &quot;Open Government Data (OGD) Platform India — district-wise crop production statistics (Directorate of Economics and Statistics, MoA&amp;FW).&quot; [Online]. Available: https://www.data.gov.in/ (accessed Nov. 22, 2026).</p>
+    <p>[31] A. Ingle, &quot;Crop Recommendation Dataset,&quot; Kaggle, 2020. [Online]. Available: https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset (accessed Nov. 22, 2026).</p>
+    <p>[32] T. G. Dietterich, &quot;Approximate statistical tests for comparing supervised classification learning algorithms,&quot; <i>Neural Comput.</i>, vol. 10, no. 7, pp. 1895–1923, 1998, doi: 10.1162/089976698300017197.</p>
+    <p>[33] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, &quot;On calibration of modern neural networks,&quot; in <i>Proc. 34th Int. Conf. Machine Learning (ICML)</i>, 2017; arXiv:1706.04599, doi: 10.48550/arXiv.1706.04599.</p>
+    <p>[34] F. Pedregosa et al., &quot;Scikit-learn: Machine learning in Python,&quot; <i>J. Mach. Learn. Res.</i>, vol. 12, no. 85, pp. 2825–2830, 2011. [Online]. Available: https://www.jmlr.org/papers/v12/pedregosa11a.html</p>
+    <p>[35] G. Ke et al., &quot;LightGBM: A highly efficient gradient boosting decision tree,&quot; in <i>Advances in Neural Information Processing Systems 30 (NIPS)</i>, 2017. [Online]. Available: https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html</p>
+  </div>
+  <div class="foot">AgroMind Bulletin · [College Name], Department of [Department Name] · Vol. 1, Issue 1 · November 2026<br>
+    Full literature review: docs/research/LITERATURE.md · Code and notebook: AgroMind project repository</div>
+</div>
+
+</body>
+</html>
