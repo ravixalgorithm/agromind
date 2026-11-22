@@ -2267,6 +2267,11 @@ const NOTEBOOKS = [
 function PaperPage() {
   const numbers = research.v4?.numbers ?? {};
   const [copied, setCopied] = useState(false);
+  const copyBib = () =>
+    navigator.clipboard?.writeText(bibtex).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    );
   const authors = AUTHORS.map((n) => n.replace(/^Dr\.\s*/, '')).join(' and '); // no titles in BibTeX author fields
   const bibtex = `@misc{agromind2026,
   title        = {${PAPER_TITLE.replace('%', '\\%')}},
@@ -2276,6 +2281,32 @@ function PaperPage() {
   howpublished = {\\url{${SITE.repo}}}
 }`;
   const blob = (path) => `${SITE.repo}/blob/main/${path}`;
+  const colab = (file) => `https://colab.research.google.com/github/${SITE.repo.replace('https://github.com/', '')}/blob/main/notebooks/${file}`;
+  // public/paper/ is filled by scripts/sync-paper.mjs before dev/build; without it the links fall back to the repository.
+  const [meta, setMeta] = useState(null);
+  const frame = useRef(null);
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}paper/meta.json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setMeta)
+      .catch(() => setMeta(null));
+  }, []);
+  const local = (file) => (file ? `${import.meta.env.BASE_URL}paper/${file}` : null);
+  const pdf = local(meta?.pdf);
+  const pdfHref = pdf ?? blob('paper/main.pdf');
+  const print = () => {
+    // Print the embedded PDF; where the viewer is hidden (phones) or blocked, open the PDF to print from there.
+    try {
+      if (!frame.current?.offsetParent) throw new Error('viewer hidden');
+      frame.current.contentWindow.focus();
+      frame.current.contentWindow.print();
+    } catch {
+      window.open(pdfHref, '_blank', 'noopener');
+    }
+  };
+  const facts = [meta?.compiled && `Compiled ${longDate(meta.compiled)}`, meta?.pages && `${meta.pages} pages`, meta?.bytes && `PDF, ${Math.round(meta.bytes / 1024)} KB`].filter(
+    Boolean,
+  );
 
   return (
     <article className="paper">
@@ -2287,22 +2318,61 @@ function PaperPage() {
           <br />
           Department of {SITE.department}, {SITE.college} · Supervisor: {SITE.guide}
         </p>
-        <p className="paper-links">
-          <a className="btn" href={blob('paper/main.pdf')} target="_blank" rel="noreferrer">
-            Paper (PDF)
-          </a>
-          <a className="btn btn-plain" href={blob('docs/newsletter/AgroMind_Newsletter.pdf')} target="_blank" rel="noreferrer">
-            Newsletter (PDF)
-          </a>
-          <a className="btn btn-plain" href={SITE.repo} target="_blank" rel="noreferrer">
-            Source code
-          </a>
-        </p>
+        {facts.length > 0 && <p className="paper-facts">{facts.join(' · ')}</p>}
       </header>
 
       <Section id="abstract" title="Abstract">
         <p className="abstract">{texToText(ABSTRACT_TEX, numbers)}</p>
         {!research.v4?.numbers && <p className="note">Numbers appear once results.json contains v4.numbers.</p>}
+      </Section>
+
+      <Section id="full-paper" title="Full paper">
+        <div className="paper-tools" role="toolbar" aria-label="Paper actions">
+          <a className="btn btn-small" href={pdfHref} {...(pdf ? { download: 'AgroMind_v4_paper.pdf' } : { target: '_blank', rel: 'noreferrer' })}>
+            Download PDF
+          </a>
+          <a className="btn btn-plain btn-small" href={pdfHref} target="_blank" rel="noreferrer">
+            Open in new tab
+          </a>
+          <button type="button" className="btn btn-plain btn-small" onClick={copyBib}>
+            {copied ? 'BibTeX copied' : 'Copy BibTeX'}
+          </button>
+          <a
+            className="btn btn-plain btn-small"
+            href={local(meta?.latex) ?? blob('paper/main.tex')}
+            {...(meta?.latex ? { download: meta.latex } : { target: '_blank', rel: 'noreferrer' })}
+          >
+            LaTeX source{meta?.latex?.endsWith('.zip') ? ' (zip)' : ''}
+          </a>
+          <a className="btn btn-plain btn-small" href={local(meta?.newsletter) ?? blob('docs/newsletter/AgroMind_Newsletter.pdf')} target="_blank" rel="noreferrer">
+            Newsletter PDF
+          </a>
+          <a className="btn btn-plain btn-small" href={colab(NOTEBOOKS[0][0])} target="_blank" rel="noreferrer">
+            Open in Colab
+          </a>
+          <button type="button" className="btn btn-plain btn-small" onClick={print}>
+            Print
+          </button>
+        </div>
+        {pdf ? (
+          <>
+            <iframe ref={frame} className="pdf-frame" src={`${pdf}#view=FitH`} title={`${PAPER_TITLE} (PDF)`} />
+            <p className="pdf-mobile">
+              Phones show only the first page of an embedded PDF.{' '}
+              <a className="btn" href={pdf} target="_blank" rel="noreferrer">
+                Open the paper{meta.pages ? ` (${meta.pages} pages)` : ''}
+              </a>
+            </p>
+          </>
+        ) : (
+          <p className="note">
+            The PDF copy is not in this build.{' '}
+            <a href={pdfHref} target="_blank" rel="noreferrer">
+              Read the paper in the repository
+            </a>
+            .
+          </p>
+        )}
       </Section>
 
       <Section id="notebooks" title="Notebooks">
@@ -2326,11 +2396,7 @@ function PaperPage() {
                   </th>
                   <td>{about}</td>
                   <td>
-                    <a
-                      href={`https://colab.research.google.com/github/${SITE.repo.replace('https://github.com/', '')}/blob/main/notebooks/${file}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a href={colab(file)} target="_blank" rel="noreferrer">
                       <span className="badge">Open in Colab</span>
                     </a>
                   </td>
@@ -2341,24 +2407,7 @@ function PaperPage() {
         </div>
       </Section>
 
-      <Section
-        id="cite"
-        title="Cite this"
-        actions={
-          <button
-            type="button"
-            className="btn btn-plain btn-small"
-            onClick={() => {
-              navigator.clipboard?.writeText(bibtex).then(
-                () => setCopied(true),
-                () => setCopied(false),
-              );
-            }}
-          >
-            {copied ? 'Copied' : 'Copy BibTeX'}
-          </button>
-        }
-      >
+      <Section id="cite" title="Cite this">
         <pre className="bibtex">{bibtex}</pre>
       </Section>
     </article>

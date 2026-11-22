@@ -50,7 +50,7 @@
     },
     {
       "file": "figures/13_v3_generalisation.png",
-      "caption": "v3 hit@1 of ExtraTrees (the live model), Random Forest and the best popularity baseline for unseen districts, unseen states and future years, and ExtraTrees per held-out state."
+      "caption": "v3 hit@1 of ExtraTrees (the v3 model), Random Forest and the best popularity baseline for unseen districts, unseen states and future years, and ExtraTrees per held-out state."
     }
   ],
   "v1": {
@@ -777,7 +777,7 @@
       },
       {
         "file": "figures/13_v3_generalisation.png",
-        "caption": "v3 hit@1 of ExtraTrees (the live model), Random Forest and the best popularity baseline for unseen districts, unseen states and future years, and ExtraTrees per held-out state."
+        "caption": "v3 hit@1 of ExtraTrees (the v3 model), Random Forest and the best popularity baseline for unseen districts, unseen states and future years, and ExtraTrees per held-out state."
       }
     ],
     "data": {
@@ -863,57 +863,57 @@
     },
     "leave_states_out": {
       "baseline: season popularity": {
-        "hit1_mean": 0.3046,
-        "hit1_std": 0.0589,
+        "hit1_mean": 0.3045,
+        "hit1_std": 0.0588,
         "hit3_mean": 0.5544
       },
       "RF: climate + season + lat/lon": {
-        "hit1_mean": 0.404,
-        "hit1_std": 0.0586,
-        "hit3_mean": 0.7045
+        "hit1_mean": 0.4036,
+        "hit1_std": 0.0587,
+        "hit3_mean": 0.7035
       },
       "ExtraTrees: climate + season + lat/lon": {
-        "hit1_mean": 0.418,
-        "hit1_std": 0.0591,
-        "hit3_mean": 0.707
+        "hit1_mean": 0.4175,
+        "hit1_std": 0.0584,
+        "hit3_mean": 0.7079
       }
     },
     "leave_states_out_per_state_hit1": {
-      "Uttar Pradesh": 0.494,
+      "Uttar Pradesh": 0.4945,
       "Bihar": 0.2387,
-      "Madhya Pradesh": 0.3788,
-      "Karnataka": 0.5071,
+      "Madhya Pradesh": 0.3794,
+      "Karnataka": 0.5136,
       "West Bengal": 0.3178,
       "Gujarat": 0.4224,
-      "Tamil Nadu": 0.5313,
-      "Maharashtra": 0.4908,
+      "Tamil Nadu": 0.5345,
+      "Maharashtra": 0.478,
       "Rajasthan": 0.4502,
-      "Assam": 0.2759,
+      "Assam": 0.2745,
       "Odisha": 0.2843,
-      "Haryana": 0.7385,
-      "Punjab": 0.6809,
+      "Haryana": 0.7311,
+      "Punjab": 0.6765,
       "Kerala": 0.6355,
       "Andhra Pradesh": 0.5682,
-      "Telangana": 0.5354,
-      "Arunachal Pradesh": 0.3556,
+      "Telangana": 0.5114,
+      "Arunachal Pradesh": 0.3507,
       "Jharkhand": 0.1889,
-      "Uttarakhand": 0.3524,
-      "Chhattisgarh": 0.0699,
+      "Uttarakhand": 0.3511,
+      "Chhattisgarh": 0.0712,
       "Meghalaya": 0.2296,
-      "Nagaland": 0.3327,
-      "Himachal Pradesh": 0.2081,
+      "Nagaland": 0.3489,
+      "Himachal Pradesh": 0.2036,
       "Tripura": 0.552,
       "Manipur": 0.0787,
-      "Jammu and Kashmir": 0.2533,
+      "Jammu and Kashmir": 0.2507,
       "Puducherry": 0.386,
-      "Mizoram": 0.2471,
-      "Sikkim": 0.6131,
+      "Mizoram": 0.2644,
+      "Sikkim": 0.7007,
       "Goa": 0.3918,
       "Andaman and Nicobar Islands": 0.303,
-      "Dadra and Nagar Haveli": 0.1961,
+      "Dadra and Nagar Haveli": 0.2353,
       "Chandigarh": 0.8485,
       "Delhi": 0.7778,
-      "Ladakh": 0.5,
+      "Ladakh": 0.6667,
       "The Dadra & Nagar Haveli and Daman and Diu": 0.0,
       "Daman and Diu": 0.0
     },
@@ -1057,7 +1057,7 @@
       {
         "aspect": "Unseen states / regions, hit@1",
         "v2": "7\u201313% (leave-one-source-out accuracy)",
-        "v3": "41.80% (ExtraTrees; baseline 30.46%)"
+        "v3": "41.75% (ExtraTrees; baseline 30.45%)"
       },
       {
         "aspect": "Future years (2015\u20132022), hit@1",
@@ -1071,7 +1071,7 @@
       "python": "3.12.14",
       "sklearn": "1.9.1",
       "seed": 42,
-      "runtime_seconds": 180.8,
+      "runtime_seconds": 264.3,
       "doc": "hit1 = top-ranked crop is one of the recommend==1 crops of the district-year-season query; hit3 = any of the top 3 is; recall3 = share of recommended crops in the top 3. leave_districts_out = GroupKFold(5) by state|district; leave_states_out = GroupKFold(5) by state (state feature dropped); leave_years_out = train <=2014, test >=2015."
     }
   },
