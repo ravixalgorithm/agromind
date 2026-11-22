@@ -2,11 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .india_ref import SEASONS, SOIL_TYPES, STATES, WATER_SOURCES
-
-STATE_NAMES = STATES
-
-# key -> (dataset column, label, unit, min, max, step)
+# key -> (dataset column, label, unit, min, max, step). Used by data_loader.py for the v2 research notebook.
 # Bounds span the union of all three training sources so any slider position is a legal request.
 NUMERIC_FIELDS = {
     "N": ("N", "Nitrogen", "", 0, 450, 1),
@@ -17,35 +13,6 @@ NUMERIC_FIELDS = {
     "humidity": ("humidity", "Humidity", "%", 0, 100, 1),
     "water": ("rainfall", "Seasonal rainfall", "mm", 0, 4000, 10),
 }
-
-
-def _num(key: str):
-    _, label, _, lo, hi, _ = NUMERIC_FIELDS[key]
-    return Field(..., ge=lo, le=hi, description=label)
-
-
-class CropRequest(BaseModel):
-    N: float = _num("N")
-    P: float = _num("P")
-    K: float = _num("K")
-    ph: float = _num("ph")
-    temperature: float = _num("temperature")
-    humidity: float = _num("humidity")
-    water: float = _num("water")
-    soil: Literal[SOIL_TYPES] = Field(..., description="Soil type")
-    season: Literal[SEASONS] = Field(..., description="Growing season")
-    water_source: Literal[WATER_SOURCES] = Field(..., description="Irrigated or rainfed")
-    state: Literal[STATE_NAMES] = Field(..., description="Indian state")
-
-
-class CropPrediction(BaseModel):
-    crop: str
-    confidence: float
-
-
-class CropResponse(BaseModel):
-    best_crop: str
-    top_recommendations: list[CropPrediction]
 
 
 class V3Overrides(BaseModel):

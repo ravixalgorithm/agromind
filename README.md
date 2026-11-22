@@ -1,6 +1,6 @@
 # AgroMind
 
-**Generalized crop recommendation for Indian fields** — pick a state, enter soil and climate readings, get ranked crop fits with confidence, calendars, and growing profiles.
+**District-level crop recommendation for India**: pick a state, district and season, and get every crop ranked by how likely it is to be among the best-yielding crops there. Learned from 26 years of official Government of India crop statistics.
 
 <p align="center">
   <img src="docs/dashboard.png" alt="AgroMind dashboard — crop analysis with confidence, ranking, and field readings" width="100%" />
@@ -10,43 +10,51 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" />
   <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" />
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=flat-square&logo=fastapi&logoColor=white" />
-  <img alt="Rows" src="https://img.shields.io/badge/Training%20rows-67%2C200-2e7d32?style=flat-square" />
-  <img alt="Crops" src="https://img.shields.io/badge/Crops-74-2e7d32?style=flat-square" />
+  <img alt="Rows" src="https://img.shields.io/badge/DES%20rows-4%2C00%2C379-2e7d32?style=flat-square" />
+  <img alt="Districts" src="https://img.shields.io/badge/Districts-748-2e7d32?style=flat-square" />
 </p>
 
 ---
 
 ## Overview
 
-AgroMind is a full-stack advisor for matching field conditions to crops **across India**. A Random Forest model trained on a **merged three-source dataset** (67,200 rows · 74 crops · 16 states) ranks candidates from NPK, pH, temperature, humidity, rainfall, soil type, season, and **state**.
+AgroMind recommends crops for a **real Indian district and season**. The data are
+**4,00,379 official district-wise crop records** from the Government of India's Directorate of
+Economics & Statistics (APY reports, data.desagri.gov.in, crop years 1997-98 to 2022-23, 37 states/UTs,
+748 districts). Each record is joined with NASA POWER season climate and ISRIC SoilGrids soil at the
+district centroid. An ExtraTrees model learns which crops end up among the top-3 by relative yield in
+each district-season.
 
-The UI is a floated desktop-style app: dark sidebar, Chrome-style tabs, hatch-framed metric shells, live rankings, and a raw dataset viewer.
+The validation is honest: every split is grouped, so test districts, states or years are never seen in training.
 
-**Docs:** [Project documentation](docs/PROJECT.md) · [UI design system](frontend/DESIGN.md)
+| Test | hit@1 | hit@3 | Popularity baseline hit@1 |
+|------|-------|-------|---------------------------|
+| Unseen districts | **72.66 %** | **93.53 %** | 61.69 % |
+| Unseen states | 41.80 % | 70.70 % | 30.46 % |
+| Future years (2015–2022) | 65.34 % | 87.80 % | 55.49 % |
+
+**Docs:** [Project documentation](docs/PROJECT.md) · [Dataset](docs/research/DATASET.md) · [Data provenance](docs/research/DATA_PROVENANCE.md) · [UI design system](frontend/DESIGN.md)
 
 | Layer | Stack |
 |-------|--------|
-| Frontend | React 18, Vite, Iconsax, Plus Jakarta Sans |
-| Backend | FastAPI, scikit-learn, pandas, joblib |
-| Model | RandomForest (300 trees), one-hot soil / season / state |
-| Data | Merged `india_crops` + `tamilnadu_crops` + `Crop_recommendation` CSVs |
+| Frontend | React 18, Vite |
+| Backend | FastAPI, scikit-learn, pandas, pyarrow |
+| Model | ExtraTrees (300 trees) on season climate + district location + season + state |
+| Data | `backend/data/large/agromind_india_large.parquet` (DES APY × NASA POWER × SoilGrids) |
 
-> **Note:** Training rows come from public / synthetic agro reference sets. Metrics are for demo / coursework — not farm-validated agronomy advice.
+> **Note:** "Recommended" means "among the top-3 crops by relative yield in that district-season" in the
+> official statistics. It is not profit or agronomy advice. Treat outputs as a demonstration for education.
 
-**States covered:** Andhra Pradesh, Assam, Bihar, Gujarat, Haryana, Karnataka, Kerala, Madhya Pradesh, Maharashtra, Odisha, Punjab, Rajasthan, Tamil Nadu, Telangana, Uttar Pradesh, West Bengal.
+### Research history: v1 → v2 → v3
 
----
+| Version | Data | Result |
+|---------|------|--------|
+| v1 | Kaggle `Crop_recommendation.csv` (2,200 rows, 22 crops) | 98 % reported, but the one-vs-rest decoding was flawed and a min–max lookup already gets 88 % on that set |
+| v2 | 3 merged CSVs (67,200 rows, 74 crops) | 94.3 % in random 5-fold CV, but only 7–13 % on a source held out, because the sources disagree. Retired |
+| v3 (live) | official DES APY + climate + soil (4,00,379 rows) | the grouped results above |
 
-## Features
-
-- **State-aware recommendations** — location is a model feature, not just a label
-- **Live results** — update as soon as every reading is set
-- **Confidence & fit** — top pick with %, reading marks, soil match, sow/harvest window
-- **Crop ranking** — model pick plus same-season alternatives by in-range fit
-- **Growing calendar** — sow / grow / harvest months per crop
-- **Field panel** — state, season, soil chips, craft sliders
-- **Saved analyses** — sidebar history (`localStorage`)
-- **Raw data viewer** — browse merged training rows, filterable by crop, with the source set shown per row
+All of it is reproducible in Colab: `notebooks/AgroMind_v2_Research.ipynb` (v1 → v2) and
+`notebooks/AgroMind_v3_LargeScale.ipynb` (v3). Numbers are in `docs/research/results.json`.
 
 ---
 
@@ -54,8 +62,8 @@ The UI is a floated desktop-style app: dark sidebar, Chrome-style tabs, hatch-fr
 
 ### Prerequisites
 
-- Python **3.10+** (verified on 3.15)
-- Node.js **18+** and npm (verified on 22)
+- Python **3.10+**
+- Node.js **18+** and npm
 
 ### Windows — one click
 
@@ -63,8 +71,8 @@ The UI is a floated desktop-style app: dark sidebar, Chrome-style tabs, hatch-fr
 start_all.bat
 ```
 
-This opens the backend and frontend in separate terminals. First run creates `backend/.venv`,
-installs dependencies and trains the model (a minute or two); later runs start instantly.
+This opens the backend and frontend in separate terminals. The first run creates `backend/.venv` and
+installs dependencies. The model trains in memory in a few seconds each time the API starts.
 
 Then open **http://127.0.0.1:5173**
 
@@ -73,8 +81,8 @@ Then open **http://127.0.0.1:5173**
 ```bash
 # backend
 cd backend
-py -m venv .venv
-.venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate         # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
@@ -84,80 +92,34 @@ npm install
 npm run dev
 ```
 
-First boot trains (or loads) `backend/models/crop_model_v2.joblib`.
-
 | URL | Purpose |
 |-----|---------|
 | http://127.0.0.1:8000/docs | Swagger |
-| http://127.0.0.1:8000/metadata | Fields, states, crop profiles |
-| http://127.0.0.1:8000/model-info | Metrics and per-source row counts |
-| http://127.0.0.1:8000/dataset | Paginated training rows |
+| http://127.0.0.1:8000/options | States → districts → seasons, crop list |
+| http://127.0.0.1:8000/model-info | Model, data coverage, grouped metrics, v1/v2 history |
+| http://127.0.0.1:8000/dataset | Paginated browse of all 4,00,379 rows |
 
-To retrain from scratch:
+Checks:
 
 ```bash
 cd backend
-.venv\Scripts\python train_model.py --force
+python -m pytest tests -q     # every endpoint
+python train_model.py         # trains once, prints coverage + grouped metrics
 ```
 
 ---
 
 ## API example
 
-`POST /predict`
+`POST /predict`: `temperature`, `humidity` and `rainfall` are optional overrides of the district's
+season averages (`GET /district` returns the defaults).
 
 ```json
-{
-  "N": 90,
-  "P": 40,
-  "K": 40,
-  "ph": 6.5,
-  "temperature": 28,
-  "humidity": 80,
-  "water": 1200,
-  "soil": "Alluvial",
-  "season": "kharif",
-  "water_source": "irrigated",
-  "state": "Punjab"
-}
+{ "state": "Punjab", "district": "Ludhiana", "season": "rabi" }
 ```
 
----
-
-## Model & data
-
-| Item | Detail |
-|------|--------|
-| Artifact | `backend/models/crop_model_v2.joblib` |
-| Scale | 67,200 rows · 74 crops · 16 states · 10 soil classes |
-| Features | N, P, K, pH, temp, RH, rainfall, soil, season, **state** |
-| Target | crop slug (`rice`, `mango`, …) |
-| Held-out | See live `GET /model-info` |
-
-### Sources
-
-`backend/app/data_loader.py` normalises all three CSVs into one schema
-(`N, P, K, temperature, humidity, ph, rainfall, soil, season, state, crop, water_source`)
-before training, so the model learns from every row:
-
-| File | Rows | Contributes |
-|------|------|-------------|
-| `data/india_crops.csv` | 8,000 | state, soil, season, climate |
-| `data/tamilnadu_crops.csv` | 57,000 | free-text soil, month-level sow/harvest, durations |
-| `data/Crop_recommendation.csv` | 2,200 | the Kaggle agronomy readings (22 crops) |
-
-Normalisation rules:
-
-- **Soil** — 34 free-text strings from the Tamil Nadu set are folded into 10 canonical buckets
-  (see `SOIL_TYPES` in `backend/app/india_ref.py`).
-- **Crop names** — spelling variants are aliased (`bengalgram` → chickpea, `Pearl millet` → bajra,
-  `gingely` → sesame, `redgram` → pigeon pea, `small onion` → onion) so 100+ raw labels collapse to 74 crops.
-- **Season** — taken from the row when present, otherwise from the crop's dominant season, otherwise
-  from the curated calendar.
-- **State** — rows that carry no location (the Kaggle set) use an `Unspecified` bucket which the API
-  never offers, so it cannot be selected from the UI.
-- **Sow / harvest / duration** — curated where the data has no calendar columns, otherwise read off
-  the Tamil Nadu records (`SOWN`, `HARVESTED`, `CROPDURATION`).
+The response ranks all 49 crops (wheat first for Ludhiana rabi), each with its probability and its
+historical median yield in that district. Full shapes: [docs/PROJECT.md §5](docs/PROJECT.md#5-api).
 
 ---
 
@@ -168,20 +130,20 @@ agromind/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py           # FastAPI routes
-│   │   ├── model_service.py  # training, metrics, prediction, metadata
-│   │   ├── data_loader.py    # merges the three CSVs
-│   │   ├── india_ref.py      # states, soils, crop catalog, calendars
-│   │   └── schemas.py        # request/response models + field bounds
-│   ├── data/                 # the three training CSVs
-│   ├── models/               # crop_model_v2.joblib (generated)
+│   │   ├── v3_service.py     # district model: data, training, prediction, browse
+│   │   ├── schemas.py        # /predict request model
+│   │   ├── india_ref.py      # crop names, types, curated calendars
+│   │   └── data_loader.py    # v2 CSV merge (used by the v2 research notebook only)
+│   ├── data/large/           # DES APY × NASA POWER × SoilGrids table (+ build stats)
+│   ├── data/*.csv            # v1/v2 research CSVs
+│   ├── scripts/build_large_dataset.py
+│   ├── tests/test_api.py
 │   └── train_model.py
-├── frontend/
-│   ├── src/                  # App.jsx, Slider.jsx, styles.css
-│   └── DESIGN.md
+├── frontend/                 # React UI (see DESIGN.md)
+├── notebooks/                # v1 (original), v2 research, v3 large-scale, v4 method
 ├── docs/
-│   ├── dashboard.png
-│   └── PROJECT.md
-├── notebooks/                # original Kaggle exploration
+│   ├── PROJECT.md
+│   └── research/             # DATASET, DATA_PROVENANCE, LITERATURE, results.json, figures
 ├── start_all.bat
 ├── start_backend.bat
 └── start_frontend.bat
@@ -193,4 +155,4 @@ agromind/
 
 Application code is for education and demonstration.
 
-Training data combines public agro reference patterns and the Kaggle crop recommendation set; treat outputs as illustrative.
+Crop statistics: Government of India, Directorate of Economics & Statistics (DES), under the DES copyright policy (reproduction free of charge after taking permission; see provenance). Climate: NASA POWER. Soil: ISRIC SoilGrids 2.0 (CC BY 4.0). Details and citations: [DATA_PROVENANCE.md](docs/research/DATA_PROVENANCE.md). Treat outputs as illustrative.
