@@ -6,7 +6,7 @@ REPO = "ravixalgorithm/agromind"
 NB = Path(__file__).resolve().parents[1] / "notebooks/AgroMind_v4_Novel_Method.ipynb"
 md, code = nbf.v4.new_markdown_cell, nbf.v4.new_code_cell
 cells = [
-md(f"""# AgroMind v4: yield-grounded crop ranking + conformal prediction sets
+md(f"""# AgroMind v4 (final): yield-grounded crop ranking + conformal prediction sets
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{REPO}/blob/main/notebooks/AgroMind_v4_Novel_Method.ipynb)
 
@@ -16,7 +16,7 @@ How good are they on **real Government of India data**, in **states and years th
 * **Data:** DES district × season × year crop statistics (1997-98 to 2022-23, official DES portal) + NASA POWER climate + SoilGrids soil (built by `backend/scripts/build_large_dataset.py`).
 * **Task:** for each district-season-year, rank the crops grown there by realised yield percentile. The "best crop" is the top-yielding one.
 * **Baselines (as in the literature):** Gaussian NB, Random Forest, XGBoost, MLP classifiers, plus naive *crop prior* and *last-year persistence*.
-* **Ours (YieldRank):** LightGBM LambdaMART ranker on (district-season, crop) pairs, and **split-conformal prediction sets** with a 90% coverage target, calibrated on **held-out states**.
+* **Ours (YieldRank v4, final):** a blend, per district-season, of a listwise ranker (XGBoost rank:ndcg) and a pointwise yield-percentile regressor (LightGBM) on (district-season, crop) pairs, plus 0.25 × last-year persistence. The configuration was chosen on held-out training states and years, never on test folds (`experiments/select_final.py`). Recommendations come with **split-conformal prediction sets** at a 90% coverage target.
 * **Protocols:** random 5-fold, **leave-states-out** (5 folds over states), **leave-years-out** (5 contiguous year blocks).
 
 Everything below is computed live; nothing is pasted in. The code lives in `experiments/run.py` (fetched from GitHub on Colab)."""),
@@ -37,6 +37,23 @@ import numpy as np, pandas as pd, run
 from scipy.stats import wilcoxon
 pd.set_option("display.width", 200); pd.set_option("display.max_columns", 30)
 print("repo root:", root.resolve())"""),
+md("## 0. How AgroMind got here: v1 → v2 → v3 → v4 (read from `docs/research/results.json`)"),
+code("""import json
+R = json.load(open(root / "docs/research/results.json")) if (root / "docs/research/results.json").exists() else {}
+g = lambda *ks, d=None: (lambda v: v)(__import__("functools").reduce(lambda a, k: a.get(k, {}) if isinstance(a, dict) else {}, ks, R) or d)
+v1 = g("v1", "RandomForest", "reported_accuracy"); v1x = g("v1", "GaussianNB", "exact_match_accuracy")
+v2 = g("models", "RandomForest (v2 deployed)", "accuracy_mean"); v2l = max([v.get("accuracy", 0) for k, v in g("loso", d={}).items() if "closed" in k] or [0])
+v3 = g("v3", "leave_states_out", "ExtraTrees: climate + season + lat/lon", "hit1_mean"); v3b = g("v3", "leave_states_out", "baseline: season popularity", "hit1_mean")
+n4 = g("final", "numbers", d=None) or g("v4", "numbers", d={})
+print(f"v1  Kaggle table, 2,200 rows, random 80/20  -> RF accuracy {100*(v1 or 0):.1f}%.  Weakness: near-synthetic data, no location/year; "
+      f"its multi-output decoder hides errors (exact-match GNB {100*(v1x or 0):.1f}%).")
+print(f"v2  67,200 merged rows, 74 crops, random 5-fold -> RF accuracy {100*(v2 or 0):.1f}%.  Weakness: train on two sources, test on the third "
+      f"-> at most {100*v2l:.1f}% (leave-one-source-out).")
+print(f"v3  400,379 Govt APY rows, grouped splits -> unseen states hit@1 {100*(v3 or 0):.1f}% (ExtraTrees; season-popularity baseline {100*(v3b or 0):.1f}%; "
+      "v3 hit@1 counts any of the top-3 yield crops).  Weakness: no uncertainty, classifier framing.")
+print(f"v4  same Govt data, best-yield crop per district-season-year -> unseen states hit@1 {n4.get('OursHitLSO','?')}% vs best literature classifier "
+      f"{n4.get('BaseHitLSO','?')}% and persistence {n4.get('PersHitLSO','?')}%; 90% conformal sets cover {n4.get('CovIIDLSO','?')}% with "
+      f"{n4.get('SizeIIDLSO','?')} crops.  Remaining weakness: per-state coverage, single country (see paper).")"""),
 md("""## 1. The literature's setting: Kaggle crop table, random 80/20 split
 This reproduces the ~99% figures (2,200 rows, 100 per crop, no location or year)."""),
 code("""from sklearn.ensemble import RandomForestClassifier

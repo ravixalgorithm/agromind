@@ -54,51 +54,56 @@ def state_robust(cal, test, state, alpha=0.1, beta=0.9, min_n=30):
     return {"coverage": float(cov.mean()), "size": float(size.mean()), "n_states": S, "threshold": float(th)}, cov, size
 
 
-ap = argparse.ArgumentParser()
-ap.add_argument("--quick", action="store_true")
-args = ap.parse_args()
-df = run.load()
-if args.quick:
-    df = df[df.qid.isin(df.qid.drop_duplicates().sample(6000, random_state=run.SEED))].reset_index(drop=True)
-crops = sorted(df.crop_slug.unique())
-Q = df.groupby("qid").first()
-ncand = df.groupby("qid").size()
-BUCKET = pd.cut(ncand, [1, 3, 5, 8, 100], labels=["2-3", "4-5", "6-8", "9+"]).astype(str)
-ZONE = Q.state.map(REGION).fillna("other")
-idx = lambda qs: df.index[df.qid.isin(qs)]
-out, perq = {}, []
-for protocol in ("random", "leave-states-out", "leave-years-out"):
-    for f, (trq, teq, groups) in enumerate(run.folds(df, protocol)):
-        if args.quick and f >= 2:
-            break
-        oof = pd.Series(np.nan, index=idx(trq))
-        g = groups.loc[trq].values
-        for itr, iho in GroupKFold(min(5, len(set(g)))).split(trq, groups=g):
-            score = run.fit_final(df, idx(trq[itr]), crops)
-            oof.loc[idx(trq[iho])] = score(idx(trq[iho]))
-        tr_i, te_i = idx(trq), idx(teq)
-        T = run.fit_T(df.loc[tr_i, "qid"], oof.values, df.loc[tr_i, "best"].values)
-        final = run.fit_final(df, tr_i, crops)
-        s_te = final(te_i)
-        mk = lambda i, s: df.loc[i, ["qid", "best"]].assign(p=run.softmax_by_q(df.loc[i, "qid"], s, T))
-        res, per = run.conformal(mk(tr_i, oof.values), mk(te_i, s_te))
-        pq = run.per_query(df.loc[te_i], s_te)
-        rec = {k: float(v) for k, v in pq.mean().items()} | {"conformal_crossgroup": res}
-        cal_df, te_df = mk(tr_i, oof.values), mk(te_i, s_te)
-        for name, grp in (("ncand", BUCKET), ("region", ZONE)):
-            rec[f"mondrian_{name}"], cov, size = mondrian(cal_df, te_df, grp)
-            per[f"cov_M{name}"], per[f"size_M{name}"] = cov, size
-        rec["state_robust"], cov, size = state_robust(cal_df, te_df, Q.state)
-        per["cov_SR"], per["size_SR"] = cov, size
-        out.setdefault(protocol, []).append(rec)
-        per["state"], per["protocol"], per["fold"] = Q.state.reindex(per.index).values, protocol, f
-        perq.append(per.reset_index(names="qid"))
-        print(f"{protocol:17s} f{f} hit@1={rec['hit@1']:.4f} ndcg@3={rec['ndcg@3']:.4f} "
-              f"LAC90 cov={res['LAC@0.9']['coverage']:.3f} size={res['LAC@0.9']['size']:.2f} "
-              f"APS90 cov={res['APS@0.9']['coverage']:.3f} | Mondrian ncand {rec['mondrian_ncand']['coverage']:.3f}/{rec['mondrian_ncand']['size']:.2f} "
-              f"region {rec['mondrian_region']['coverage']:.3f}/{rec['mondrian_region']['size']:.2f} "
-              f"state-robust {rec['state_robust']['coverage']:.3f}/{rec['state_robust']['size']:.2f}", flush=True)
-tag = "quick" if args.quick else "main"
-json.dump(out, open(run.OUT / f"crossconf_{tag}.json", "w"), indent=1)
-pd.concat(perq, ignore_index=True).to_parquet(run.OUT / f"crossconf_query_{tag}.parquet")
-print("wrote", run.OUT / f"crossconf_{tag}.json")
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--quick", action="store_true")
+    args = ap.parse_args()
+    df = run.load()
+    if args.quick:
+        df = df[df.qid.isin(df.qid.drop_duplicates().sample(6000, random_state=run.SEED))].reset_index(drop=True)
+    crops = sorted(df.crop_slug.unique())
+    Q = df.groupby("qid").first()
+    ncand = df.groupby("qid").size()
+    BUCKET = pd.cut(ncand, [1, 3, 5, 8, 100], labels=["2-3", "4-5", "6-8", "9+"]).astype(str)
+    ZONE = Q.state.map(REGION).fillna("other")
+    idx = lambda qs: df.index[df.qid.isin(qs)]
+    out, perq = {}, []
+    for protocol in ("random", "leave-states-out", "leave-years-out"):
+        for f, (trq, teq, groups) in enumerate(run.folds(df, protocol)):
+            if args.quick and f >= 2:
+                break
+            oof = pd.Series(np.nan, index=idx(trq))
+            g = groups.loc[trq].values
+            for itr, iho in GroupKFold(min(5, len(set(g)))).split(trq, groups=g):
+                score = run.fit_final(df, idx(trq[itr]), crops)
+                oof.loc[idx(trq[iho])] = score(idx(trq[iho]))
+            tr_i, te_i = idx(trq), idx(teq)
+            T = run.fit_T(df.loc[tr_i, "qid"], oof.values, df.loc[tr_i, "best"].values)
+            final = run.fit_final(df, tr_i, crops)
+            s_te = final(te_i)
+            mk = lambda i, s: df.loc[i, ["qid", "best"]].assign(p=run.softmax_by_q(df.loc[i, "qid"], s, T))
+            res, per = run.conformal(mk(tr_i, oof.values), mk(te_i, s_te))
+            pq = run.per_query(df.loc[te_i], s_te)
+            rec = {k: float(v) for k, v in pq.mean().items()} | {"conformal_crossgroup": res}
+            cal_df, te_df = mk(tr_i, oof.values), mk(te_i, s_te)
+            for name, grp in (("ncand", BUCKET), ("region", ZONE)):
+                rec[f"mondrian_{name}"], cov, size = mondrian(cal_df, te_df, grp)
+                per[f"cov_M{name}"], per[f"size_M{name}"] = cov, size
+            rec["state_robust"], cov, size = state_robust(cal_df, te_df, Q.state)
+            per["cov_SR"], per["size_SR"] = cov, size
+            out.setdefault(protocol, []).append(rec)
+            per["state"], per["protocol"], per["fold"] = Q.state.reindex(per.index).values, protocol, f
+            perq.append(per.reset_index(names="qid"))
+            print(f"{protocol:17s} f{f} hit@1={rec['hit@1']:.4f} ndcg@3={rec['ndcg@3']:.4f} "
+                  f"LAC90 cov={res['LAC@0.9']['coverage']:.3f} size={res['LAC@0.9']['size']:.2f} "
+                  f"APS90 cov={res['APS@0.9']['coverage']:.3f} | Mondrian ncand {rec['mondrian_ncand']['coverage']:.3f}/{rec['mondrian_ncand']['size']:.2f} "
+                  f"region {rec['mondrian_region']['coverage']:.3f}/{rec['mondrian_region']['size']:.2f} "
+                  f"state-robust {rec['state_robust']['coverage']:.3f}/{rec['state_robust']['size']:.2f}", flush=True)
+    tag = "quick" if args.quick else "main"
+    json.dump(out, open(run.OUT / f"crossconf_{tag}.json", "w"), indent=1)
+    pd.concat(perq, ignore_index=True).to_parquet(run.OUT / f"crossconf_query_{tag}.parquet")
+    print("wrote", run.OUT / f"crossconf_{tag}.json")
+
+
+if __name__ == "__main__":
+    main()
