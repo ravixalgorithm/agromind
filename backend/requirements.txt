@@ -1,0 +1,9 @@
+# Plain `uvicorn` — the [standard] extra pulls httptools/pyyaml/websockets, which have no
+# wheels on very new Python releases (3.13+). These bounds install on Python 3.10 – 3.15.
+fastapi>=0.115
+uvicorn>=0.32
+pandas>=2.2
+numpy>=2.1
+scikit-learn>=1.5
+joblib>=1.4
+python-multipart>=0.0.19
