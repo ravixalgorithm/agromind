@@ -268,21 +268,21 @@
           learning-to-rank model (LightGBM LambdaMART <span class="cite">[35]</span>), orders the 49 crops for each
           district, season and year in 259,181 Government records (1997–2022, 43,443 queries). Here hit@1 means
           the top-ranked crop is <i>the</i> best-yielding one, a stricter test than v3's. On states it has never seen,
-          YieldRank's first pick is the best crop 55.7% of the time against 39.2% for the best
-          classifier (MLP; +16.5 points, p&nbsp;&lt;&nbsp;10<sup>−300</sup>).</p>
+          YieldRank's first pick is the best crop 55.6% of the time against 38.5% for the best
+          classifier (MLP; +17.0 points, p&nbsp;&lt;&nbsp;10<sup>−300</sup>).</p>
         <p>It also returns a <b>conformal prediction set</b>: a shortlist meant to contain the best crop 90% of the time.
-          On unseen states, with i.i.d. calibration, the sets achieve 90.0% coverage with 2.87 crops
-          on average, but only 74.8% in the worst state (Telangana). For a Random Forest on unseen states,
+          On unseen states, with i.i.d. calibration, the sets achieve 90.1% coverage with 2.87 crops
+          on average, but only 74.9% in the worst state (Telangana). For a Random Forest on unseen states,
           calibrating on held-out training states instead of i.i.d. data lifts coverage from 75.4% to 89.5%.</p>
         <p><b>The honest caveat:</b> simply repeating last year's best crop scores 54.5%, almost as high.
-          YieldRank's clear advantage is on the 39.7% of cases with no usable history: 47.5% against 42.6%.</p>
+          YieldRank's clear advantage is on the 39.7% of cases with no usable history: 47.2% against 42.6%.</p>
       </div>
       <div>
         <table class="kr">
           <thead><tr><th>Unseen states</th><th class="num">Hit@1</th><th class="num">NDCG@3</th></tr></thead>
           <tbody>
-            <tr class="best"><td>YieldRank (ours)</td><td class="num">55.7%</td><td class="num">0.922</td></tr>
-            <tr><td>MLP (best classifier)</td><td class="num">39.2%</td><td class="num">0.838</td></tr>
+            <tr class="best"><td>YieldRank (ours)</td><td class="num">55.6%</td><td class="num">0.922</td></tr>
+            <tr><td>MLP (best classifier)</td><td class="num">38.5%</td><td class="num">0.833</td></tr>
             <tr><td>Last-year persistence</td><td class="num">54.5%</td><td class="num">0.909</td></tr>
           </tbody>
         </table>
