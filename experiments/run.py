@@ -245,8 +245,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true", help="2 folds, subsample, for smoke tests")
     ap.add_argument("--no-hist", action="store_true", help="drop district-history features")
+    ap.add_argument("--no-soil", action="store_true", help="drop SoilGrids columns (ablation)")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
+    global ENV
+    if args.no_soil:
+        ENV = [c for c in ENV if not c.startswith("soil_")]
     hist = not args.no_hist
     df = load()
     if args.quick:
@@ -310,7 +314,7 @@ def main():
                     p = wilcoxon(diff).pvalue if (diff != 0).any() else 1.0
                     rec[f"wilcoxon_vs_ours_{k}"] = {"mean_diff": float(diff.mean()), "p": float(p), "n": int(len(diff))}
     OUT.mkdir(exist_ok=True)
-    tag = args.tag or ("quick" if args.quick else ("nohist" if args.no_hist else "main"))
+    tag = args.tag or ("quick" if args.quick else "nohist" if args.no_hist else "nosoil" if args.no_soil else "main")
     meta = dict(rows=len(df), queries=int(df.qid.nunique()), crops=len(crops), states=int(df.state.nunique()),
                 years=[int(df.year.min()), int(df.year.max())], hist=hist,
                 soil_coverage=df.soil_source.value_counts(dropna=False).to_dict())

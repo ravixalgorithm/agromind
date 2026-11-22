@@ -1,0 +1,345 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\input{tables/numbers}
+
+\begin{document}
+
+\title{Beyond 99\%: Yield-Grounded Crop Ranking with Conformal Prediction Sets, Evaluated on Unseen Indian States and Years}
+
+\author{\IEEEauthorblockN{[Student Names]}
+\IEEEauthorblockA{Department of Computer Science and Engineering\\
+{[College Name]}, India}
+\and
+\IEEEauthorblockN{[Guide Name]}
+\IEEEauthorblockA{Department of Computer Science and Engineering\\
+{[College Name]}, India}}
+
+\maketitle
+
+\begin{abstract}
+Crop-recommendation papers routinely report 97--99.9\% accuracy, almost always on a small,
+augmented, location-free table split at random. We ask how such recommenders behave on real data
+in states and years they have never seen. From Government of India
+district\,$\times$\,season\,$\times$\,year crop statistics joined with NASA POWER climate and
+SoilGrids soil, we build a benchmark of \NQueries{} district-season-years (\NCrops{} crops,
+\NStates{} states/UTs, \YearA--\YearB). We recast recommendation as \emph{ranking the crops grown in
+a district by realised yield}. Four classifier families from the literature, which reach
+\KaggleRF\% on the Kaggle table, pick the best-yielding crop in at most \BaseHitR\% of cases under
+a random split. On held-out states this falls to \BaseHitLSO\%, below a one-line rule that repeats
+last year's yield ranking (\PersHitLSO\%). A yield-grounded ranker (YieldRank) reaches
+\OursHitLSO\% on held-out states (+\GainHitLSO{} points over \BaseNameLSO, NDCG@3
+\BaseNDCGLSO$\to$\OursNDCGLSO). Its margin over persistence is small overall but
+\OursHitColdLSO\% vs \PersHitColdLSO\% on the \ColdShareLSO\% of cases where some crop lacks
+last-year history. Split-conformal sets at a 90\% target cover the best crop in \CovIIDLSO\% of
+unseen-state cases with \SizeIIDLSO{} crops on average, but coverage drops to \WorstIID\% in the
+worst state. Calibrating the classifiers on held-out states rather than i.i.d.\ queries raises
+Random-Forest coverage from \RFCovIIDMean\% to \RFCovGRPMean\%.
+\end{abstract}
+
+\begin{IEEEkeywords}
+crop recommendation, learning to rank, conformal prediction, spatial cross-validation, distribution shift, Indian agriculture
+\end{IEEEkeywords}
+
+%=====================================================================
+\section{Introduction}
+
+Choosing what to sow is the most consequential decision a smallholder makes each season, and
+machine-learning crop recommenders promise to support it. The literature reports remarkable
+numbers: 99.09\% \cite{dey2024}, 99.27\% \cite{shastri2025}, 99.56\% \cite{ahmed2025},
+99.59\% \cite{elbasi2023} and 99.91\% \cite{kulkarni2018}. Most of these results come from the
+same public Kaggle table \cite{ingle2020kaggle}: 2,200 rows, exactly 100 per crop, ``built by
+augmenting'' Indian rainfall, climate and fertiliser data, with no location, season or year. On
+it, a Random Forest reaches \KaggleRF\% with a random 80/20 split in our hands as well.
+
+These numbers do not tell a farmer in a new district how much to trust the advice. When Sam and
+D'Abreo \cite{sam2025} merely respected time order on Indian data, Random-Forest accuracy fell
+from 99.96\% (10-fold CV) to 78.55\%. Yield studies tell the same story: random cross-validation
+overstates skill when data are spatially or temporally structured
+\cite{roberts2017,meyer2019,zhang2026,baatz2025,asif2026}. Yet no crop-recommendation paper we
+found holds out entire \emph{regions}.
+
+Two further gaps follow from the usual framing (Section~\ref{sec:related}; full audit in our
+repository). First, recommendation is posed as single-label classification of ``the crop grown
+here'', scored by top-1 accuracy. Several crops are usually viable, though, and realised yield, the
+outcome that matters, is ignored. Second, recommenders show a ``confidence'' that is never
+calibrated, and none returns a set of options with a coverage guarantee. Conformal prediction
+\cite{angelopoulos2021} has reached agriculture only for weed images \cite{melki2023,melki2025} and
+nitrogen rates \cite{khan2026}.
+
+\textbf{Contributions.}
+\begin{enumerate}
+\item A public benchmark for crop recommendation on real Indian government data
+(DES district-season-year statistics \cite{ogdindia} + NASA POWER \cite{nasapower} + SoilGrids
+\cite{poggio2021}) with \emph{leave-states-out} and \emph{leave-years-out} protocols, and
+re-implementations of the classifier families used in prior work on identical splits.
+\item YieldRank, a learning-to-rank formulation that ranks the candidate crops of a
+district-season by realised yield percentile, evaluated with NDCG@k and hit@k
+\cite{jarvelin2002}.
+\item Conformal prediction sets for ``which crop yields best here?'', with a state-level
+audit of coverage. It shows when i.i.d.\ calibration breaks under spatial shift and how
+held-out-state, cross-group and Mondrian calibration behave.
+\item An honest accounting. A one-line persistence rule beats every literature classifier on
+unseen states. Our gain over it is concentrated in cold-start cases, and we report where the
+advantage is large, small, or absent.
+\end{enumerate}
+
+%=====================================================================
+\section{Related Work}\label{sec:related}
+
+\textbf{Crop recommendation.} Early Indian systems combined classifiers by voting over soil and
+weather \cite{pudumalar2017,kulkarni2018}, and later ones added season and location
+\cite{doshi2018,priyadharshini2021}. Recent work explores stacking \cite{akkem2023,ahmed2025},
+RF+XGBoost hybrids \cite{afzal2025}, neural and transformer models
+\cite{musanase2023,latha2026,pandey2026}, explainability \cite{shams2024,turgut2024,shastri2025},
+and metaheuristics \cite{mahesh2026,reddy2026}. Table~\ref{tab:lit} summarises how these papers
+evaluate. Economic signals appear as classifier inputs (MSP and cost of cultivation
+\cite{sam2025}) or as a price-forecast re-rank of a classifier's top-3 \cite{sindhur2025}. Hasan
+et al.\ \cite{hasan2023} threshold per-crop production forecasts.
+
+\textbf{Honest evaluation.} Blocked and spatial cross-validation are standard in ecology
+\cite{roberts2017,meyer2019}. In yield prediction, moving from random CV to leave-site-out or
+forward-year splits cuts $R^2$ from 0.84 to 0.29--0.36 \cite{zhang2026}, from 0.99 to $-0.20$
+\cite{asif2026}, and degrades models across US regions \cite{chakravarty2025}. District-level Indian
+rice yield reaches out-of-sample $R^2\le0.82$ \cite{declercq2024}.
+
+\textbf{Uncertainty.} Tree-ensemble probabilities are miscalibrated \cite{niculescumizil2005}.
+Split conformal prediction gives finite-sample marginal coverage under exchangeability
+\cite{angelopoulos2021,sadinle2019,romano2020}. Coverage can fail under distribution shift
+\cite{barber2023} and for sub-groups \cite{melki2023}.
+
+\begin{table}[t]
+\caption{How recent crop-recommendation work evaluates (from full text where available).}
+\label{tab:lit}
+\centering\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+Ref. & Data & Split & Metric & Reported \\
+\midrule
+\cite{dey2024} & Kaggle \cite{ingle2020kaggle} & random & precision & 99.09\% \\
+\cite{elbasi2023} & soil--climate & random & accuracy & 99.59\% \\
+\cite{afzal2025} & Kaggle & 80/20 + 10-fold & accuracy & 98\% \\
+\cite{shastri2025} & Kaggle & 75/25 & accuracy & 99.27\% \\
+\cite{ahmed2025} & Kaggle; FAO & 80/20 + 10-fold & accuracy & 99.56\%; 85.6\% \\
+\cite{pandey2026} & Kaggle + images & strat.\ 80/10/10 & accuracy & 99.3\% \\
+\cite{piyar2026} & Kaggle (2 sets) & 80/20 & accuracy & 98.4\% \\
+\cite{sindhur2025} & Kaggle-style + prices & 20\% hold-out & accuracy & 98.5\% \\
+\cite{sam2025} & Indian env.+econ. & \textbf{time split} & accuracy & 99.96\%$\to$78.55\% \\
+\midrule
+\textbf{Ours} & DES+POWER+SoilGrids & \textbf{states / years} & NDCG, hit@k, coverage & Tab.~\ref{tab:rank},\ref{tab:conf} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+%=====================================================================
+\section{Dataset}
+
+\textbf{Crop statistics.} District-wise, season-wise area and production published by the
+Directorate of Economics and Statistics, Ministry of Agriculture \& Farmers Welfare
+\cite{ogdindia}, crop years 1997-98 to 2020-21 (a 1997--2021 compilation cross-checked row-wise
+against the official API). Yield is production/area. Records with area below 100\,ha are dropped
+as noisy. Crop names are folded to \NCrops{} slugs.
+
+\textbf{Climate and soil.} Each of \NDistricts{} APY district names is matched to a district
+polygon centroid. NASA POWER monthly temperature, relative humidity and corrected precipitation
+\cite{nasapower,sparks2018} are aggregated over each season's months (e.g.\ Kharif Jun--Oct). Soil
+pH, total N, organic carbon, clay, sand and CEC (0--30\,cm) come from SoilGrids 2.0
+\cite{poggio2021} at the centroid. In this version soil is available for only part of the
+districts (state medians elsewhere). We flag this as a limitation and rerun when coverage is
+complete.
+
+\textbf{Task.} A \emph{query} is one district $\times$ season $\times$ year. Its
+\emph{candidates} are the crops actually grown there (median 4, max 27). The relevance of crop $c$
+in query $q$ is its \emph{yield percentile}: the rank of its yield among all districts that grew
+$c$ that year, scaled to $[0,1]$. Percentiles make yields comparable across crops with very
+different units (t/ha of sugarcane vs pulses) and express comparative advantage. The
+\emph{best crop} of a query is its highest-percentile candidate. After keeping queries with at
+least two candidates, the benchmark has \NRows{} (query, crop) rows and \NQueries{} queries
+(\YearA--\YearB, \NStates{} states/UTs).
+
+%=====================================================================
+\section{Method}
+
+\textbf{Features.} Every model receives the same inputs: season climate (3), soil (6), season
+one-hot (4) and, in the main setting, \emph{district history}: last year's yield percentile of
+each candidate in that district, its 3-year mean, and last year's area share. History uses
+strictly earlier years only. We report a history-free ablation too. State identity is
+\emph{not} a feature, because it carries no information about an unseen state.
+
+\textbf{YieldRank.} We train a LightGBM \cite{ke2017} LambdaMART ranker \cite{burges2010} on
+(query, crop) pairs, with crop identity as a categorical feature so that trees can learn
+crop$\times$environment interactions. Relevance is the yield percentile graded into 10 levels,
+and the objective optimises NDCG. A pointwise LightGBM regressor on the percentile serves as an
+ablation.
+
+\textbf{Literature baselines.} Following prior work, the classifiers predict a single crop label
+from query-level features: Gaussian Naive Bayes \cite{pudumalar2017,elbasi2023}, Random Forest
+(300 trees) \cite{kulkarni2018,breiman2001}, XGBoost \cite{dey2024,chen2016} and an MLP
+\cite{musanase2023}. For fairness we train them on the \emph{best} crop of each training query
+(the label our metrics reward) and give them the same history features flattened per crop. At
+test time their class probabilities, restricted to the query's candidates, rank the candidates.
+We add two naive rankers: the crop's mean training percentile (\emph{crop prior}) and
+\emph{persistence}, i.e.\ last year's percentile.
+
+\textbf{Conformal prediction sets.} For each model we turn candidate scores into probabilities
+with a per-query softmax whose temperature is fitted on calibration data. Split-conformal LAC
+\cite{sadinle2019} uses the score $1-\hat p(y)$ and APS \cite{romano2020} uses cumulative
+sorted mass. Both give a set of crops that should contain the best crop with probability
+$\ge 1-\alpha$. The guarantee holds only if calibration and test queries are exchangeable
+\cite{angelopoulos2021}. Under a leave-states-out split, a calibration set drawn from the
+training states is not exchangeable with an unseen state. We therefore compare
+(i) \emph{i.i.d.\ calibration}: random held-out queries from the training groups; and
+(ii) \emph{held-out-group calibration}: 20\% of training \emph{states} (or year blocks) withheld
+from fitting. If states are exchangeable, (ii) restores a state-level guarantee. All models are
+fitted on the same remaining queries.
+
+\textbf{Protocols.} \emph{Random}: 5-fold CV over queries. \emph{Leave-states-out}: 5-fold
+grouped CV over states. \emph{Leave-years-out}: 5 contiguous year blocks. We report mean$\pm$std
+over folds and a paired two-sided Wilcoxon signed-rank test over all test queries (pooled across
+folds) between YieldRank and each baseline.
+
+%=====================================================================
+\section{Results}
+
+\begin{table*}[t]
+\caption{Ranking the crops grown in a district-season by realised yield (mean$\pm$std over 5 folds). Hit@1: the top-ranked crop is the best-yielding one. $^{*}$/$^{**}$: YieldRank better or worse with Wilcoxon $p<0.05$/$p<0.001$ (paired over queries).}
+\label{tab:rank}
+\centering\footnotesize
+\resizebox{\textwidth}{!}{\input{tables/ranking}}
+\end{table*}
+
+\textbf{The 99\% does not transfer.} On the Kaggle table our Random Forest reaches \KaggleRF\%
+accuracy (Gaussian NB \KaggleNB\%), matching the literature. On real district data, even under a
+random split, the best classifier (\BaseNameR) puts the best-yielding crop first in only
+\BaseHitR\% of district-season-years (Table~\ref{tab:rank}). Per-query candidate lists are
+short (about six crops), yet the task is far from trivial: ranking by each crop's average
+percentile (crop prior) gets only \PriorHitR\%.
+
+\textbf{Spatial shift hurts classifiers most.} Moving from random to leave-states-out, Random
+Forest drops from \RFHitR\% to \RFHitLSO\%, XGBoost from \XGBHitR\% to \XGBHitLSO\% and the MLP
+from \MLPHitR\% to \MLPHitLSO\% Hit@1 (Fig.~\ref{fig:hit}). YieldRank drops from \OursHitR\% to
+\OursHitLSO\%. On held-out states it improves Hit@1 over the best classifier by \GainHitLSO{}
+points and NDCG@3 from \BaseNDCGLSO{} to \OursNDCGLSO{} (paired Wilcoxon over
+\NPairedLSO{} test queries, $p\PHitLSO$). Hit@3 rises from \BaseHitThreeLSO\% to
+\OursHitThreeLSO\%. Under leave-years-out the gap is smaller (+\GainHitLYO{} points,
+$p\PHitLYO$): new years of known states look much like old ones.
+
+\textbf{Persistence is the baseline to beat.} Ranking crops by last year's yield percentile in
+the same district gets \PersHitLSO\% Hit@1 on held-out states, more than every literature
+classifier. YieldRank beats it by a small but significant margin overall
+(\OursHitLSO\% vs \PersHitLSO\%, $p\PersPLSO$). The margin is concentrated where history is
+incomplete. On the \ColdShareLSO\% of queries in which at least one candidate crop was not grown
+in that district the previous year, YieldRank reaches \OursHitColdLSO\% against
+\PersHitColdLSO\% for persistence ($p\PersPColdLSO$) and \BaseHitColdLSO\% for \BaseNameLSO.
+On the remaining warm queries persistence is slightly better (\PersHitWarmLSO\% vs
+\OursHitWarmLSO\%, $p\PersPWarmLSO$).
+
+\textbf{Ablations.} A pointwise LightGBM regressor on the same (query, crop) pairs is
+slightly \emph{better} than the LambdaMART objective on held-out states (\PointHitLSO\% vs
+\OursHitLSO\% Hit@1, $p\PointPLSO$; NDCG@3 \PointNDCGLSO{} vs \OursNDCGLSO). The gain over
+the literature therefore comes from the yield-grounded \emph{pair} formulation, which lets crop
+identity interact with environment and history, not from the listwise loss. Practitioners can
+use the simpler regressor. \NHABLATION
+
+\begin{table}[t]
+\caption{YieldRank on held-out states: 90\% LAC sets under different calibration schemes
+(coverage, mean set size, number of states with $\ge$30 test queries that fall below 85\%
+coverage, and worst state coverage).}
+\label{tab:conflso}
+\centering\scriptsize
+\resizebox{\columnwidth}{!}{\input{tables/conformal_lso}}
+\end{table}
+
+\textbf{Conformal sets.} With i.i.d.\ calibration, YieldRank's 90\% LAC sets keep near-nominal
+\emph{marginal} coverage on unseen states (\CovIIDLSO\%, \SizeIIDLSO{} crops of about six;
+Table~\ref{tab:conf}). The classifiers' do not: Random Forest covers only \RFCovIIDMean\%
+(\RFCovIIDMin--\RFCovIIDMax\% across folds). Calibrating on held-out training states restores
+it to \RFCovGRPMean\% (\RFCovGRPMin--\RFCovGRPMax\%). Its confidence learned on seen states is
+over-confident on new ones, and only a state-disjoint calibration set reveals this. Marginal
+coverage hides state-level failures, though (Fig.~\ref{fig:cov}). The median state is covered
+at \MedianStateCovIID\%, but \StatesBelowIID{} of \StatesN{} states fall below 85\%, worst
+\WorstState{} (\WorstIID\%). Telangana has records only from 2013 (it was formed in 2014) and
+about nine candidate crops per query against six on average, so its queries are harder than
+the calibration pool. Table~\ref{tab:conflso} compares remedies. Pooling all training states through cross-group calibration (out-of-fold
+scores from rankers that never saw the state) keeps marginal coverage at \CCLACCovLSO\% but
+leaves \CCWorstState{} at \CCWorstCov\%. A Mondrian threshold per number of candidate crops,
+which is known before predicting, lifts the worst state to \MNWorstCov\% (Telangana
+\MNTelanganaCov\%) and leaves \MNStatesBelow{} states below 85\%. The cost is larger sets
+(\CCMNSizeLSO{} vs \CCLACSizeLSO{} crops). Region-wise Mondrian helps less (worst
+\MRWorstCov\%). State-conditional coverage remains open.
+
+
+\begin{table}[t]
+\caption{Conformal sets for the best crop at a 90\% target: empirical coverage (\%) and mean set size, averaged over folds.}
+\label{tab:conf}
+\centering\scriptsize
+\setlength{\tabcolsep}{2.2pt}
+\resizebox{\columnwidth}{!}{\input{tables/conformal}}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/hit1_protocols.pdf}
+\caption{Hit@1 by protocol (error bars: std over folds).}
+\label{fig:hit}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/coverage_states.pdf}
+\caption{Per-state coverage of YieldRank's 90\% LAC sets under leave-states-out (states with $\ge30$ test queries). The dashed line is the target.}
+\label{fig:cov}
+\end{figure}
+
+%=====================================================================
+\section{Discussion and Limitations}
+
+\textbf{What the benchmark changes.} On the near-synthetic Kaggle table, the question ``which
+model is best?'' has an answer near 99\% that says little about deployment. On real district
+data, two choices matter more than the classifier family. The first is the evaluation protocol:
+random splits overstate the classifiers' Hit@1 by up to
+\ClfDropMax{} points (YieldRank: \OursDrop) relative to unseen states. The second is the problem formulation: ranking
+(query, crop) pairs by realised yield is consistently better than predicting a crop label.
+A persistence rule that no prior paper reports is a stronger baseline than any of them, and we
+recommend that future work include it.
+
+\textbf{Limitations.} (i) Relevance is observed only for crops actually grown. We rank among
+these, so the benchmark cannot score a crop a district has never tried. (ii) Yield percentile
+measures comparative advantage, not profit or risk. MSP/cost-of-cultivation and groundwater
+constraints \cite{sam2025,devineni2022,dangar2024} are natural re-ranking terms that we leave to
+future work. (iii) Climate and soil are taken at district centroids. Season weather is the
+\emph{realised} one, as in prior work, whereas a deployed system would use forecasts. Soil
+currently comes from the district's own SoilGrids point for about a fifth of rows and a state
+median elsewhere. (iv) Conformal guarantees assume exchangeability of states. India's states
+differ in size and history, and our per-state audit shows the guarantee is marginal, not
+conditional \cite{barber2023}. (v) District boundaries changed over 1997--2020, and new districts
+appear as cold-start queries.
+
+
+%=====================================================================
+\section{Conclusion}
+
+Crop recommendation evaluated the way the literature does it, on an augmented table with
+random splits, reports about 99\%. On \NQueries{} real Indian district-season-years and held-out
+states, the same classifiers pick the best-yielding crop \BaseHitLSO\% of the time, below a
+last-year persistence rule. Recasting the task as yield-grounded ranking raises this to
+\OursHitLSO\% and NDCG@3 to \OursNDCGLSO. The gain is largest where history is missing.
+Conformal sets of about three crops give near-nominal marginal coverage on unseen states, but
+per-state coverage must be audited and the calibration set must respect the shift. Benchmark,
+code and a Colab notebook accompany the paper.
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{../docs/research/references,extra}
+
+\end{document}
