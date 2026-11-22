@@ -14,9 +14,10 @@ const SITE = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-const SAVED_KEY = 'agromind.saved-analyses.v3';
-// Keys left by the removed soil-test mode; cleared once so old v2 entries don't linger.
-const OLD_KEYS = ['agromind.saved-analyses.v2', 'agromind.active-analysis.v2', 'agromind.advisory-mode'];
+const FINAL = 'AgroMind v4 (final)';
+const SAVED_KEY = 'agromind.saved-analyses.v4';
+// Keys left by earlier versions (v2 soil-test mode, v3 saved analyses); cleared once so old entries don't linger.
+const OLD_KEYS = ['agromind.saved-analyses.v2', 'agromind.active-analysis.v2', 'agromind.advisory-mode', 'agromind.saved-analyses.v3'];
 const PREFS_KEY = 'agromind.prefs.v1';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -63,7 +64,7 @@ const T = {
   },
 };
 
-const prob = (p) => (p > 0 && p < 0.0005 ? '<0.1%' : `${(p * 100).toFixed(1)}%`);
+const prob = (p) => (typeof p !== 'number' ? '—' : p > 0 && p < 0.0005 ? '<0.1%' : `${(p * 100).toFixed(1)}%`);
 const longDate = (iso) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
 function loadSaved() {
@@ -168,6 +169,7 @@ function App() {
               ·
             </span>
             <span className="brand-sub">Crop Recommendation Research</span>
+            <span className="tag">v4 (final)</span>
           </a>
           <div className="header-tools">
             <span role="group" aria-label="Text size">
@@ -263,6 +265,9 @@ const EXAMPLES = [
   ['Uttar Pradesh', 'Lucknow', 'rabi'],
 ];
 const V3_PAGE = 100;
+const FEW_YEARS = 5; // fewer recorded years than this for a district-season counts as little history
+const UNITS = { 'Tonnes/ha': 't/ha' };
+const yieldText = (v, unit) => (typeof v === 'number' ? `${num(v, v >= 100 ? 0 : 2)} ${UNITS[unit] ?? unit ?? ''}`.trim() : '—');
 
 const seasonLabel = (s) => (s === 'whole_year' ? 'Whole year' : SEASONS[s] ? `${SEASONS[s].name} (${SEASONS[s].months})` : s);
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -287,7 +292,10 @@ function useV3Info() {
   const [v3, setV3] = useState(null);
   useEffect(() => {
     getJSON('/model-info')
-      .then((d) => setV3(d.rows ? d : null))
+      .then((d) => {
+        const flat = { ...d, ...(d.data ?? {}) };
+        setV3(flat.rows ? flat : null);
+      })
       .catch(() => setV3(null));
   }, []);
   return v3;
@@ -296,12 +304,12 @@ function useV3Info() {
 // The API gives crop-year starts: [1997, 2022] means crop years 1997-98 to 2022-23.
 const cropYear = (y) => `${y}-${String((y + 1) % 100).padStart(2, '0')}`;
 const yearSpan = (years) => (years ? `crop years ${cropYear(years[0])} to ${cropYear(years[1])}` : '');
-const districtCount = (v3) => `${v3.districts} districts${v3.locations ? ` (${v3.locations} locations)` : ''}`;
+const districtCount = (v3) => (v3.districts ? `${v3.districts} districts${v3.locations ? ` (${v3.locations} locations)` : ''}` : '');
 
 function useV3Stats() {
   const v3 = useV3Info();
   if (!v3?.rows) return null;
-  return [`${v3.rows.toLocaleString('en-IN')} records`, districtCount(v3), `${v3.states} states`, yearSpan(v3.years)].filter(Boolean).join(' · ');
+  return [`${(v3.records ?? v3.rows).toLocaleString('en-IN')} records`, districtCount(v3), `${v3.states} states`, yearSpan(v3.years)].filter(Boolean).join(' · ');
 }
 
 function Advisory({ t }) {
@@ -320,10 +328,11 @@ function Advisory({ t }) {
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState('idle'); // idle | loading | ready | error
   const [message, setMessage] = useState('');
-  const [showAll, setShowAll] = useState(false);
   const warm = useRef(false); // the first prediction after the server starts loads the model (~3 s)
   const resultsRef = useRef(null);
   const stats = useV3Stats();
+  const served = useV3Info();
+  const soilUsed = Boolean(served?.features?.some((f) => f.startsWith('soil')));
   const [saved, setSaved] = useState(loadSaved);
   const reopen = useRef(null); // {id, climate} of a saved analysis being reopened
 
@@ -360,7 +369,6 @@ function Advisory({ t }) {
   useEffect(() => {
     setInfo(null);
     setResult(null);
-    setShowAll(false);
     if (!complete) {
       setStatus('idle');
       return undefined;
@@ -423,7 +431,7 @@ function Advisory({ t }) {
       season: result.season,
       climate: Object.fromEntries(V3_CLIMATE.map((f) => [f.key, result.inputs?.[f.key]])),
       edited,
-      pick: { crop: top.crop, name: top.name, probability: top.probability },
+      pick: { crop: top.crop, name: top.name, probability: result.fallback ? null : top.probability_best }, // v3 fallback has no P(best)
       savedAt: new Date().toISOString(),
     };
     setSaved((list) => {
@@ -458,7 +466,8 @@ function Advisory({ t }) {
   const cropInfo = (slug) => options?.crops.find((c) => c.slug === slug);
   const recs = result?.recommendations ?? [];
   const top = recs[0];
-  const shown = showAll ? recs : recs.slice(0, 10);
+  const fallback = Boolean(result?.fallback);
+  const setCrops = recs.filter((r) => r.in_set);
   const place = info ? `${info.district}, ${info.state}` : '';
   const loadingText = warm.current ? 'Updating…' : 'Loading model… the first prediction after the server starts takes a few seconds.';
   const cal = top && cropInfo(top.crop);
@@ -573,8 +582,8 @@ function Advisory({ t }) {
           ) : !complete ? (
             <div className="status-box">
               <p>
-                Choose a <strong>state, district and season</strong>. The district&apos;s season climate is filled in from NASA POWER, and every crop is ranked by the model trained
-                on Government of India district crop statistics.
+                Choose a <strong>state, district and season</strong>. The district&apos;s season climate (NASA POWER) and soil (SoilGrids) are filled in, and {FINAL} ranks the
+                crops grown there by the yield they can be expected to give, with a 90% prediction set.
               </p>
             </div>
           ) : !top ? (
@@ -586,84 +595,142 @@ function Advisory({ t }) {
               <section className="rec" aria-labelledby="v3-rec-h">
                 <p className="eyebrow">
                   {t('recommended')} · {place} · {seasonLabel(info.season).split(' (')[0]}
+                  {result.target_year ? ` ${cropYear(result.target_year)}` : ''}
                 </p>
                 <h2 id="v3-rec-h" className="rec-crop">
                   {top.name} <span className="rec-type">{cropInfo(top.crop)?.type}</span>
                 </h2>
-                <dl className="stats">
-                  <div>
-                    <dt>P(crop)</dt>
-                    <dd>{prob(top.probability)}</dd>
-                  </div>
-                  <div>
-                    <dt>Grown in this district</dt>
-                    <dd className={top.grown_here ? 'ok' : 'off'}>{top.grown_here ? `${top.years_grown} yrs` : 'No'}</dd>
-                  </div>
-                  <div>
-                    <dt>Median yield here</dt>
-                    <dd>
-                      {typeof top.historical_median_yield === 'number' ? num(top.historical_median_yield, 2) : '—'}
-                      {typeof top.historical_median_yield === 'number' && <small className="unit"> {top.yield_unit}</small>}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Climate used</dt>
-                    <dd className="dd-text">
-                      {num(result.inputs.temperature)} °C · {num(result.inputs.humidity)}% · {num(result.inputs.rainfall, 0)} mm
-                    </dd>
-                  </div>
-                </dl>
+                {fallback ? (
+                  <p className="keybox is-warn">
+                    No crop in this district and season has a recorded yield, so {FINAL} cannot rank them. The list below comes from the earlier v3 model: the crops most likely to
+                    be grown here, not the best-yielding ones.
+                  </p>
+                ) : (
+                  <>
+                    <dl className="stats">
+                      <div>
+                        <dt>Expected yield</dt>
+                        <dd>{yieldText(top.expected_yield, top.yield_unit)}</dd>
+                      </div>
+                      <div>
+                        <dt>P(best crop)</dt>
+                        <dd>{prob(top.probability_best)}</dd>
+                      </div>
+                      <div>
+                        <dt>Grown here</dt>
+                        <dd>{top.years_grown ? `${top.years_grown} yrs` : '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>Climate used</dt>
+                        <dd className="dd-text">
+                          {num(result.inputs.temperature)} °C · {num(result.inputs.humidity)}% · {num(result.inputs.rainfall, 0)} mm
+                        </dd>
+                      </div>
+                    </dl>
+                    {setCrops.length > 0 && (
+                      <p className="keybox conformal-set">
+                        <strong>We are 90% confident the best crop is among {setCrops.length === 1 ? 'this one' : `these ${setCrops.length}`}:</strong>{' '}
+                        {setCrops.map((r) => r.name).join(', ')}.
+                        {result.set_was_empty && <span className="muted"> (The set came out empty, so the top-ranked crop was put in.)</span>}
+                      </p>
+                    )}
+                    {typeof result.history_years === 'number' && result.history_years < FEW_YEARS && (
+                      <p className="note cold-note">
+                        Little history: this district and season has only {result.history_years} {result.history_years === 1 ? 'year' : 'years'} of records, so the ranking leans on
+                        climate, soil and the few yields there are. Treat it as a starting point and check locally.
+                      </p>
+                    )}
+                  </>
+                )}
                 {status === 'loading' && <p className="muted small">{loadingText}</p>}
                 {result.note && <p className="note">{result.note}</p>}
               </section>
 
               <section className="block" aria-labelledby="v3-top-h">
                 <h3 id="v3-top-h">
-                  {t('topCrops')} · {place}
+                  {fallback ? t('topCrops') : 'Crops grown here, ranked by expected yield'} · {place}
                 </h3>
-                <div className="table-wrap">
-                  <table className="data">
-                    <thead>
-                      <tr>
-                        <th scope="col">#</th>
-                        <th scope="col">Crop</th>
-                        <th scope="col" className="hide-sm">
-                          Type
-                        </th>
-                        <th scope="col" className="num">
-                          P(crop)
-                        </th>
-                        <th scope="col" className="num wrap">
-                          Median yield here
-                        </th>
-                        <th scope="col" className="num wrap hide-sm">
-                          Years grown
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shown.map((r, i) => (
-                        <tr key={r.crop} className={i === 0 ? 'is-selected' : undefined}>
-                          <td>{i + 1}</td>
-                          <th scope="row">{r.name}</th>
-                          <td className="hide-sm">{cropInfo(r.crop)?.type ?? ''}</td>
-                          <td className="num">{prob(r.probability)}</td>
-                          <td className="num">{typeof r.historical_median_yield === 'number' ? `${num(r.historical_median_yield, 2)} ${r.yield_unit ?? ''}` : '—'}</td>
-                          <td className="num hide-sm">{r.grown_here ? r.years_grown : <span className="muted">not grown</span>}</td>
+                {fallback ? (
+                  <div className="table-wrap">
+                    <table className="data">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Crop</th>
+                          <th scope="col" className="num">
+                            P(grown)
+                          </th>
+                          <th scope="col" className="num wrap hide-sm">
+                            Years grown
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="note">
-                  P(crop) is the model&apos;s probability that the crop is among this district&apos;s three best-yielding crops for the season. Median yield is the district&apos;s
-                  historical median for that crop in this season (Government APY records).{' '}
-                  {recs.length > 10 && (
-                    <button type="button" className="link-btn" onClick={() => setShowAll((s) => !s)}>
-                      {showAll ? 'Show top 10' : `Show all ${recs.length} crops`}
-                    </button>
-                  )}
-                </p>
+                      </thead>
+                      <tbody>
+                        {recs.slice(0, 10).map((r, i) => (
+                          <tr key={r.crop}>
+                            <td>{i + 1}</td>
+                            <th scope="row">{r.name}</th>
+                            <td className="num">{prob(r.probability)}</td>
+                            <td className="num hide-sm">{r.grown_here ? r.years_grown : <span className="muted">not grown</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <>
+                    <div className="table-wrap">
+                      <table className="data">
+                        <thead>
+                          <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Crop</th>
+                            <th scope="col" className="c wrap">
+                              In 90% set
+                            </th>
+                            <th scope="col" className="num wrap">
+                              Expected yield
+                            </th>
+                            <th scope="col" className="num wrap">
+                              P(best)
+                            </th>
+                            <th scope="col" className="num wrap hide-sm">
+                              Median yield, all years
+                            </th>
+                            <th scope="col" className="num wrap hide-sm">
+                              Years grown
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recs.map((r) => (
+                            <tr key={r.crop}>
+                              <td>{r.rank}</td>
+                              <th scope="row">
+                                {r.name}
+                                {r.cold_start && (
+                                  <span className="tag tag-muted" title="No yield record for this crop here last year">
+                                    cold start
+                                  </span>
+                                )}
+                              </th>
+                              <td className={`c ${r.in_set ? 'ok' : ''}`}>{r.in_set ? '✓' : <span className="muted">–</span>}</td>
+                              <td className="num">{yieldText(r.expected_yield, r.yield_unit)}</td>
+                              <td className="num">{prob(r.probability_best)}</td>
+                              <td className="num hide-sm">{yieldText(r.historical_median_yield, r.yield_unit)}</td>
+                              <td className="num hide-sm">{r.years_grown ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="note">
+                      Only crops grown in this district and season in its last five recorded years are ranked. Expected yield = the crop&apos;s median yield here over those years;
+                      P(best) = calibrated probability that it gives the best yield of these crops. The 90% set contains the best-yielding crop in about 90% of past cases.
+                      &quot;Cold start&quot;: no yield record for that crop here last year, so the model relies more on climate, soil and older years.
+                    </p>
+                  </>
+                )}
               </section>
 
               {info.history?.top_crops?.length > 0 && (
@@ -695,7 +762,7 @@ function Advisory({ t }) {
                           <tr key={c.crop}>
                             <th scope="row">{c.name ?? c.crop}</th>
                             <td className="num">{num(c.mean_area_ha, 0)}</td>
-                            <td className="num">{typeof c.median_yield === 'number' ? `${num(c.median_yield, 2)} ${c.yield_unit ?? ''}` : '—'}</td>
+                            <td className="num">{yieldText(c.median_yield, c.yield_unit)}</td>
                             <td className="num hide-sm">{c.years}</td>
                             <td className="num">{c.recommended_years}</td>
                           </tr>
@@ -745,7 +812,7 @@ function Advisory({ t }) {
 
               {info.soil && (
                 <section className="block" aria-labelledby="v3-soil-h">
-                  <h3 id="v3-soil-h">District soil profile (SoilGrids, context only)</h3>
+                  <h3 id="v3-soil-h">District soil (SoilGrids){soilUsed ? ', used by the model' : ', context only'}</h3>
                   <table className="kv">
                     <tbody>
                       {SOIL_ROWS.map(([k, labelText, unit]) => (
@@ -765,7 +832,8 @@ function Advisory({ t }) {
                     </tbody>
                   </table>
                   <p className="note">
-                    Not used by the model: adding soil gave no gain in the study (Results, v3). District centre {num(info.location?.lat, 3)}° N, {num(info.location?.lon, 3)}° E.
+                    {soilUsed ? `${FINAL} uses these values as inputs.` : 'Not used by the served model.'} District centre {num(info.location?.lat, 3)}° N,{' '}
+                    {num(info.location?.lon, 3)}° E.
                   </p>
                 </section>
               )}
@@ -794,7 +862,7 @@ function Advisory({ t }) {
                   <th scope="col">District · season</th>
                   <th scope="col">Recommended</th>
                   <th scope="col" className="num">
-                    P(crop)
+                    P(best)
                   </th>
                   <th scope="col" className="hide-sm">
                     Climate
@@ -1098,8 +1166,8 @@ function DatasetPage({ t }) {
       <header className="page-head">
         <h1>{t('dataset')}</h1>
         <p className="lede">
-          Government of India district-wise, season-wise crop statistics (APY){stats ? `: ${stats}` : ''}, joined with NASA POWER climate and SoilGrids soil. These are the records
-          behind the advisory. Licences are listed on the <a href="#/about">About</a> page.
+          The data behind {FINAL}: Government of India district-wise, season-wise crop statistics (APY){stats ? `: ${stats}` : ''}, joined with NASA POWER climate and SoilGrids
+          soil. The model learns from these yields, and the advisory shows each district&apos;s history from them. Licences are listed on the <a href="#/about">About</a> page.
         </p>
       </header>
       <Section id="records" title={t('rawData')}>
@@ -1121,14 +1189,13 @@ const isOurs = (name) => name.includes('(ours)');
 const isClassifier = (name) => /\[[\d,]+\]/.test(name); // literature classifiers carry their citation numbers
 // The pointwise LightGBM row uses the proposed yield-ranking formulation too; name it so it doesn't read as an outside baseline.
 const methodName = (name) => (/pointwise/i.test(name) ? 'LightGBM pointwise (same yield-ranking formulation, ours)' : name);
-const MIN_STATE_QUERIES = 30;
 const V3_TESTS = [
   ['leave_districts_out', 'Unseen districts'],
   ['leave_years_out', 'Future crop years'],
   ['leave_states_out', 'Unseen states'],
 ];
 
-// For one grouped test: the ExtraTrees row (the served model) and the best popularity baseline by Hit@1.
+// For one grouped test: the ExtraTrees row (the v3 model) and the best popularity baseline by Hit@1.
 function v3Pair(test) {
   const rows = Object.entries(test ?? {});
   const model = rows.find(([n]) => n.startsWith('ExtraTrees'));
@@ -1136,101 +1203,183 @@ function v3Pair(test) {
   return model && base ? { model, base } : null;
 }
 
-function ImprovementTable({ r }) {
+// Numbers each version is summarised by, all read from results.json (v1/v2 from the v2 notebook, v3 and v4 from theirs).
+const V2_MODEL = 'RandomForest (v2 deployed)';
+const SOURCE_NAMES = { india: 'Multi-state (india)', tamilnadu: 'Tamil Nadu', kaggle: 'Kaggle' };
+function versionNumbers(r) {
   const v1 = r.v1?.RandomForest;
-  const imp = Object.fromEntries((r.improvement ?? []).map((x) => [x.aspect, x.v1]));
+  const v2 = r.models?.[V2_MODEL];
+  const loso = Object.entries(r.loso ?? {})
+    .filter(([k]) => k.endsWith('|open set'))
+    .map(([k, x]) => [k.split('|')[0], x.accuracy]);
+  const losoVals = loso.map(([, a]) => a).filter((a) => typeof a === 'number');
   const v3 = r.v3 ?? {};
-  const v3sum = Object.fromEntries((v3.summary ?? []).map((x) => [x.aspect, x.v3]));
-  const n = r.v4?.numbers ?? {};
-  const m4 = r.v4?.meta ?? {};
-  const kaggle = r.dataset?.rows_by_source?.kaggle;
   const pairs = Object.fromEntries(V3_TESTS.map(([k]) => [k, v3Pair(v3[k])]));
+  const h3 = (k) => metric(pairs[k]?.model[1], 'hit1');
+  return {
+    v1,
+    v2,
+    loso,
+    losoRange: losoVals.length ? `${(Math.min(...losoVals) * 100).toFixed(1)}–${pct1(Math.max(...losoVals))}` : '—',
+    v3,
+    pairs,
+    h3,
+    n: r.v4?.numbers ?? {},
+    m4: r.v4?.meta ?? {},
+    sources: Object.keys(r.dataset?.rows_by_source ?? {}),
+  };
+}
+
+// Four steps; each fixed the previous one's weakness. The prose is fixed, every number comes from results.json.
+function VersionHistory({ r }) {
+  const x = versionNumbers(r);
+  const steps = [
+    {
+      v: 'v1',
+      name: 'Previous project',
+      fact: `${pct1(x.v1?.reported_accuracy)} accuracy on ${r.dataset?.rows_by_source?.kaggle?.toLocaleString('en-IN') ?? '—'} Kaggle rows`,
+      fixed: 'Starting point',
+      lacked: `Argmax decode bug (GaussianNB exact-match ${pct1(r.v1?.GaussianNB?.exact_match_accuracy)} vs ${pct1(r.v1?.GaussianNB?.reported_accuracy)} reported); one random split`,
+    },
+    {
+      v: 'v2',
+      name: 'Merged sources',
+      fact: `${pct2(x.v2?.accuracy_mean)} ± ${pct2(x.v2?.accuracy_std)} (5-fold), top-3 ${pct2(x.v2?.top3_mean)} on ${r.dataset?.rows?.toLocaleString('en-IN') ?? '—'} rows`,
+      fixed: `One multiclass model, ${x.sources.length} merged sources, cross-validation`,
+      lacked: `The sources disagree: on an unseen source accuracy falls to ${x.losoRange}`,
+    },
+    {
+      v: 'v3',
+      name: 'Intermediate',
+      fact: `Hit@1 ${pct1(x.h3('leave_districts_out'))} / ${pct1(x.h3('leave_states_out'))} / ${pct1(x.h3('leave_years_out'))} on unseen districts / states / years`,
+      fixed: `${x.v3.data?.rows?.toLocaleString('en-IN') ?? '—'} real district records, tested on places and years it has not seen`,
+      lacked: 'Predicts what is grown, not what yields best; no uncertainty',
+    },
+    {
+      v: 'v4',
+      name: 'Final',
+      fact: `Hit@1 ${x.n.OursHitLSO ?? '—'}% on unseen states; 90% sets of ${x.n.SizeIIDLSO ?? '—'} crops`,
+      fixed: 'Ranks crops by realised yield and gives a 90% prediction set',
+      lacked: null,
+    },
+  ];
+  return (
+    <ol className="versions" aria-label="Version history">
+      {steps.map((s) => (
+        <li key={s.v} className={s.v === 'v4' ? 'is-final' : undefined}>
+          <p className="ver-name">
+            <strong>{s.v}</strong> {s.v === 'v4' ? FINAL.replace('AgroMind v4 ', '') : s.name.toLowerCase()}
+          </p>
+          <p className="ver-fact">{s.fact}</p>
+          <p className="ver-line">
+            <span>Fixed:</span> {s.fixed}
+          </p>
+          {s.lacked && (
+            <p className="ver-line">
+              <span>Still lacked:</span> {s.lacked}
+            </p>
+          )}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ImprovementTable({ r }) {
+  const x = versionNumbers(r);
+  const imp = Object.fromEntries((r.improvement ?? []).map((row) => [row.aspect, row]));
+  const { v3, pairs, n, m4 } = x;
+  const v3sum = Object.fromEntries((v3.summary ?? []).map((row) => [row.aspect, row.v3]));
+  const kaggle = r.dataset?.rows_by_source?.kaggle;
   const vs = (p) => (p ? `${pct1(metric(p.model[1], 'hit1'))} vs ${pct1(metric(p.base[1], 'hit1'))} baseline` : '—');
   const rows = [
     [
       'Data',
       `Kaggle crop-recommendation table, ${kaggle?.toLocaleString('en-IN') ?? '—'} rows`,
+      `${r.dataset?.rows?.toLocaleString('en-IN') ?? '—'} rows merged from ${x.sources.map((k) => SOURCE_NAMES[k] ?? k).join(', ')}`,
       `Government of India district crop statistics, ${v3.data?.rows?.toLocaleString('en-IN') ?? '—'} records`,
       `Same statistics as ${n.NQueries ?? '—'} district-season-year queries`,
     ],
     [
       'Coverage',
       `${r.dataset?.crops_by_source?.kaggle ?? '—'} crops; no location or season`,
+      `${r.dataset?.crops ?? '—'} crops; inputs ${imp.Inputs?.v2 ?? '—'}`,
       `${v3.data?.crops_app ?? '—'} crops · ${v3.data?.districts ?? '—'} districts · ${v3.data?.states ?? '—'} states · ${v3.data?.crop_years ?? '—'} crop years`,
       `${m4.crops ?? '—'} crops · ${m4.states ?? '—'} states · ${n.YearA ?? '—'}–${n.YearB ?? '—'}`,
     ],
-    ['What is predicted', 'One crop label per row', v3sum.Labels ?? '—', 'A ranking of the crops grown in a district by realised yield, plus a 90% prediction set'],
-    ['Evaluation', imp['Evaluation protocol'] ?? '—', v3sum.Validation ?? '—', 'Random split, unseen states and future years; Wilcoxon tests'],
+    [
+      'What is predicted',
+      'One crop label per row',
+      'One crop label per row (single multiclass model)',
+      v3sum.Labels ?? '—',
+      'A ranking of the crops grown in a district by realised yield, plus a 90% prediction set',
+    ],
+    [
+      'Evaluation',
+      imp['Evaluation protocol']?.v1 ?? '—',
+      'Stratified 5-fold CV, leave-one-source-out, McNemar',
+      v3sum.Validation ?? '—',
+      'Random split, unseen states and future years; Wilcoxon tests',
+    ],
     [
       'Headline result',
-      `${pct2(v1?.reported_accuracy)} accuracy on a random split (reported)`,
+      `${pct2(x.v1?.reported_accuracy)} accuracy on a random split (reported)`,
+      `${pct2(x.v2?.accuracy_mean)} ± ${pct2(x.v2?.accuracy_std)} accuracy, top-3 ${pct2(x.v2?.top3_mean)} (5-fold)`,
       `Unseen districts: ${vs(pairs.leave_districts_out)} (Hit@1)`,
       `Unseen states: ${n.OursHitLSO ?? '—'}% vs ${n.BaseHitLSO ?? '—'}% for the best classifier (${n.BaseNameLSO ?? '—'}); persistence ${n.PersHitLSO ?? '—'}%`,
     ],
     [
       'Tested on new places and years',
-      imp['Generalisation to an unseen source'] ?? 'not tested',
+      imp['Generalisation to an unseen source']?.v1 ?? 'not tested',
+      `Unseen source: ${x.losoRange} accuracy`,
       `Unseen states ${vs(pairs.leave_states_out)}; future years ${vs(pairs.leave_years_out)}`,
-      'Unseen states and future years (Section 3)',
+      'Unseen states and future years (Section 2)',
     ],
     [
       'Uncertainty',
-      imp['Probability calibration'] ?? 'not measured',
+      imp['Probability calibration']?.v1 ?? 'not measured',
+      `Probability per crop (ECE ${typeof r.calibration?.[V2_MODEL]?.ece === 'number' ? r.calibration[V2_MODEL].ece.toFixed(3) : '—'})`,
       'Probability per crop',
       `90% prediction sets: ${n.CovIIDLSO ?? '—'}% coverage with ${n.SizeIIDLSO ?? '—'} crops on average`,
     ],
   ];
   return (
-    <div className="table-wrap">
-      <table className="data compare">
-        <caption className="tcap">From the previous project (v1) to the current system (v3) and the improved method (v4)</caption>
-        <thead>
-          <tr>
-            <th scope="col">Aspect</th>
-            <th scope="col">Previous project (v1)</th>
-            <th scope="col">Current system (v3, live)</th>
-            <th scope="col">Improved method (v4)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([aspect, a, b, c]) => (
-            <tr key={aspect}>
-              <th scope="row">{aspect}</th>
-              <td>{a}</td>
-              <td>{b}</td>
-              <td>{c}</td>
+    <>
+      <p className="tcap">From the previous project (v1) through v2 and v3 to {FINAL}</p>
+      <div className="table-wrap">
+        <table className="data compare">
+          <thead>
+            <tr>
+              <th scope="col">Aspect</th>
+              <th scope="col">Previous project (v1)</th>
+              <th scope="col">v2</th>
+              <th scope="col">Intermediate (v3)</th>
+              <th scope="col" className="is-final">
+                {FINAL}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map(([aspect, a, b, c, d]) => (
+              <tr key={aspect}>
+                <th scope="row">{aspect}</th>
+                <td>{a}</td>
+                <td>{b}</td>
+                <td>{c}</td>
+                <td className="is-final">{d}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
-function V3Section({ v, served, failed }) {
-  const pairs = V3_TESTS.map(([k, name]) => [name, v3Pair(v[k])]).filter(([, p]) => p);
-  const [first, ...rest] = pairs;
-  const states = Object.entries(v.leave_states_out_per_state_hit1 ?? {}).sort((a, b) => b[1] - a[1]);
-  const stateN = v.leave_states_out_per_state_n; // queries per held-out state, when results.json carries it
-  const soil = Object.entries(v.soil_subset ?? {}).filter(([, x]) => x && typeof x === 'object' && 'hit1_mean' in x);
-  const figures = (v.figures?.length ? v.figures : (research.figures ?? []).filter((f) => f.file?.includes('_v3_'))) ?? [];
-
+// The model the advisory serves right now, read live from /model-info.
+function ServedModel({ served, failed }) {
   return (
     <>
-      {first && (
-        <p className="keybox">
-          <strong>Headline:</strong> for {first[0].toLowerCase()}, the served model ({first[1].model[0]}) ranks a high-yield crop first in{' '}
-          <strong>{pct1(metric(first[1].model[1], 'hit1'))}</strong> of district-season queries ({pct1(metric(first[1].model[1], 'hit3'))} within its top 3), against{' '}
-          {pct1(metric(first[1].base[1], 'hit1'))} / {pct1(metric(first[1].base[1], 'hit3'))} for the best popularity baseline.
-          {rest.map(([name, p]) => (
-            <span key={name}>
-              {' '}
-              {name}: {pct1(metric(p.model[1], 'hit1'))} vs {pct1(metric(p.base[1], 'hit1'))}.
-            </span>
-          ))}
-        </p>
-      )}
-
       {served ? (
         <table className="kv">
           <caption className="tcap">Model served by the advisory (live from the server)</caption>
@@ -1250,142 +1399,154 @@ function V3Section({ v, served, failed }) {
               </tr>
             )}
             <tr>
-              <th scope="row">Records · training rows</th>
+              <th scope="row">Training data</th>
               <td>
-                {served.rows?.toLocaleString('en-IN')} · {served.training_rows?.toLocaleString('en-IN')}
+                {[
+                  served.training_rows && `${served.training_rows.toLocaleString('en-IN')} rows`,
+                  served.training_queries && `${served.training_queries.toLocaleString('en-IN')} district-season-year queries`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </td>
             </tr>
             <tr>
               <th scope="row">Coverage</th>
-              <td>
-                {served.crops} crops · {served.states} states · {districtCount(served)} · {yearSpan(served.years)}
-              </td>
+              <td>{[`${served.crops} crops`, `${served.states} states`, districtCount(served), yearSpan(served.years)].filter(Boolean).join(' · ')}</td>
             </tr>
+            {served.holdout_check && (
+              <tr>
+                <th scope="row">Hold-out check</th>
+                <td>
+                  Hit@1 {pct1(served.holdout_check.hit1)} · 90% set coverage {pct1(served.holdout_check.coverage)} with {num(served.holdout_check.set_size, 2)} crops on average
+                  {served.holdout_check.queries ? ` (${served.holdout_check.queries.toLocaleString('en-IN')} queries)` : ''}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       ) : (
-        <p className="muted small">{failed ? `Cannot reach the model server at ${API_BASE_URL}; the tables below come from results.json.` : 'Loading the served model…'}</p>
-      )}
-
-      <div className="sub-section table-wrap">
-        <table className="data">
-          <caption className="tcap">Grouped evaluation: the served ExtraTrees model against the best popularity baseline</caption>
-          <thead>
-            <tr>
-              <th scope="col">Test</th>
-              <th scope="col" className="num">
-                Hit@1
-              </th>
-              <th scope="col" className="num">
-                Hit@3
-              </th>
-              <th scope="col" className="num wrap">
-                Baseline Hit@1
-              </th>
-              <th scope="col" className="num wrap">
-                Baseline Hit@3
-              </th>
-              <th scope="col" className="hide-sm">
-                Baseline
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {pairs.map(([name, p]) => (
-              <tr key={name}>
-                <th scope="row">{name}</th>
-                <td className="num">{pct2(metric(p.model[1], 'hit1'))}</td>
-                <td className="num">{pct2(metric(p.model[1], 'hit3'))}</td>
-                <td className="num">{pct2(metric(p.base[1], 'hit1'))}</td>
-                <td className="num">{pct2(metric(p.base[1], 'hit3'))}</td>
-                <td className="hide-sm">{p.base[0].replace(/^baseline:\s*/, '')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {typeof v.meta?.doc === 'string' && <p className="note">{v.meta.doc}</p>}
-
-      {states.length > 0 && (
-        <div className="sub-section grid-table">
-          <p className="tcap">Hit@1 for each held-out state (unseen states test), best first</p>
-          <ul className="kv-grid">
-            {states.map(([name, x]) => {
-              const count = stateN?.[name];
-              const small = typeof count === 'number' && count < MIN_STATE_QUERIES;
-              return (
-                <li key={name} className={small ? 'is-small' : undefined} title={small ? 'Too few queries for a reliable figure' : undefined}>
-                  <span>{name}</span>
-                  <span className="grid-val">
-                    <strong>{pct2(x)}</strong>
-                    {typeof count === 'number' && <small> · n {count.toLocaleString('en-IN')}</small>}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          {stateN && (
-            <p className="note">
-              n = district-season-year queries for the held-out state. States with fewer than {MIN_STATE_QUERIES} queries are greyed out: their Hit@1 rests on too few cases to read
-              as a success or a failure.
-            </p>
-          )}
-        </div>
-      )}
-
-      {soil.length > 0 && (
-        <div className="sub-section table-wrap">
-          <table className="data narrow">
-            <caption className="tcap">Does soil help? Districts with a measured SoilGrids point</caption>
-            <thead>
-              <tr>
-                <th scope="col">Model</th>
-                <th scope="col" className="num">
-                  Hit@1
-                </th>
-                <th scope="col" className="num">
-                  Hit@3
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {soil.map(([name, x]) => (
-                <tr key={name}>
-                  <th scope="row">{name}</th>
-                  <td className="num">{pct2(x.hit1_mean)}</td>
-                  <td className="num">{pct2(x.hit3_mean)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="note">
-            {v.soil_subset.queries?.toLocaleString('en-IN')} queries in {v.soil_subset.districts} districts. Adding soil does not improve the ranking, so the served model leaves it
-            out.
-          </p>
-        </div>
-      )}
-
-      {figures.length > 0 && (
-        <div className="sub-section figures">
-          {figures.map((f, i) => {
-            // Figure images are copied from docs/research/figures/ into frontend/public/research/.
-            const src = `${import.meta.env.BASE_URL}research/${f.file.split('/').pop()}`;
-            return (
-              <figure key={f.file} className="figure">
-                <a href={src} target="_blank" rel="noreferrer" title="Open full size">
-                  <img src={src} alt={f.caption} loading="lazy" />
-                </a>
-                <figcaption className="fcap">{f.caption}</figcaption>
-              </figure>
-            );
-          })}
-        </div>
+        <p className="muted small">{failed ? `Cannot reach the model server at ${API_BASE_URL}; the tables on this page come from results.json.` : 'Loading the served model…'}</p>
       )}
     </>
   );
 }
 
-function V4Section({ v }) {
+// v3 step, kept short: one table and the generalisation figure.
+function researchFigure(f) {
+  // Figure images are copied from docs/research/figures/ into frontend/public/research/.
+  const src = `${import.meta.env.BASE_URL}research/${f.file.split('/').pop()}`;
+  return (
+    <figure key={f.file} className="figure">
+      <a href={src} target="_blank" rel="noreferrer" title="Open full size">
+        <img src={src} alt={f.caption} loading="lazy" />
+      </a>
+      <figcaption className="fcap">{f.caption}</figcaption>
+    </figure>
+  );
+}
+
+function V3Section({ v }) {
+  const pairs = V3_TESTS.map(([k, name]) => [name, v3Pair(v[k])]).filter(([, p]) => p);
+  const fig = (v.figures ?? []).find((f) => f.file?.includes('generalisation'));
+
+  return (
+    <>
+      <p>
+        v3 moved to {v.data?.rows?.toLocaleString('en-IN') ?? '—'} Government of India district records and was tested on districts, states and years it had not seen. It still
+        predicted which crops are grown rather than which yield best, and gave no uncertainty; {FINAL} addresses both.
+      </p>
+      {pairs.length > 0 && (
+        <div className="sub-section">
+          <p className="tcap">v3 (ExtraTrees) against the best popularity baseline</p>
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th scope="col">Test</th>
+                  <th scope="col" className="num">
+                    Hit@1
+                  </th>
+                  <th scope="col" className="num">
+                    Hit@3
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Baseline Hit@1
+                  </th>
+                  <th scope="col" className="num wrap">
+                    Baseline Hit@3
+                  </th>
+                  <th scope="col" className="hide-sm">
+                    Baseline
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pairs.map(([name, p]) => (
+                  <tr key={name}>
+                    <th scope="row">{name}</th>
+                    <td className="num">{pct2(metric(p.model[1], 'hit1'))}</td>
+                    <td className="num">{pct2(metric(p.model[1], 'hit3'))}</td>
+                    <td className="num">{pct2(metric(p.base[1], 'hit1'))}</td>
+                    <td className="num">{pct2(metric(p.base[1], 'hit3'))}</td>
+                    <td className="hide-sm">{p.base[0].replace(/^baseline:\s*/, '')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {fig && <div className="sub-section figures one">{researchFigure(fig)}</div>}
+    </>
+  );
+}
+
+// v2 step, kept short: one table (cross-validation and leave-one-source-out) and the LOSO figure.
+function V2Section({ r }) {
+  const x = versionNumbers(r);
+  const fig = (r.figures ?? []).find((f) => f.file?.includes('_loso'));
+  return (
+    <>
+      <p>
+        v2 merged {x.sources.length} sources into {r.dataset?.rows?.toLocaleString('en-IN') ?? '—'} rows and replaced v1&apos;s per-crop heads with one multiclass model. It scored
+        well within its own data, but the sources disagree: trained on two and tested on the third, it falls to {x.losoRange} accuracy. That led to v3.
+      </p>
+      <div className="sub-section">
+        <p className="tcap">v2 deployed Random Forest: cross-validation and unseen sources</p>
+        <div className="table-wrap">
+          <table className="data narrow">
+            <tbody>
+              <tr>
+                <th scope="row">Accuracy (5-fold CV)</th>
+                <td className="num">
+                  {pct2(x.v2?.accuracy_mean)} ± {pct2(x.v2?.accuracy_std)}
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Macro-F1 (5-fold CV)</th>
+                <td className="num">{pct2(x.v2?.macro_f1_mean)}</td>
+              </tr>
+              <tr>
+                <th scope="row">Top-3 accuracy (5-fold CV)</th>
+                <td className="num">{pct2(x.v2?.top3_mean)}</td>
+              </tr>
+              {x.loso.map(([src, acc]) => (
+                <tr key={src}>
+                  <th scope="row">Unseen source: {src}</th>
+                  <td className="num">{pct2(acc)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="note">Unseen source = trained on the other two sources, tested on this one, open crop vocabulary.</p>
+      </div>
+      {fig && <div className="sub-section figures one">{researchFigure(fig)}</div>}
+    </>
+  );
+}
+
+function V4Section({ v, served, failed }) {
   const lso = v.metrics?.main?.['leave-states-out'] ?? {};
   const entries = Object.entries(lso);
   const ours = entries.find(([name]) => isOurs(name));
@@ -1439,6 +1600,8 @@ function V4Section({ v }) {
           )}
         </p>
       )}
+
+      <ServedModel served={served} failed={failed} />
 
       {entries.length > 0 && (
         <div className="table-wrap">
@@ -1960,6 +2123,31 @@ function MethodComparison({ mc, papers }) {
   );
 }
 
+// Headline of the final model, from results.json `final`. Renders nothing until CC5 writes it.
+function FinalBox({ f }) {
+  const items = Array.isArray(f?.headline) ? f.headline.filter((h) => h && h.label && h.value != null) : [];
+  if (!items.length) return null;
+  return (
+    <section className="keybox final-box" aria-labelledby="final-h">
+      <h2 id="final-h">Final model: {f.name ?? FINAL}</h2>
+      {f.method && <p>{f.method}</p>}
+      <dl className="final-stats">
+        {items.map((h) => (
+          <div key={h.label}>
+            <dt>{h.label}</dt>
+            <dd>
+              {h.value}
+              {h.unit === '%' ? '%' : h.unit ? ` ${h.unit}` : ''}
+              {h.split && <small>{SPLIT_NAMES[h.split] ?? h.split}</small>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {f.note && <p className="note">{f.note}</p>}
+    </section>
+  );
+}
+
 function ResultsPage({ t }) {
   const [info, setInfo] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -1968,15 +2156,16 @@ function ResultsPage({ t }) {
       .then(setInfo)
       .catch(() => setFailed(true));
   }, []);
-  const served = info?.rows ? info : null;
+  const served = info?.model ? { ...info, ...(info.data ?? {}) } : null; // v4 nests its counts in data
 
   return (
     <div className="results">
       <header className="page-head">
         <h1>{t('results')}</h1>
         <p className="lede">
-          What changed since the previous project, how the current advisory model performs on districts, states and years it has not seen, and the improved ranking method. Every
-          number below is generated from <code>docs/research/results.json</code>, written by the research notebooks.
+          {FINAL} ranks the crops grown in a district by the yield they can be expected to give, with a 90% prediction set. This page shows how it holds up on states and years it
+          has not seen, how it compares with other methods and recent work, and how it grew out of the earlier versions v1, v2 and v3. Every number below is generated from{' '}
+          <code>docs/research/results.json</code>, written by the research notebooks.
         </p>
       </header>
 
@@ -1986,19 +2175,22 @@ function ResultsPage({ t }) {
         </div>
       )}
 
-      <Section id="r-improvement" title="Improvement over the previous version" className="numbered">
+      <FinalBox f={research.final} />
+
+      <Section id="r-improvement" title={`From v1 to ${FINAL}`} className="numbered">
+        <VersionHistory r={research} />
         <ImprovementTable r={research} />
       </Section>
 
-      {research.v3 && (
-        <Section id="r-v3" title="Current system (v3, live model)" className="numbered">
-          <V3Section v={research.v3} served={served} failed={failed} />
+      {research.v4?.metrics?.main && (
+        <Section id="r-v4" title={`${FINAL}: YieldRank and conformal prediction sets`} className="numbered">
+          <V4Section v={research.v4} served={served} failed={failed} />
         </Section>
       )}
 
-      {research.v4?.metrics?.main && (
-        <Section id="r-v4" title="Improved method (v4): YieldRank and conformal prediction sets" className="numbered">
-          <V4Section v={research.v4} />
+      {research.method_comparison?.methods?.length > 0 && (
+        <Section id="r-methods" title={`Method comparison: why we chose ${research.method_comparison.chosen ?? 'YieldRank'}`} className="numbered">
+          <MethodComparison mc={research.method_comparison} papers={research.related_work ?? []} />
         </Section>
       )}
 
@@ -2008,9 +2200,15 @@ function ResultsPage({ t }) {
         </Section>
       )}
 
-      {research.method_comparison?.methods?.length > 0 && (
-        <Section id="r-methods" title={`Method comparison: why we chose ${research.method_comparison.chosen ?? 'YieldRank'}`} className="numbered">
-          <MethodComparison mc={research.method_comparison} papers={research.related_work ?? []} />
+      {research.v3 && (
+        <Section id="r-v3" title="Intermediate step: v3" className="numbered">
+          <V3Section v={research.v3} />
+        </Section>
+      )}
+
+      {research.models?.[V2_MODEL] && (
+        <Section id="r-v2" title="Earlier step: v2" className="numbered">
+          <V2Section r={research} />
         </Section>
       )}
     </div>
@@ -2052,10 +2250,11 @@ function texToText(tex, numbers) {
     .replace(/\s*\n\s*/g, ' ');
 }
 
+// Final model first, then the steps that led to it.
 const NOTEBOOKS = [
-  ['AgroMind_v2_Research.ipynb', 'v1 reproduction and corrected decode; v2 merged data, 10-model comparison, ablation, leave-one-source-out, McNemar, calibration.'],
+  ['AgroMind_v4_Novel_Method.ipynb', `${FINAL}: YieldRank (LambdaMART yield ranking) against literature classifiers and persistence, with split-conformal prediction sets.`],
   ['AgroMind_v3_LargeScale.ipynb', 'v3: Government district crop statistics with NASA POWER climate and SoilGrids soil; unseen districts, states and years.'],
-  ['AgroMind_v4_Novel_Method.ipynb', 'v4: YieldRank (LambdaMART yield ranking) against literature classifiers and persistence, with split-conformal prediction sets.'],
+  ['AgroMind_v2_Research.ipynb', 'v1 reproduction and corrected decode; v2 merged data, 10-model comparison, ablation, leave-one-source-out, McNemar, calibration.'],
 ];
 
 function PaperPage() {
@@ -2074,7 +2273,7 @@ function PaperPage() {
   return (
     <article className="paper">
       <header className="page-head">
-        <p className="eyebrow">Paper · preprint</p>
+        <p className="eyebrow">Paper · preprint · {FINAL}</p>
         <h1>{PAPER_TITLE}</h1>
         <p className="authors">
           {SITE.team.join(', ')}
@@ -2165,11 +2364,11 @@ const DATA_SOURCES = [
   // Wording for the four district-data rows follows docs/research/DATA_PROVENANCE.md.
   [
     'Crop area & production: Directorate of Economics & Statistics, Ministry of Agriculture & Farmers Welfare, Govt. of India — APY district-wise season-wise statistics, 1997-98 to 2022-23, data.desagri.gov.in',
-    'District mode and the v3/v4 benchmark: crops grown, area, production and yield',
+    `${FINAL}: crops grown, area, production and yield (training data and benchmark; also v3)`,
     'Reproduced with acknowledgement under the DES copyright policy',
   ],
   ['Climate: NASA POWER (power.larc.nasa.gov), 1997–2023', 'Season temperature, humidity and rainfall at district centres', 'NASA open data, no restrictions; cite POWER'],
-  ['Soil: ISRIC SoilGrids 2.0', 'District soil profile (context only)', 'CC BY 4.0'],
+  ['Soil: ISRIC SoilGrids 2.0', `District soil inputs to ${FINAL}`, 'CC BY 4.0'],
   ['District boundaries: datta07/INDIAN-SHAPEFILES', 'District centres', 'MIT'],
   ['Kaggle Crop Recommendation dataset (2,200 rows)', 'v1 and v2 research models (Results page)', 'As listed on the Kaggle dataset page'],
   [
@@ -2185,8 +2384,9 @@ function AboutPage() {
       <header className="page-head">
         <h1>About</h1>
         <p className="lede">
-          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). It recommends crops for Indian districts from the season and its
-          climate and the district's location, and studies how such recommenders hold up on states and years they have never seen.
+          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). Its final model, {FINAL}, ranks the crops grown in an Indian district
+          by the yield they can be expected to give, from the district&apos;s yield history, season climate and soil, with a 90% prediction set; the project also studies how such
+          recommenders hold up on states and years they have never seen.
         </p>
       </header>
 
@@ -2222,17 +2422,17 @@ function AboutPage() {
             <tr>
               <th scope="row">Advisory model</th>
               <td>
-                ExtraTrees over season climate, district location, season and state, trained on Government of India district crop statistics. Earlier models (v1, v2) are documented
-                on the Results page.
+                {FINAL}: YieldRank ranks the crops grown in a district by expected yield and gives a 90% conformal prediction set. Trained on Government of India district crop
+                statistics. The previous project (v1) and the intermediate system (v3) are documented on the Results page.
               </td>
             </tr>
             <tr>
-              <th scope="row">Research method</th>
-              <td>YieldRank, a yield-grounded ranker with conformal prediction sets (see Paper)</td>
+              <th scope="row">Method</th>
+              <td>YieldRank, a yield-grounded ranker with split-conformal prediction sets (see Paper)</td>
             </tr>
             <tr>
               <th scope="row">Software</th>
-              <td>React 18 and Vite (interface); Python, FastAPI and scikit-learn (server); LightGBM (research)</td>
+              <td>React 18 and Vite (interface); Python, FastAPI, LightGBM and scikit-learn (server and research)</td>
             </tr>
           </tbody>
         </table>
