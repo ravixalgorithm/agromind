@@ -389,11 +389,6 @@ table {
   background: var(--warn-tint);
 }
 
-.data tbody tr.group-row th {
-  background: var(--tint);
-  color: var(--navy-ink);
-}
-
 .data .total {
   font-weight: 700;
 }
@@ -441,10 +436,6 @@ caption,
 
 .c {
   text-align: center !important;
-}
-
-.cap {
-  text-transform: capitalize;
 }
 
 td.ok,
@@ -507,26 +498,6 @@ dd.off {
   color: var(--navy-ink);
 }
 
-.toc {
-  margin: 0 0 28px;
-  padding: 12px 16px;
-  border: 1px solid var(--rule);
-  max-width: 860px;
-}
-
-.toc ol {
-  margin: 0;
-  padding-left: 22px;
-  columns: 2;
-  column-gap: 32px;
-  font-size: 0.9rem;
-}
-
-.toc li {
-  break-inside: avoid;
-  margin-bottom: 2px;
-}
-
 .figures {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
@@ -542,14 +513,6 @@ dd.off {
   width: 100%;
   height: auto;
   border: 1px solid var(--rule);
-}
-
-.figure-empty {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 4 / 3;
-  border: 1px dashed var(--rule-strong);
-  color: var(--muted);
 }
 
 .figure figcaption {
@@ -964,10 +927,6 @@ input[type='number'] {
 
   .hide-sm {
     display: none;
-  }
-
-  .toc ol {
-    columns: 1;
   }
 
   .data.narrow {

@@ -13,7 +13,7 @@ An **academic research tool**: clean white page, navy and green accents, serif h
 | Route | Page |
 |---|---|
 | `#/` | **Advisory** (landing, the only mode): State → District → Season with editable season climate on the left; recommended crop with P(crop), ranked crops with historical yield, district history, crop calendar (when `/options` has months) and a read-only soil profile on the right; saved analyses below (localStorage `agromind.saved-analyses.v3`) |
-| `#/results` | Model results v1 → v4 from `src/research.json`; sections and table captions are numbered with CSS counters (`.results .numbered h2::before`, `.tcap::before`); `#/report` still works |
+| `#/results` | Three numbered sections from `src/research.json`: (1) improvement table v1 → v3 → v4, (2) current system v3 (served model from `/model-info`, grouped evaluation, per-state grid, soil test, figs 11–13), (3) improved method v4 (headline, unseen-states ranking, conformal summary, per-state coverage). Table captions are numbered with CSS counters (`.tcap::before`); `#/report` still works |
 | `#/dataset` | Paged, filterable browser of the district crop records (`/dataset`) |
 | `#/paper` | Title, abstract (`ABSTRACT_TEX` from `paper/main.tex`, `\Macros` filled from `research.v4.numbers`), PDF/newsletter/code links, Colab links, BibTeX |
 | `#/about` | Project, team, system, data sources with licences, disclaimer |
@@ -39,4 +39,4 @@ The header has a small A−/A/A+ text-size control and EN/हि (Hindi covers n
 
 ## Results data
 
-`src/research.json` is a copy of `docs/research/results.json`; figures are copied to `public/research/`. Generic renderers turn arrays, `{name: {metric}}` maps and flat maps into tables. v4 has its own `V4Report`.
+`src/research.json` is a copy of `docs/research/results.json`; only the v3 figures (11–13) are copied to `public/research/`. `ImprovementTable`, `V3Section` and `V4Section` read named keys from it; v1/v2 detail is no longer shown.
