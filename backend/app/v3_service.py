@@ -141,6 +141,10 @@ class V3Service:
         except KeyError:
             raise UnknownDistrict(f"No records for {district}, {state} in season '{season}'.") from None
 
+    def district_row(self, state: str, district: str, season: str) -> pd.Series:
+        """Season climate (mean over years), centroid and soil of one district; raises UnknownDistrict."""
+        return self._district_row(state, district, season)
+
     def district(self, state: str, district: str, season: str) -> dict:
         row = self._district_row(state, district, season)
         recent = self.df[(self.df.state == state) & (self.df.district == district) & (self.df.season_app == season)]
