@@ -6,7 +6,7 @@ to us”, with the material reproduced accurately and the source prominently ack
 Send both **before the paper is submitted**, then record the date sent and the reply in
 `DATA_PROVENANCE.md` (rows S1 and S7, “Permission e-mail”) and close item 7 in `WEAKNESSES.md`.
 
-Sender: Ravi Pratap Singh, on behalf of the team, from 11aravipratapsingh@gmail.com, with the
+Sender: Ravi Pratap Singh, on behalf of the team, from 230104047@hbtu.ac.in, with the
 supervisor (Dr. Imran Khan) in Cc if possible. Addresses are the ones each site lists on its
 contact page (checked 2026-11-23); re-check before sending.
 
@@ -57,7 +57,7 @@ contact page (checked 2026-11-23); re-check before sending.
 > B.Tech CSE, Semester VII · Department of Computer Science and Engineering
 > Harcourt Butler Technical University (HBTU), Kanpur
 > Supervisor: Dr. Imran Khan, Dept. of CSE, HBTU Kanpur
-> 11aravipratapsingh@gmail.com
+> 230104047@hbtu.ac.in
 
 ---
 
@@ -104,7 +104,7 @@ contact page (checked 2026-11-23); re-check before sending.
 > B.Tech CSE, Semester VII · Department of Computer Science and Engineering
 > Harcourt Butler Technical University (HBTU), Kanpur
 > Supervisor: Dr. Imran Khan, Dept. of CSE, HBTU Kanpur
-> 11aravipratapsingh@gmail.com
+> 230104047@hbtu.ac.in
 
 ---
 
