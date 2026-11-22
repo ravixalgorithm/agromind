@@ -169,3 +169,11 @@ have a number that can move (NDCG/hit@k vs baselines; coverage vs the nominal le
 - [E21] N. Devineni, S. Perveen, U. Lall, "Solving groundwater depletion in India while achieving food security," *Nat. Commun.*, 13:3374, 2022, doi:10.1038/s41467-022-31122-9.
 - [E22] S. Dangar, V. Mishra, "Groundwater sustainability in India through nonrice-dominated cropping pattern," *PNAS Nexus*, 3:pgae378, 2024, doi:10.1093/pnasnexus/pgae378.
 - Methods: A. N. Angelopoulos, S. Bates, arXiv:2107.07511 (2021); M. Sadinle, J. Lei, L. Wasserman, *JASA* 114:223–234 (2019), doi:10.1080/01621459.2017.1395341; Y. Romano, M. Sesia, E. J. Candès, arXiv:2006.02544 (NeurIPS 2020); G. Ke et al., LightGBM (NeurIPS 2017) [already in references.bib as `ke2017`].
+
+---
+
+## 6. Outcome (see `paper/main.pdf`, numbers in `docs/research/results.json` → `v4`)
+
+- **G1 confirmed, measurable win.** On held-out states the literature classifiers' Hit@1 falls by up to 23 points relative to random splits and ends up below a last-year persistence rule. YieldRank is +15 points over the best classifier, but only slightly above persistence overall; its clear gain over persistence is on cold-start queries.
+- **G2: honest partial result.** Marginal 90% coverage holds for YieldRank on unseen states. Classifiers need held-out-state calibration to reach it. Per-state coverage fails in 3 of 32 states; Mondrian-by-#candidates calibration narrows but does not close this.
+- **New finding:** climate and soil features alone barely transfer across states, and state-median soil *raises* random-split scores while *lowering* out-of-state ones (Meyer et al. [19]).
