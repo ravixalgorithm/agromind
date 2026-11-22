@@ -12,9 +12,9 @@ An **academic research tool**: clean white page, navy and green accents, serif h
 
 | Route | Page |
 |---|---|
-| `#/` | **Advisory** (landing): field inputs left, results right (recommended crop with P(crop), top-ranked crops table, calendar, readings vs typical range), saved analyses below |
+| `#/` | **Advisory** (landing, the only mode): State → District → Season with editable season climate on the left; recommended crop with P(crop), ranked crops with historical yield, district history, crop calendar (when `/options` has months) and a read-only soil profile on the right; saved analyses below (localStorage `agromind.saved-analyses.v3`) |
 | `#/results` | Model results v1 → v4 from `src/research.json`; sections and table captions are numbered with CSS counters (`.results .numbered h2::before`, `.tcap::before`); `#/report` still works |
-| `#/dataset` | Training-data summary and paged raw-data browser |
+| `#/dataset` | Paged, filterable browser of the district crop records (`/dataset`) |
 | `#/paper` | Title, abstract (`ABSTRACT_TEX` from `paper/main.tex`, `\Macros` filled from `research.v4.numbers`), PDF/newsletter/code links, Colab links, BibTeX |
 | `#/about` | Project, team, system, data sources with licences, disclaimer |
 
@@ -31,6 +31,11 @@ The header has a small A−/A/A+ text-size control and EN/हि (Hindi covers n
 - Tables: `.data` (bordered, tinted header, `.num` right-aligned) and `.kv` (label/value). Captions use `caption.tcap` (or `p.tcap`).
 - `.keybox` holds a key-result sentence (computed from data, never typed). `.note` is a small source/definition line under a table.
 - `.hide-sm` hides secondary columns under 640px.
+
+## Data sources
+
+- Live: `/options`, `/district`, `/predict`, `/dataset`, `/model-info` (all counts and years shown on the site come from `/model-info`).
+- Research: `src/research.json` (see below). v1/v2 appear only there, as history.
 
 ## Results data
 

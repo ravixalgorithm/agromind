@@ -239,7 +239,7 @@ function Section({ id, title, children, className = '', actions }) {
   );
 }
 
-/* ── District mode (v3: Government district crop statistics) ── */
+/* ── Advisory (Government district crop statistics) ─────── */
 
 const V3_SEL_KEY = 'agromind.v3.selection';
 const V3_CLIMATE = [
@@ -282,12 +282,12 @@ function getJSON(path) {
   return jsonCache[path];
 }
 
-// The served district model's metadata (/model-info v3). Every count and year shown for district mode comes from here.
+// The served model's metadata (/model-info). Every count and year shown on the site comes from here.
 function useV3Info() {
   const [v3, setV3] = useState(null);
   useEffect(() => {
     getJSON('/model-info')
-      .then((d) => setV3(d.v3 ?? (d.rows ? d : null)))
+      .then((d) => setV3(d.rows ? d : null))
       .catch(() => setV3(null));
   }, []);
   return v3;
@@ -328,7 +328,7 @@ function Advisory({ t }) {
   const reopen = useRef(null); // {id, climate} of a saved analysis being reopened
 
   useEffect(() => {
-    getJSON('/v3/options')
+    getJSON('/options')
       .then(setOptions)
       .catch((e) => setOptError(e.message || `Cannot reach the model server at ${API_BASE_URL}.`));
   }, []);
@@ -367,7 +367,7 @@ function Advisory({ t }) {
     }
     const controller = new AbortController();
     setStatus('loading');
-    fetch(`${API_BASE_URL}/v3/district?${new URLSearchParams(sel)}`, { signal: controller.signal })
+    fetch(`${API_BASE_URL}/district?${new URLSearchParams(sel)}`, { signal: controller.signal })
       .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error(await readError(r, [])))))
       .then((d) => {
         setInfo(d);
@@ -390,7 +390,7 @@ function Advisory({ t }) {
     setStatus('loading');
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/v3/predict`, {
+        const res = await fetch(`${API_BASE_URL}/predict`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ state: info.state, district: info.district, season: info.season, ...Object.fromEntries(V3_CLIMATE.map((f) => [f.key, Number(climate[f.key])])) }),
@@ -890,7 +890,7 @@ function V3DataBrowser() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getJSON('/v3/options')
+    getJSON('/options')
       .then(setOptions)
       .catch(() => {});
   }, []);
@@ -899,7 +899,7 @@ function V3DataBrowser() {
     const controller = new AbortController();
     setStatus('loading');
     const params = new URLSearchParams({ page: String(page), page_size: String(V3_PAGE), ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });
-    fetch(`${API_BASE_URL}/v3/dataset?${params}`, { signal: controller.signal })
+    fetch(`${API_BASE_URL}/dataset?${params}`, { signal: controller.signal })
       .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error(await readError(r, [])))))
       .then((d) => {
         setPayload(d);
@@ -1685,7 +1685,7 @@ function ResultsPage({ t }) {
       .catch(() => setFailed(true));
   }, []);
 
-  const served = info?.v3 ?? (info?.rows ? info : null);
+  const served = info?.rows ? info : null;
   const { _placeholder, note, _doc: doc = {}, figures = [], meta: runMeta, ...sections } = research;
   const order = Object.keys(SECTIONS);
   const keys = [...order.filter((k) => k in sections), ...Object.keys(sections).filter((k) => !order.includes(k) && !k.startsWith('_'))];
