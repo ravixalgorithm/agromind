@@ -1,17 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import research from './research.json';
 
-// Project identity: fill in the placeholders before submission.
+// Project identity (from the lead). No university logo or emblem anywhere on the site.
 const SITE = {
-  department: '[Department]',
-  college: '[College Name]',
-  address: '[College Address, City, State – PIN]',
-  team: ['[Student Name 1]', '[Student Name 2]', '[Student Name 3]', '[Student Name 4]'],
-  guide: '[Guide Name], [Designation]',
-  email: '[project-email@college.edu]',
+  department: 'Computer Science and Engineering',
+  college: 'Harcourt Butler Technical University (HBTU), Kanpur',
+  short: 'Dept. of CSE, HBTU Kanpur',
+  programme: 'B.Tech, Computer Science and Engineering, Semester VII',
+  team: [
+    ['Rajat Patel', '230104046'],
+    ['Harshit Jain', '230104023'],
+    ['Sanyam Jain', '230104055'],
+    ['Ravi Pratap Singh', '230104047'],
+  ],
+  guide: 'Dr. Imran Khan',
+  contact: ['Ravi Pratap Singh', '11aravipratapsingh@gmail.com'],
   session: '2026–27',
   repo: 'https://github.com/ravixalgorithm/agromind',
 };
+const AUTHORS = [...SITE.team.map(([name]) => name), SITE.guide]; // paper order: students, then the supervisor
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const FINAL = 'AgroMind v4 (final)';
@@ -214,7 +221,7 @@ function App() {
 
       <footer className="site-footer">
         <p className="wrap">
-          AgroMind · final year project, Dept. of {SITE.department}, {SITE.college} ({SITE.session}). An academic research prototype, not an official Government of India service.
+          AgroMind · B.Tech final year project, {SITE.short} ({SITE.session}). An academic research prototype, not an official Government of India service.
         </p>
       </footer>
     </>
@@ -2260,12 +2267,12 @@ const NOTEBOOKS = [
 function PaperPage() {
   const numbers = research.v4?.numbers ?? {};
   const [copied, setCopied] = useState(false);
-  const authors = SITE.team.join(' and ');
+  const authors = AUTHORS.join(' and ');
   const bibtex = `@misc{agromind2026,
   title        = {${PAPER_TITLE.replace('%', '\\%')}},
   author       = {${authors}},
   year         = {2026},
-  note         = {Final year project, Dept. of ${SITE.department}, ${SITE.college}},
+  note         = {B.Tech project, Department of ${SITE.department}, ${SITE.college}},
   howpublished = {\\url{${SITE.repo}}}
 }`;
   const blob = (path) => `${SITE.repo}/blob/main/${path}`;
@@ -2276,9 +2283,9 @@ function PaperPage() {
         <p className="eyebrow">Paper · preprint · {FINAL}</p>
         <h1>{PAPER_TITLE}</h1>
         <p className="authors">
-          {SITE.team.join(', ')}
+          {AUTHORS.join(', ')}
           <br />
-          Dept. of {SITE.department}, {SITE.college} · Guide: {SITE.guide}
+          Department of {SITE.department}, {SITE.college} · Supervisor: {SITE.guide}
         </p>
         <p className="paper-links">
           <a className="btn" href={blob('paper/main.pdf')} target="_blank" rel="noreferrer">
@@ -2384,9 +2391,9 @@ function AboutPage() {
       <header className="page-head">
         <h1>About</h1>
         <p className="lede">
-          AgroMind is a final year project of the Dept. of {SITE.department}, {SITE.college} ({SITE.session}). Its final model, {FINAL}, ranks the crops grown in an Indian district
-          by the yield they can be expected to give, from the district&apos;s yield history, season climate and soil, with a 90% prediction set; the project also studies how such
-          recommenders hold up on states and years they have never seen.
+          AgroMind is a final year project of the Department of {SITE.department}, {SITE.college} ({SITE.programme}, session {SITE.session}). Its final model, {FINAL}, ranks the
+          crops grown in an Indian district by the yield they can be expected to give, from the district&apos;s yield history, season climate and soil, with a 90% prediction set;
+          the project also studies how such recommenders hold up on states and years they have never seen.
         </p>
       </header>
 
@@ -2395,24 +2402,27 @@ function AboutPage() {
           <thead>
             <tr>
               <th scope="col">Name</th>
+              <th scope="col">Roll no.</th>
               <th scope="col">Role</th>
             </tr>
           </thead>
           <tbody>
-            {SITE.team.map((name) => (
+            {SITE.team.map(([name, roll]) => (
               <tr key={name}>
                 <th scope="row">{name}</th>
-                <td>Student</td>
+                <td className="num">{roll}</td>
+                <td>Student, {SITE.programme}</td>
               </tr>
             ))}
             <tr>
               <th scope="row">{SITE.guide}</th>
-              <td>Project guide</td>
+              <td className="num">—</td>
+              <td>Supervisor, {SITE.short}</td>
             </tr>
           </tbody>
         </table>
         <p className="note">
-          Contact: {SITE.email} · {SITE.address}
+          Contact: {SITE.contact[0]}, <a href={`mailto:${SITE.contact[1]}`}>{SITE.contact[1]}</a>
         </p>
       </Section>
 
