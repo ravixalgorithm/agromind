@@ -6,8 +6,9 @@ to us”, with the material reproduced accurately and the source prominently ack
 Send both **before the paper is submitted**, then record the date sent and the reply in
 `DATA_PROVENANCE.md` (rows S1 and S7, “Permission e-mail”) and close item 7 in `WEAKNESSES.md`.
 
-Fill in every `[…]` placeholder. Addresses are the ones each site lists on its contact page
-(checked 2026-11-23); re-check before sending.
+Sender: Ravi Pratap Singh, on behalf of the team, from 11aravipratapsingh@gmail.com, with the
+supervisor (Dr. Imran Khan) in Cc if possible. Addresses are the ones each site lists on its
+contact page (checked 2026-11-23); re-check before sending.
 
 ---
 
@@ -20,17 +21,21 @@ Fill in every `[…]` placeholder. Addresses are the ones each site lists on its
 
 > Dear Sir/Madam,
 >
-> I am [Name], a final-year [B.Tech / degree] student in [Department] at [College], [City],
-> working under the guidance of [Guide Name]. For my final-year project, AgroMind, a crop
-> recommendation system for Indian districts, I have used the district-wise, season-wise
+> I am Ravi Pratap Singh, a B.Tech (Computer Science and Engineering) student in Semester VII
+> (session 2026–27) in the Department of Computer Science and Engineering, Harcourt Butler
+> Technical University (HBTU), Kanpur. I am writing on behalf of my project team (Rajat Patel,
+> Harshit Jain, Sanyam Jain and myself), supervised by Dr. Imran Khan, Department of CSE, HBTU Kanpur.
+>
+> For our final-year project, AgroMind, a crop
+> recommendation system for Indian districts, we have used the district-wise, season-wise
 > Area, Production & Yield (APY) statistics published on the DES Data Portal
 > (https://data.desagri.gov.in/website/crops-apy-report-web), for all states and the crop
 > years 1997-98 to 2022-23, as downloaded on 22 November 2026.
 >
-> As your Copyright Policy (https://desagri.gov.in/website-policies/) requires, I am writing to
-> request permission to reproduce this material in:
+> As your Copyright Policy (https://desagri.gov.in/website-policies/) requires, we request
+> permission to reproduce this material in:
 >
-> 1. my project report and a research paper submitted for academic review, as tables, figures
+> 1. our project report and a research paper submitted for academic review, as tables, figures
 >    and summary statistics; and
 > 2. the project's source repository, as a processed dataset (the APY figures joined with
 >    public climate and soil data), for the examiners and reviewers to reproduce the results.
@@ -42,15 +47,17 @@ Fill in every `[…]` placeholder. Addresses are the ones each site lists on its
 > Welfare, Ministry of Agriculture & Farmers Welfare, Government of India — Area, Production
 > & Yield statistics, data.desagri.gov.in (accessed 22 November 2026).”*
 >
-> I would be grateful for your permission, or for guidance on any conditions you would like me
+> We would be grateful for your permission, or for guidance on any conditions you would like us
 > to follow.
 >
 > Thank you for making these statistics available.
 >
 > Yours faithfully,
-> [Name]
-> [Roll number], [Department], [College]
-> [E-mail] · [Phone]
+> Ravi Pratap Singh (Roll no. 230104047), on behalf of the AgroMind project team
+> B.Tech CSE, Semester VII · Department of Computer Science and Engineering
+> Harcourt Butler Technical University (HBTU), Kanpur
+> Supervisor: Dr. Imran Khan, Dept. of CSE, HBTU Kanpur
+> 11aravipratapsingh@gmail.com
 
 ---
 
@@ -64,17 +71,21 @@ Fill in every `[…]` placeholder. Addresses are the ones each site lists on its
 
 > Dear Sir/Madam,
 >
-> I am [Name], a final-year [B.Tech / degree] student in [Department] at [College], [City],
-> working under the guidance of [Guide Name]. My final-year project, AgroMind, ranks crops for
+> I am Ravi Pratap Singh, a B.Tech (Computer Science and Engineering) student in Semester VII
+> (session 2026–27) in the Department of Computer Science and Engineering, Harcourt Butler
+> Technical University (HBTU), Kanpur. I am writing on behalf of my project team (Rajat Patel,
+> Harshit Jain, Sanyam Jain and myself), supervised by Dr. Imran Khan, Department of CSE, HBTU Kanpur.
+>
+> Our final-year project, AgroMind, ranks crops for
 > Indian districts. To consider farm income as well as yield, it uses the table “Minimum
 > Support / Fair & Remunerative Prices Recommended by CACP and Fixed by Government (Crop
 > Year)” published at https://cacp.da.gov.in/Home/MSP (crop years 2010-11 to 2026-27, as
 > accessed on 23 November 2026).
 >
-> As your Website Policies (https://cacp.da.gov.in/Home/Privacy) require, I am writing to
-> request permission to reproduce these prices in:
+> As your Website Policies (https://cacp.da.gov.in/Home/Privacy) require, we request
+> permission to reproduce these prices in:
 >
-> 1. my project report and a research paper submitted for academic review; and
+> 1. our project report and a research paper submitted for academic review; and
 > 2. the project's source repository, as a small table of MSP / FRP by crop and crop year,
 >    for the examiners and reviewers to reproduce the results.
 >
@@ -85,13 +96,15 @@ Fill in every `[…]` placeholder. Addresses are the ones each site lists on its
 > Welfare, Ministry of Agriculture & Farmers Welfare, Government of India — cacp.da.gov.in
 > (accessed 23 November 2026).”*
 >
-> I would be grateful for your permission, or for guidance on any conditions you would like me
+> We would be grateful for your permission, or for guidance on any conditions you would like us
 > to follow.
 >
 > Yours faithfully,
-> [Name]
-> [Roll number], [Department], [College]
-> [E-mail] · [Phone]
+> Ravi Pratap Singh (Roll no. 230104047), on behalf of the AgroMind project team
+> B.Tech CSE, Semester VII · Department of Computer Science and Engineering
+> Harcourt Butler Technical University (HBTU), Kanpur
+> Supervisor: Dr. Imran Khan, Dept. of CSE, HBTU Kanpur
+> 11aravipratapsingh@gmail.com
 
 ---
 
