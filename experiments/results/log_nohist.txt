@@ -1,0 +1,4 @@
+rows 259181 queries 43443 crops 49 states 36 hist=False
+random            f0 Crop prior             ndcg@3=0.7976 hit@1=0.2900 cov90 iid=0.901 grp=0.902 (0s)
+random            f0 GaussianNB [6,12]      ndcg@3=0.7908 hit@1=0.2766 cov90 iid=0.908 grp=0.906 (0s)
+random            f0 RandomForest [8,21]    ndcg@3=0.8964 hit@1=0.5268 cov90 iid=0.904 grp=0.907 (3s)
