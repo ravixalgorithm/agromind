@@ -1332,7 +1332,7 @@ const SECTIONS = {
   v1: 'Model v1 (original, reproduced)',
   v1_fixed: 'Model v1 Corrected (plain multiclass, Kaggle data)',
   models: 'Model Comparison on v2 Data (stratified 5-fold CV)',
-  v3: 'Model v3',
+  v3: 'Model v3 — Large Real Dataset (district crop statistics)',
   v4: 'Model v4',
   ablation: 'Feature Ablation (deployed Random Forest)',
   loso: 'Leave-One-Source-Out Validation',
@@ -1367,12 +1367,36 @@ const COLS = {
   acc_v1_fixed: 'Acc. v1 corrected',
   acc_v2: 'Acc. v2',
   aspect: 'Aspect',
+  hit1: 'Hit@1',
+  hit3: 'Hit@3',
+  recall3: 'Recall@3',
+  hit1_by_year: 'Hit@1',
   v1: 'v1',
   v2: 'v2',
+  v3: 'v3',
+  v4: 'v4',
 };
-const label = (k) => COLS[k] ?? SECTIONS[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+// Sub-section headings inside nested results (e.g. v3); checked before the top-level titles.
+const SUBTITLES = {
+  summary: 'v2 vs v3',
+  leave_districts_out: 'Unseen districts (grouped by district)',
+  leave_years_out: 'Future crop years',
+  leave_states_out: 'Unseen states',
+  leave_states_out_per_state_hit1: 'Hit@1 for each held-out state',
+  soil_subset: 'Rows with a measured soil point only',
+  data: 'Data',
+  task: 'Task',
+  meta: 'Run details',
+};
+const label = (k) => {
+  const [base, sub] = k.split(':');
+  if (sub) return `${label(base)} ${sub}`;
+  return COLS[k] ?? SECTIONS[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+};
+// Data keys like "rows_by_source" get a label; free-text names like "RF: + state" are shown as written.
+const rowName = (k) => (/^[a-z0-9_%]+$/.test(k) ? label(k) : k);
 const isPlain = (v) => v === null || typeof v !== 'object';
-const RATE = /acc|f1|top3|chance|drop|confidence/;
+const RATE = /acc|f1|top3|chance|drop|confidence|hit|recall/;
 
 // Rates (0–1) as percentages, *_pct / *_% as given, p-values and scores as decimals.
 const cell = (v, key = '') => {
@@ -1435,32 +1459,55 @@ function RowsTable({ rows, head = [], highlight }) {
   );
 }
 
-const isMetricMap = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).length > 0 && Object.values(v).every((x) => x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every(isPlain));
+const isFlatObj = (x) => x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every(isPlain);
+// {name: {metric: n}} maps; one extra level ({hit1_by_year: {2015: n}}) is flattened into "hit1_by_year:2015" columns.
+const isMetricMap = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).length > 0 && Object.values(v).every((x) => x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every((y) => isPlain(y) || isFlatObj(y)));
+const flatten = (row) => Object.fromEntries(Object.entries(row).flatMap(([k, v]) => (isPlain(v) ? [[k, v]] : Object.entries(v).map(([s, x]) => [`${k}:${s}`, x]))));
 
 // Render any results.json value: arrays of rows and {name: {metric: n}} maps become tables, flat values a key/value table.
-function ReportValue({ value, name = 'Name', split, highlight }) {
+function ReportValue({ value, name = 'Name', split, highlight, ctx = '' }) {
   if (isPlain(value)) return <p>{cell(value)}</p>;
   if (Array.isArray(value)) return value.every((v) => v && typeof v === 'object') ? <RowsTable rows={value} /> : <p>{cell(value)}</p>;
   if (isMetricMap(value)) {
     const rows = Object.entries(value).map(([k, v]) => {
-      if (!split) return { [name]: k, ...v };
+      if (!split) return { [name]: k, ...flatten(v) };
       const [a, b = ''] = k.split('|').map((s) => s.trim());
-      return { [split[0]]: a, [split[1]]: b, ...v };
+      return { [split[0]]: a, [split[1]]: b, ...flatten(v) };
     });
     return <RowsTable rows={rows} head={split ?? [name]} highlight={highlight} />;
   }
   const entries = Object.entries(value);
+  // A long map of name -> rate (e.g. 35 states) reads better as a compact grid, best first.
+  if (entries.length > 12 && entries.every(([, v]) => typeof v === 'number')) {
+    return (
+      <ul className="kv-grid">
+        {entries
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, v]) => (
+            <li key={k}>
+              <span>{k}</span>
+              <strong>{cell(v, RATE.test(k) ? k : ctx)}</strong>
+            </li>
+          ))}
+      </ul>
+    );
+  }
   const flat = entries.filter(([, v]) => isPlain(v) || (Array.isArray(v) && v.every(isPlain)));
-  const nested = entries.filter((e) => !flat.includes(e));
+  // Sibling {metric: n} objects with the same keys (e.g. two models) become one table.
+  const shape = (v) => (isFlatObj(v) ? Object.keys(v).sort().join() : null);
+  const shapes = entries.map(([, v]) => shape(v)).filter(Boolean);
+  const grouped = entries.filter(([, v]) => shape(v) && shapes.filter((x) => x === shape(v)).length > 1);
+  const nested = entries.filter((e) => !flat.includes(e) && !grouped.includes(e));
   return (
     <>
+      {grouped.length > 0 && <RowsTable rows={grouped.map(([k, v]) => ({ [name]: rowName(k), ...v }))} head={[name]} />}
       {flat.length > 0 && (
         <table className="kv">
           <tbody>
             {flat.map(([k, v]) => (
               <tr key={k}>
                 <th scope="row">{label(k)}</th>
-                <td>{cell(v, k)}</td>
+                <td>{cell(v, RATE.test(k) ? k : ctx)}</td>
               </tr>
             ))}
           </tbody>
@@ -1468,8 +1515,8 @@ function ReportValue({ value, name = 'Name', split, highlight }) {
       )}
       {nested.map(([k, v]) => (
         <div key={k} className="sub-section">
-          <h3>{label(k)}</h3>
-          <ReportValue value={v} />
+          <h3>{SUBTITLES[k] ?? rowName(k)}</h3>
+          <ReportValue value={v} ctx={k} />
         </div>
       ))}
     </>
@@ -1494,6 +1541,38 @@ function losoSummary(loso) {
   );
 }
 
+// v3-style results: best learned model vs best popularity baseline for each grouped split, computed from the numbers.
+function generalisationSummary(v) {
+  const val = (r, m) => r[`${m}_mean`] ?? r[m];
+  const best = (split) => {
+    const rows = Object.entries(v?.[split] ?? {}).filter(([, r]) => r && typeof val(r, 'hit1') === 'number');
+    const top = (list) => list.sort((a, b) => val(b[1], 'hit1') - val(a[1], 'hit1'))[0];
+    const model = top(rows.filter(([n]) => !n.startsWith('baseline')));
+    const base = top(rows.filter(([n]) => n.startsWith('baseline')));
+    return model && base ? { model: model[0], m1: val(model[1], 'hit1'), m3: val(model[1], 'hit3'), b1: val(base[1], 'hit1'), b3: val(base[1], 'hit3') } : null;
+  };
+  const pc = (x) => (typeof x === 'number' ? `${(x * 100).toFixed(1)}%` : '—');
+  const parts = [
+    ['unseen districts', best('leave_districts_out')],
+    ['future crop years', best('leave_years_out')],
+    ['unseen states', best('leave_states_out')],
+  ].filter(([, r]) => r);
+  if (!parts.length) return null;
+  const [[firstName, first], ...rest] = parts;
+  return (
+    <p className="notice">
+      <strong>Headline:</strong> for {firstName}, the best model ({first.model}) ranks a high-yield crop first in <strong>{pc(first.m1)}</strong> of district-season queries ({pc(first.m3)}{' '}
+      within its top 3), against {pc(first.b1)} / {pc(first.b3)} for the best popularity baseline.
+      {rest.map(([name, r]) => (
+        <span key={name}>
+          {' '}
+          For {name}: {pc(r.m1)} vs {pc(r.b1)}.
+        </span>
+      ))}
+    </p>
+  );
+}
+
 function ReportPage({ t }) {
   const [info, setInfo] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -1514,6 +1593,14 @@ function ReportPage({ t }) {
     ...(isMetricMap(sections.models) && { models: byDesc(sections.models, 'macro_f1_mean') }),
     ...(isMetricMap(sections.importance) && { importance: byDesc(sections.importance, 'accuracy_drop_mean') }),
   };
+
+  // vN sections: results first, setup last; their own figure list is already in the Figures panel.
+  const V_ORDER = ['summary', 'leave_districts_out', 'leave_years_out', 'leave_states_out', 'leave_states_out_per_state_hit1', 'soil_subset'];
+  for (const v of Object.keys(prepared).filter((k) => /^v\d+$/.test(k) && !isPlain(prepared[k]) && !Array.isArray(prepared[k]))) {
+    const { figures: _f, ...rest } = prepared[v];
+    const ks = Object.keys(rest);
+    prepared[v] = Object.fromEntries([...V_ORDER.filter((k) => k in rest), ...ks.filter((k) => !V_ORDER.includes(k))].map((k) => [k, rest[k]]));
+  }
 
   return (
     <>
@@ -1556,6 +1643,7 @@ function ReportPage({ t }) {
       {keys.map((k) => (
         <Panel key={k} title={SECTIONS[k] ?? label(k)}>
           {k === 'loso' && losoSummary(prepared.loso)}
+          {/^v\d+$/.test(k) && generalisationSummary(prepared[k])}
           <ReportValue
             value={prepared[k]}
             name={k === 'importance' ? 'Input' : k === 'ablation' ? 'Feature set' : 'Model'}
