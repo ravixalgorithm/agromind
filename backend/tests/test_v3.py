@@ -38,4 +38,5 @@ def test_v3_endpoints() -> None:
 
         info = client.get("/model-info").json()
         assert info["v3"]["rows"] > 300_000 and info["v3"]["districts"] > 700
+        assert 0 < info["v3"]["locations"] <= info["v3"]["districts"]
         assert "accuracy" in info["metrics"]  # v2 fields still at the top level

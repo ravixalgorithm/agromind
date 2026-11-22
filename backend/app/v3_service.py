@@ -237,6 +237,7 @@ class V3Service:
             "rows": int(len(df)), "training_rows": int(len(lab)),
             "crops": int(lab.crop_slug.nunique()), "states": int(df.state.nunique()),
             "districts": int(df.groupby(["state", "district"]).ngroups),
+            "locations": int(df[["lat", "lon"]].drop_duplicates().shape[0]),  # matched centroids (several APY names share one)
             "years": [int(df.year.min()), int(df.year.max())],
             "label": "recommend == 1: top-3 crops by within-crop yield percentile per district-year-season",
             "metrics": metrics,

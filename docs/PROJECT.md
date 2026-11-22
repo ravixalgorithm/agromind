@@ -92,7 +92,7 @@ secondary **soil-test (N-P-K) mode**.
 |----------|---------|
 | `GET /health` | Liveness probe |
 | `GET /metadata` | Input fields, allowed options, per-crop profiles, source coverage |
-| `GET /model-info` | v2 metrics, feature list, per-source row counts at the top level; the v3 model under `"v3"` (rows, crops, states, districts, years, grouped metrics) |
+| `GET /model-info` | v2 metrics, feature list, per-source row counts at the top level; the v3 model under `"v3"` (rows, crops, states, districts = APY names, locations = matched centroids, years, grouped metrics) |
 | `POST /predict` | Ranked crop recommendations (`best_crop` + `top_recommendations`) |
 | `GET /dataset` | Paginated merged training rows (filterable by `crop`) |
 | `GET /v3/options` | States → districts → seasons that have records, plus the crop list |
