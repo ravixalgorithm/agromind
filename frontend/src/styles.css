@@ -1182,11 +1182,29 @@ input[type='number'] {
   color: var(--muted);
 }
 
-.paper-links {
+.paper-facts {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.paper-tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.pdf-frame {
+  display: block;
+  width: 100%;
+  height: 85vh;
+  border: 1px solid var(--rule-strong);
+  background: var(--tint);
+}
+
+.pdf-mobile {
+  display: none;
 }
 
 .abstract {
@@ -1252,6 +1270,21 @@ input[type='number'] {
 }
 
 @media (max-width: 640px) {
+  .pdf-frame {
+    display: none;
+  }
+
+  .pdf-mobile {
+    display: block;
+    padding: 12px 14px;
+    border: 1px solid var(--rule-strong);
+    background: var(--tint);
+  }
+
+  .pdf-mobile .btn {
+    margin-top: 8px;
+  }
+
   .versions {
     grid-template-columns: minmax(0, 1fr);
   }
