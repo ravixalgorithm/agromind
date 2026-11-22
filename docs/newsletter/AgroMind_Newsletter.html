@@ -195,7 +195,7 @@
   <div class="cols">
     <p>We reviewed 37 sources (every citation checked), with an emphasis on Indian work. Early Indian systems used
       majority-vote ensembles over soil data <span class="cite">[6], [8]</span> and added sowing season and
-      location <span class="cite">[7], [9]</span>. Recent work on the Kaggle dataset reports 98–99.6% accuracy
+      location <span class="cite">[7], [9]</span>. Recent work on the Kaggle dataset reports 98–99.6% precision or accuracy
       with XGBoost and Bayesian classifiers <span class="cite">[11], [12]</span>. Explainable systems such as
       XAI-CROP and AgroXAI attach SHAP and LIME explanations <span class="cite">[14], [15], [23]</span>.</p>
     <p>Studies on real Indian data paint a different picture. On 20 years of data from 247 rice districts, the
@@ -237,7 +237,7 @@
     <p>On the merged data the deployed Random Forest is the best of 10 models: 94.33 ± 0.12% accuracy, 92.15%
       macro-F1 and 99.18% top-3. Season is the most important input (shuffling it costs 55 points of accuracy).
       Adding soil, season and state raises accuracy on the multi-state rows from 32.22% to 71.50%. But when one
-      whole source is held out, accuracy falls to 7.0–12.9%, close to chance. The three sources describe the same
+      whole source is held out, accuracy falls to 7.0–12.9%, only a few points above chance. The three sources describe the same
       crops so differently that a model fitted to one tells us little about the others.</p>
   </div>
 
