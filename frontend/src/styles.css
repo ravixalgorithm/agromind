@@ -559,6 +559,67 @@ dd.off {
 
 /* ── Advisory ── */
 
+.mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 22px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.mode-switch button {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: -1px;
+  padding: 8px 16px 9px 0;
+  margin-right: 24px;
+  font: inherit;
+  text-align: left;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.mode-switch button strong {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+
+.mode-switch button small {
+  font-size: 0.78rem;
+}
+
+.mode-switch button[aria-selected='true'] {
+  color: var(--navy-ink);
+  border-bottom-color: var(--green);
+}
+
+.unit {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.num-field.is-edited input[type='number'] {
+  border-color: var(--navy);
+  background: var(--tint);
+}
+
+.reset-climate {
+  margin-top: 8px;
+}
+
+fieldset:disabled {
+  opacity: 0.55;
+}
+
+.toolbar.filters {
+  justify-content: flex-start;
+}
+
 .advisory {
   display: grid;
   grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
