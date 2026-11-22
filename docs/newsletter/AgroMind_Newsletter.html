@@ -84,7 +84,7 @@
   .team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; text-align: center; font-size: 8.6pt; }
   .team div { border: .6px solid var(--rule); padding: 2mm 1mm; }
   .team b { display: block; font-size: 9pt; }
-  .refs { font-size: 7.1pt; line-height: 1.28; column-count: 3; column-gap: 5mm; hyphens: auto; text-align: left; }
+  .refs { font-size: 6.9pt; line-height: 1.25; column-count: 3; column-gap: 5mm; hyphens: auto; text-align: left; }
   .refs p { overflow-wrap: anywhere; margin: 0 0 1mm; padding-left: 6mm; text-indent: -6mm; break-inside: avoid; }
   .foot { margin-top: 3mm; border-top: 3px double var(--maroon); padding-top: 1.5mm; font-size: 7.6pt; color: var(--muted); text-align: center; }
 </style>
@@ -196,13 +196,13 @@
   <p class="kicker">From the Literature</p>
   <h2>What earlier crop recommenders found, and missed</h2>
   <div class="cols">
-    <p>We reviewed 36 sources (all DOIs verified), with an emphasis on Indian work. Early Indian systems used
+    <p>We reviewed 37 sources (every citation checked), with an emphasis on Indian work. Early Indian systems used
       majority-vote ensembles over soil data <span class="cite">[6], [8]</span> and added sowing season and
       location <span class="cite">[7], [9]</span>. Recent work on the Kaggle dataset reports 98–99.6% accuracy
       with XGBoost and Bayesian classifiers <span class="cite">[11], [12]</span>. Explainable systems such as
       XAI-CROP and AgroXAI attach SHAP and LIME explanations <span class="cite">[14], [15], [23]</span>.</p>
     <p>Studies on real district-level Indian data paint a different picture. On 20 years of data from 247 rice
-      districts, the best out-of-sample R² was 0.82 <span class="cite">[16]</span>. The gap between
+      districts, the best out-of-sample R² was 0.82 <span class="cite">[16]</span>. The one crop-recommendation study with a time-ordered split saw Random Forest fall from 99.96% to 78.55% <span class="cite">[37]</span>. The gap between
       near-perfect benchmark scores and real-world skill is the main motivation for AgroMind's evaluation design.</p>
   </div>
   <table class="lit avoid" style="margin-top:2mm">
@@ -214,6 +214,7 @@
       <tr><td>[11]</td><td>Dey et al., 2024</td><td>Kaggle set</td><td>XGBoost, RF, SVM</td><td>99.09%</td><td>No location / season</td></tr>
       <tr><td>[12]</td><td>Elbasi et al., 2023</td><td>Soil–climate crops</td><td>15 classifiers</td><td>99.59%</td><td>No out-of-distribution test</td></tr>
       <tr><td>[14]</td><td>Shams et al., 2024</td><td>Soil, weather</td><td>XAI-CROP</td><td>MSE 0.94</td><td>No calibration</td></tr>
+      <tr><td>[37]</td><td>Sam &amp; D'Abreo, 2025</td><td>19 crops, 15 states</td><td>RF, SVM</td><td>99.96% → 78.55%</td><td>Holds out time, not states</td></tr>
       <tr><td>[16]</td><td>De Clercq &amp; Mahdi, 2024</td><td>247 districts, 20 yrs</td><td>19 regressors</td><td>R² ≤ 0.82</td><td>Real-data ceiling (yield)</td></tr>
     </tbody>
   </table>
@@ -234,7 +235,7 @@
     <ul>
       <li><b>Location-blind models</b> <span class="cite">[11]–[13]</span> → state, season and soil as model inputs.</li>
       <li><b>Single, near-synthetic source</b> <span class="cite">[11], [31]</span> → a three-source merge plus a real-data v3.</li>
-      <li><b>Random splits overstate skill</b> <span class="cite">[18], [19]</span> → leave-one-source-out test.</li>
+      <li><b>Random splits overstate skill</b> <span class="cite">[18], [19], [37]</span> → leave-one-source-out test.</li>
       <li><b>Uncalibrated confidence</b> <span class="cite">[20]</span> → reliability curves and ECE.</li>
       <li><b>Top-1 only</b> → top-3 accuracy and ranked same-season alternatives.</li>
     </ul>
@@ -306,6 +307,7 @@
     <p>[34] F. Pedregosa et al., &quot;Scikit-learn: Machine learning in Python,&quot; <i>J. Mach. Learn. Res.</i>, vol. 12, no. 85, pp. 2825–2830, 2011. [Online]. Available: https://www.jmlr.org/papers/v12/pedregosa11a.html</p>
     <p>[35] G. Ke et al., &quot;LightGBM: A highly efficient gradient boosting decision tree,&quot; in <i>Advances in Neural Information Processing Systems 30 (NIPS)</i>, 2017. [Online]. Available: https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html</p>
     <p>[36] pyatakov, &quot;India Agriculture Crop Production: District-wise crop area and production 1997–2021 (updated Feb. 2023),&quot; Kaggle. [Online]. Available: https://www.kaggle.com/datasets/pyatakov/india-agriculture-crop-production (accessed Nov. 22, 2026).</p>
+    <p>[37] S. Sam and S. M. D&#x27;Abreo, &quot;Crop recommendation with machine learning: Leveraging environmental and economic factors for optimal crop selection,&quot; arXiv:2505.21201, 2025, doi: 10.48550/arXiv.2505.21201.</p>
   </div>
   <div class="foot">AgroMind Bulletin · [College Name], Department of [Department Name] · Vol. 1, Issue 1 · November 2026<br>
     Full literature review: docs/research/LITERATURE.md · Code and notebook: AgroMind project repository</div>
