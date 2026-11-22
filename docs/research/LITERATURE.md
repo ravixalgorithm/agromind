@@ -1,7 +1,7 @@
 # AgroMind — Literature Review
 
 Related work for AgroMind, a state-aware Random Forest crop recommender for Indian fields.
-References are numbered [1]–[31] in IEEE style; [`references.bib`](references.bib) lists the same
+References are numbered [1]–[35] in IEEE style; [`references.bib`](references.bib) lists the same
 entries in the same order.
 
 **How citations were checked (2026-11-22).** Every DOI was looked up in Crossref (DataCite for the
@@ -72,7 +72,7 @@ temporal or grouped structure, and recommend blocked (grouped) validation instea
 random-split scores while hurting prediction at new locations. Niculescu-Mizil and Caruana [20]
 show that Random Forests [21] and boosted trees [22] give systematically distorted class
 probabilities, and that Platt scaling or isotonic regression corrects them. SHAP [23] is the
-standard way to attribute a tree model's prediction to its input features.
+standard way to attribute a tree model's prediction to its input features. Guo et al. [33] popularised Expected Calibration Error (ECE) as a summary of miscalibration, and McNemar's test, recommended by Dietterich [32], compares two classifiers on the same test set. Experiments use scikit-learn [34], with XGBoost [22] and LightGBM [35] as gradient-boosting baselines.
 
 ### 1.7 Indian data infrastructure
 
@@ -191,3 +191,11 @@ benchmark to beat.
 [30] National Informatics Centre, Government of India, "Open Government Data (OGD) Platform India — district-wise crop production statistics (Directorate of Economics and Statistics, MoA&FW)." [Online]. Available: https://www.data.gov.in/ (accessed Nov. 22, 2026).
 
 [31] A. Ingle, "Crop Recommendation Dataset," Kaggle, 2020. [Online]. Available: https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset (accessed Nov. 22, 2026).
+
+[32] T. G. Dietterich, "Approximate statistical tests for comparing supervised classification learning algorithms," *Neural Comput.*, vol. 10, no. 7, pp. 1895–1923, 1998, doi: 10.1162/089976698300017197.
+
+[33] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, "On calibration of modern neural networks," in *Proc. 34th Int. Conf. Machine Learning (ICML)*, 2017; arXiv:1706.04599, doi: 10.48550/arXiv.1706.04599.
+
+[34] F. Pedregosa et al., "Scikit-learn: Machine learning in Python," *J. Mach. Learn. Res.*, vol. 12, no. 85, pp. 2825–2830, 2011. [Online]. Available: https://www.jmlr.org/papers/v12/pedregosa11a.html
+
+[35] G. Ke et al., "LightGBM: A highly efficient gradient boosting decision tree," in *Advances in Neural Information Processing Systems 30 (NIPS)*, 2017. [Online]. Available: https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html

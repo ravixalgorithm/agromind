@@ -502,6 +502,10 @@ table {
   color: #fff;
 }
 
+.data thead th.wrap {
+  white-space: normal;
+}
+
 .data tbody tr:nth-child(even) {
   background: var(--zebra);
 }
