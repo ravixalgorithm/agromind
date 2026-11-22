@@ -1,13 +1,14 @@
 # AgroMind — Literature Review
 
 Related work for AgroMind, a state-aware Random Forest crop recommender for Indian fields.
-References are numbered [1]–[38] in IEEE style; [`references.bib`](references.bib) lists the same
+References are numbered [1]–[51] in IEEE style; [`references.bib`](references.bib) lists the same
 entries in the same order.
 
 **How citations were checked (2026-11-22).** Every DOI was looked up in Crossref (DataCite for the
 arXiv entry). Titles, authors and venues were copied from that record, and each DOI was confirmed
 to resolve at `https://doi.org/`. Web resources returned HTTP 200 on that date. Accuracy figures in
-the comparison table come from the papers' published abstracts. Where an abstract gives no
+the comparison table come from the papers' published abstracts. 2024–2026 papers [39]–[51]
+are reviewed from their full texts in [`RECENT_WORK.md`](RECENT_WORK.md). Where an abstract gives no
 number, the table says so instead of guessing. Candidates that could not be verified this way
 were dropped.
 
@@ -206,3 +207,29 @@ benchmark to beat.
 [37] S. Sam and S. M. D'Abreo, "Crop recommendation with machine learning: Leveraging environmental and economic factors for optimal crop selection," arXiv:2505.21201, 2025, doi: 10.48550/arXiv.2505.21201.
 
 [38] Directorate of Economics and Statistics, MoA&FW, Government of India, "Area, Production & Yield (APY) – Reports." [Online]. Available: https://data.desagri.gov.in/website/crops-apy-report-web (accessed Nov. 22, 2026).
+
+[39] M. K. Senapaty, A. Ray, and N. Padhy, "A Decision Support System for Crop Recommendation Using Machine Learning Classification Algorithms," *Agriculture*, vol. 14, no. 8, p. 1256, 2024, doi: 10.3390/agriculture14081256.
+
+[40] R. A. Ahmed, W. El-Shafai, Z. A. Ahmed, E.-S. M. El-Rabaie, and F. E. Abd El-Samie, "High-precision crop recommendation system with stacking ensemble classifiers for optimizing agricultural productivity," *Sci. Rep.*, vol. 15, no. 1, p. 43377, 2025, doi: 10.1038/s41598-025-09640-5.
+
+[41] H. Afzal et al., "Incorporating soil information with machine learning for crop recommendation to improve agricultural output," *Sci. Rep.*, vol. 15, no. 1, p. 8560, 2025, doi: 10.1038/s41598-025-88676-z.
+
+[42] S. Shastri, S. Kumar, V. Mansotra, and R. Salgotra, "Advancing crop recommendation system with supervised machine learning and explainable artificial intelligence," *Sci. Rep.*, vol. 15, no. 1, p. 25498, 2025, doi: 10.1038/s41598-025-07003-8.
+
+[43] G. Singh and S. Sharma, "Enhancing precision agriculture through cloud based transformative crop recommendation model," *Sci. Rep.*, vol. 15, no. 1, p. 9138, 2025, doi: 10.1038/s41598-025-93417-3.
+
+[44] H. Gunasekaran, K. Ramalakshmi, S. Debnath, and D. K. Swaminathan, "Physics-Aware Ensemble Learning for Superior Crop Recommendation in Smart Agriculture," *Sensors*, vol. 25, no. 19, p. 6243, 2025, doi: 10.3390/s25196243.
+
+[45] M. Abu Bakr, A. J. Khan, S. D. Khan, M. H. Zafar, M. Ullah, and H. Ullah, "Evaluation of Learning-Based Models for Crop Recommendation in Smart Agriculture," *Information*, vol. 16, no. 8, p. 632, 2025, doi: 10.3390/info16080632.
+
+[46] N. Piyar S and Baulkani S, "An explainable spatio-temporal deep learning framework for crop yield prediction and recommendation," *Sci. Rep.*, vol. 16, no. 1, p. 24662, 2026, doi: 10.1038/s41598-026-54439-7.
+
+[47] P. Mahesh and R. Soundrapandiyan, "A crop recommendation using improved expert-guided constraint aware differential evolution and CatBoost surrogate learning," *Front. Plant Sci.*, vol. 17, p. 1884580, 2026, doi: 10.3389/fpls.2026.1884580.
+
+[48] P. Latha and P. Kumaresan, "Smart crop recommendation: fusing nutrient and climate data with Krill Herd Optimization and explainable AI," *Front. Artif. Intell.*, vol. 9, p. 1910196, 2026, doi: 10.3389/frai.2026.1910196.
+
+[49] L. Reddy N and Gopinath M. P, "AgriOptNet: A hybrid optimization and lightweight deep learning framework for soil texture classification and crop recommendation based on nutrition," *PLOS One*, vol. 21, no. 7, p. e0350044, 2026, doi: 10.1371/journal.pone.0350044.
+
+[50] S. K. D. Sharma, "Explainable machine learning for crop recommendation using statistical validation and SHAP interpretability in South Asian agricultural data," *Discover Plants*, vol. 3, no. 1, p. 317, 2026, doi: 10.1007/s44372-026-00795-7.
+
+[51] V. Pandey, R. Tewari, and R. H. Laskar, "AgroSense 2.0: Cross-modal transformer fusion with geospatial raster integration and interpretable multi-task learning for precision crop recommendation," arXiv:2606.21892, 2026, doi: 10.48550/arXiv.2606.21892.

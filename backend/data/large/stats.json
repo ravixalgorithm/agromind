@@ -33,6 +33,15 @@
     "in_scope_match_pct": 98.54,
     "in_scope_found_but_different": 4
   },
+  "msp": {
+    "source": "https://cacp.da.gov.in/json.json",
+    "rows": 462,
+    "commodities": 28,
+    "crop_slugs": 22,
+    "years": "2010-11..2026-27",
+    "pib_2003184_checked": 42,
+    "pib_2003184_identical": 42
+  },
   "rows": 400379,
   "states": 37,
   "districts_apy": 748,
@@ -76,5 +85,16 @@
     "Alluvial": 5470,
     "Clay": 1425,
     "Sandy": 835
+  },
+  "leave_states_out_leak_check": {
+    "centroids_in_2plus_states": 5,
+    "rows_on_those_centroids": 668,
+    "centroids_in_2plus_state_groups": 0,
+    "district_names_sharing_a_centroid": {
+      "15.1101_76.5327": [
+        "Bellary",
+        "Vijayanagar"
+      ]
+    }
   }
 }

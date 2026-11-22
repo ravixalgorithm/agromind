@@ -1,7 +1,9 @@
-"""AgroMind API: one mode, district-level crop recommendations on Government of India APY data.
+"""AgroMind API: district-level crop recommendations on Government of India APY data.
 
-The /v3/* paths are aliases of the root paths, kept for clients written against the earlier
-two-mode API.
+POST /predict serves the final model, AgroMind v4 (YieldRank + 90 % conformal crop sets). The v3
+district classifier still backs /options, /district and /dataset, and answers /predict only for a
+district-season with no recent crop records (labelled "fallback": "v3"). /v3/* are aliases of the
+root paths, kept for clients written against the earlier API.
 """
 
 from contextlib import asynccontextmanager
@@ -10,22 +12,26 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import V3Request
-from .v3_service import UnknownDistrict, V3Service
+from .v3_service import CLIMATE, SOIL, UnknownDistrict, V3Service
+from .v4_service import NoCandidates, V4Service
 
 v3 = V3Service()
+v4 = V4Service()
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    v3.warm_up()  # loads the large table and trains in the background; /predict waits for it if needed
+    v3.warm_up()  # both load in the background; requests wait for them if they arrive first
+    v4.warm_up()
     yield
 
 
 app = FastAPI(
     title="AgroMind Crop Recommendation API",
-    version="4.0.0",
-    description="Crop recommendations for an Indian district and season, learned from Government of India "
-                "district-wise crop statistics (DES APY, 1997-98 to 2022-23) with NASA POWER climate.",
+    version="5.0.0",
+    description="Crop recommendations for an Indian district and season (AgroMind v4: YieldRank + conformal sets), "
+                "learned from Government of India district-wise crop statistics (DES APY, 1997-98 to 2022-23) "
+                "with NASA POWER climate and ISRIC SoilGrids soil.",
     lifespan=lifespan,
 )
 
@@ -62,12 +68,21 @@ def district(state: str, district: str, season: str) -> dict:
 @app.post("/predict")
 @app.post("/v3/predict")
 def predict(payload: V3Request) -> dict:
-    """Every crop ranked by probability, with its historical median yield in that district."""
+    """Candidate crops ranked by YieldRank, with the 90 % conformal set and expected / historical yield."""
     body = payload.model_dump()
+    state, dist, season = body.pop("state"), body.pop("district"), body.pop("season")
     try:
-        return v3.predict(body.pop("state"), body.pop("district"), body.pop("season"), overrides=body)
+        row = v3.district_row(state, dist, season)
     except UnknownDistrict as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from None
+    env = {k: (body[k] if body.get(k) is not None else row[k]) for k in CLIMATE + SOIL}
+    try:
+        return v4.predict(state, dist, season, env)
+    except NoCandidates:
+        out = v3.predict(state, dist, season, overrides=body)
+        return {"model": "AgroMind v3", "fallback": "v3",
+                "fallback_reason": "no crop with a recorded yield in this district-season, so YieldRank has no candidates",
+                **out}
 
 
 @app.get("/dataset")
@@ -80,5 +95,8 @@ def dataset(state: str | None = None, district: str | None = None, crop: str | N
 
 @app.get("/model-info")
 def model_info() -> dict:
-    """The served model, plus v1/v2 headline numbers from results.json as research history."""
-    return {**v3.info(), "history": v3.history()}
+    """The final model (v4) at the top level; v3 and v1/v2 as history."""
+    v3_info = v3.info()
+    return {**v4.info(), "history": {"v3": {k: v3_info[k] for k in ("model", "rows", "training_rows", "crops", "states",
+                                                                       "districts", "locations", "years", "metrics")},
+                                     **v3.history()}}
