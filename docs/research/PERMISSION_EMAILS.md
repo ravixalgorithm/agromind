@@ -7,7 +7,7 @@ Send both **before the paper is submitted**, then record the date sent and the r
 `DATA_PROVENANCE.md` (rows S1 and S7, “Permission e-mail”) and close item 7 in `WEAKNESSES.md`.
 
 Sender: Ravi Pratap Singh, on behalf of the team, from 230104047@hbtu.ac.in, with the
-supervisor (Prof. (Dr.) Imran Khan) in Cc if possible. Addresses are the ones each site lists on its
+supervisor (Dr. Imran Khan) in Cc if possible. Addresses are the ones each site lists on its
 contact page (checked 2026-11-23); re-check before sending.
 
 ---
@@ -24,7 +24,7 @@ contact page (checked 2026-11-23); re-check before sending.
 > I am Ravi Pratap Singh, a B.Tech (Computer Science and Engineering) student in Semester VII
 > (session 2026–27) in the Department of Computer Science and Engineering, Harcourt Butler
 > Technical University (HBTU), Kanpur. I am writing on behalf of my project team (Rajat Patel,
-> Harshit Jain, Sanyam Jain and myself), supervised by Prof. (Dr.) Imran Khan, Professor,
+> Harshit Jain, Sanyam Jain and myself), supervised by Dr. Imran Khan, Assistant Professor,
 > Department of CSE, HBTU Kanpur.
 >
 > For our final-year project, AgroMind, a crop
@@ -57,7 +57,7 @@ contact page (checked 2026-11-23); re-check before sending.
 > Ravi Pratap Singh (Roll no. 230104047), on behalf of the AgroMind project team
 > B.Tech CSE, Semester VII · Department of Computer Science and Engineering
 > Harcourt Butler Technical University (HBTU), Kanpur
-> Supervisor: Prof. (Dr.) Imran Khan, Professor, Dept. of CSE, HBTU Kanpur
+> Supervisor: Dr. Imran Khan, Assistant Professor, Dept. of CSE, HBTU Kanpur
 > 230104047@hbtu.ac.in
 
 ---
@@ -75,7 +75,7 @@ contact page (checked 2026-11-23); re-check before sending.
 > I am Ravi Pratap Singh, a B.Tech (Computer Science and Engineering) student in Semester VII
 > (session 2026–27) in the Department of Computer Science and Engineering, Harcourt Butler
 > Technical University (HBTU), Kanpur. I am writing on behalf of my project team (Rajat Patel,
-> Harshit Jain, Sanyam Jain and myself), supervised by Prof. (Dr.) Imran Khan, Professor,
+> Harshit Jain, Sanyam Jain and myself), supervised by Dr. Imran Khan, Assistant Professor,
 > Department of CSE, HBTU Kanpur.
 >
 > Our final-year project, AgroMind, ranks crops for
@@ -105,7 +105,7 @@ contact page (checked 2026-11-23); re-check before sending.
 > Ravi Pratap Singh (Roll no. 230104047), on behalf of the AgroMind project team
 > B.Tech CSE, Semester VII · Department of Computer Science and Engineering
 > Harcourt Butler Technical University (HBTU), Kanpur
-> Supervisor: Prof. (Dr.) Imran Khan, Professor, Dept. of CSE, HBTU Kanpur
+> Supervisor: Dr. Imran Khan, Assistant Professor, Dept. of CSE, HBTU Kanpur
 > 230104047@hbtu.ac.in
 
 ---

@@ -43,8 +43,8 @@
     <p><b>v4 (final)</b> asks the farmer's question directly: which crops do best here? <b>YieldRank</b> orders the
       crops grown in each district, season and year by expected yield, and adds a shortlist that comes with a coverage
       guarantee. On 36 states held out entirely, its first pick is the single best-yielding crop
-      55.6% of the time, against 38.5% for the best classifier from recent papers, and its
-      90% shortlists of 2.87 crops cover the best crop 90.1% of the time.</p>
+      56.3% of the time, against 38.3% for the best classifier from recent papers, and its
+      90% shortlists of 2.69 crops cover the best crop 87.7% of the time.</p>
   </div>
 
   <div class="box" style="margin-top:3mm">
@@ -60,18 +60,18 @@
           <td>best-yielding crop first?</td></tr>
         <tr><th>Random split</th><td class="num">98.00%<br><small>as reported</small></td>
           <td class="num">94.33%<br><small>5-fold</small></td><td class="num">—</td>
-          <td class="num">59.7%<br><small>hit@1</small></td></tr>
+          <td class="num">60.0%<br><small>hit@1</small></td></tr>
         <tr><th>Unseen data</th><td class="num">—</td><td class="num">7–13%<br><small>unseen source</small></td>
           <td class="num">72.66% / 41.75%<br><small>districts / states</small></td>
-          <td class="num">55.6%<br><small>states (best classifier 38.5%)</small></td></tr>
+          <td class="num">56.3%<br><small>states (best classifier 38.3%)</small></td></tr>
         <tr><th>Future years</th><td class="num">—</td><td class="num">—</td>
           <td class="num">65.34%<br><small>baseline 55.49%</small></td>
-          <td class="num">57.8%<br><small>best classifier 52.1%</small></td></tr>
+          <td class="num">58.8%<br><small>best classifier 52.0%</small></td></tr>
         <tr class="best"><th>Confidence</th><td class="num">—</td><td class="num">ECE 0.076<br><small>under-confident</small></td>
-          <td class="num">—</td><td class="num">90.1% coverage<br><small>90% shortlist, 2.87 crops</small></td></tr>
+          <td class="num">—</td><td class="num">87.7% coverage<br><small>90% shortlist, 2.69 crops</small></td></tr>
       </tbody>
     </table>
-    <p class="note">All figures are generated from <code>docs/research/results.json</code> (v4: <code>results.json[&quot;v4&quot;][&quot;numbers&quot;]</code>).
+    <p class="note">All figures are generated from <code>docs/research/results.json</code> (v4: <code>results.json[&quot;final&quot;][&quot;numbers&quot;]</code>).
       Each version answers a harder question, so compare within a row with care: v3's hit@1 counts any top-3 crop, v4's
       only the single best one.</p>
   </div>
@@ -120,11 +120,11 @@
         <li><b>It is trained on outcomes.</b> Labels come from realised yield in official records, not from an
           augmented table.</li>
         <li><b>It holds up in new states.</b> Moving from random to unseen-state tests costs classifiers up to
-          21.2 points of hit@1 and YieldRank 4.1; it ends 17.0 points ahead of the
+          23.0 points of hit@1 and YieldRank 3.8; it ends 17.9 points ahead of the
           best classifier (MLP).</li>
         <li><b>It helps where history is missing.</b> On cold-start cases (39.7% of queries) it picks the
-          best crop 47.2% of the time, against 42.6% for repeating last year.</li>
-        <li><b>It says how sure it is.</b> A 2.87-crop shortlist covers the best crop 90.1% of
+          best crop 47.4% of the time, against 42.4% for repeating last year.</li>
+        <li><b>It says how sure it is.</b> A 2.69-crop shortlist covers the best crop 87.7% of
           the time on unseen states.</li>
       </ul>
     </div>
@@ -153,27 +153,43 @@
       <table class="mc">
         <thead><tr><th>Method (hit@1, %)</th><th class="num">Random</th><th class="num">Unseen states</th><th class="num">Unseen years</th></tr></thead>
         <tbody>
-<tr><td>Crop prior (naive)</td><td class="num">29.0%</td><td class="num">20.8%</td><td class="num">27.7%</td></tr>
-<tr><td>Last-year persistence (naive)</td><td class="num">55.3%</td><td class="num">54.5%</td><td class="num">55.2%</td></tr>
-<tr><td>Gaussian Naive Bayes <span class="cite">[6], [12]</span></td><td class="num">33.1%</td><td class="num">26.6%</td><td class="num">31.6%</td></tr>
-<tr><td>Random Forest <span class="cite">[8], [21]</span></td><td class="num">57.5%</td><td class="num">36.3%</td><td class="num">52.0%</td></tr>
-<tr><td>XGBoost <span class="cite">[11], [22]</span></td><td class="num">57.5%</td><td class="num">38.2%</td><td class="num">52.1%</td></tr>
-<tr><td>MLP <span class="cite">[13]</span></td><td class="num">53.7%</td><td class="num">38.5%</td><td class="num">50.5%</td></tr>
-<tr class="best"><td><b>YieldRank (ours)</b></td><td class="num">59.7%</td><td class="num">55.6%</td><td class="num">57.8%</td></tr>
+<tr><td>Crop prior</td><td class="num">29.0%</td><td class="num">20.2%</td><td class="num">27.4%</td></tr>
+<tr><td>Persistence</td><td class="num">55.3%</td><td class="num">54.4%</td><td class="num">55.1%</td></tr>
+<tr><td>Gaussian NB</td><td class="num">33.1%</td><td class="num">27.8%</td><td class="num">31.7%</td></tr>
+<tr><td>Random Forest</td><td class="num">57.5%</td><td class="num">34.5%</td><td class="num">52.0%</td></tr>
+<tr><td>XGBoost</td><td class="num">57.5%</td><td class="num">36.7%</td><td class="num">52.0%</td></tr>
+<tr><td>MLP</td><td class="num">53.7%</td><td class="num">38.3%</td><td class="num">50.3%</td></tr>
+<tr><td>Stacking RF+ET+XGB (Gunasekaran 2025) <span class="cite">[44]</span></td><td class="num">53.3%</td><td class="num">33.7%</td><td class="num">48.9%</td></tr>
+<tr><td>CNN-LSTM (Bakr 2025) <span class="cite">[45]</span></td><td class="num">25.7%</td><td class="num">20.8%</td><td class="num">24.6%</td></tr>
+<tr><td>XGBoost (Dey 2024) <span class="cite">[11]</span></td><td class="num">57.6%</td><td class="num">37.1%</td><td class="num">52.0%</td></tr>
+<tr><td>Random Forest (Dey 2024) <span class="cite">[11]</span></td><td class="num">42.0%</td><td class="num">26.1%</td><td class="num">39.6%</td></tr>
+<tr><td>SVM (Dey 2024) <span class="cite">[11]</span></td><td class="num">26.2%</td><td class="num">19.2%</td><td class="num">25.5%</td></tr>
+<tr><td>k-NN (Dey 2024) <span class="cite">[11]</span></td><td class="num">35.5%</td><td class="num">24.4%</td><td class="num">32.1%</td></tr>
+<tr><td>Decision Tree (Dey 2024) <span class="cite">[11]</span></td><td class="num">31.2%</td><td class="num">22.8%</td><td class="num">27.4%</td></tr>
+<tr><td>RFXG hard vote (Afzal 2025) <span class="cite">[41]</span></td><td class="num">45.3%</td><td class="num">32.7%</td><td class="num">43.4%</td></tr>
+<tr><td>Stacking KNN+RF+NB->LR (Ahmed 2025) <span class="cite">[40]</span></td><td class="num">48.3%</td><td class="num">27.4%</td><td class="num">44.0%</td></tr>
+<tr><td>Stacking KNN+Bagging+NB->LR (Ahmed 2025) <span class="cite">[40]</span></td><td class="num">48.0%</td><td class="num">28.8%</td><td class="num">43.5%</td></tr>
+<tr><td>Hard vote LR+XGB+RF+DT+NB (Ahmed 2025) <span class="cite">[40]</span></td><td class="num">55.6%</td><td class="num">33.9%</td><td class="num">50.4%</td></tr>
+<tr><td>CatBoost (Mahesh 2026 config) <span class="cite">[47]</span></td><td class="num">53.5%</td><td class="num">37.6%</td><td class="num">50.6%</td></tr>
+<tr class="best"><td><b>LightGBM pointwise</b></td><td class="num">59.4%</td><td class="num">55.7%</td><td class="num">58.3%</td></tr>
+<tr class="best"><td><b>LightGBM XE-NDCG ranker</b></td><td class="num">60.1%</td><td class="num">55.0%</td><td class="num">58.2%</td></tr>
+<tr class="best"><td><b>XGBoost LambdaMART</b></td><td class="num">60.0%</td><td class="num">55.6%</td><td class="num">58.3%</td></tr>
+<tr class="best"><td><b>LambdaMART (v4 listwise)</b></td><td class="num">59.7%</td><td class="num">55.4%</td><td class="num">57.9%</td></tr>
+<tr class="best"><td><b>YieldRank (ours)</b></td><td class="num">60.0%</td><td class="num">56.3%</td><td class="num">58.8%</td></tr>
         </tbody>
       </table>
       <p class="note">43,443 district–season–years; mean over five folds. YieldRank vs the best classifier on
-        unseen states: +17.0 points, paired Wilcoxon p &lt; 10<sup>−300</sup>.</p>
+        unseen states: +17.9 points, paired Wilcoxon p &lt; 10<sup>−300</sup>.</p>
     </div>
     <div class="cols1">
       <p><b>Classifiers do not travel.</b> The models used in recent papers lose most of their skill when the test state
-        is new: Random Forest falls from 57.5% to 36.3%, XGBoost from 57.5% to
-        38.2%. YieldRank keeps 55.6%.</p>
-      <p><b>A simple rule is hard to beat.</b> Repeating last year's best crop scores 54.5% on unseen states,
+        is new: Random Forest falls from 57.5% to 34.5%, XGBoost from 57.5% to
+        36.7%. YieldRank keeps 56.3%.</p>
+      <p><b>A simple rule is hard to beat.</b> Repeating last year's best crop scores 54.4% on unseen states,
         close to YieldRank. No paper we reviewed reports this baseline.</p>
-      <p><b>Shortlists mostly keep their promise.</b> With random calibration, 90% shortlists cover 90.1%
-        overall, but only 74.9% in Telangana. For a Random Forest, calibrating on held-out states lifts
-        coverage from 75.4% to 89.5%.</p>
+      <p><b>Shortlists mostly keep their promise.</b> With random calibration, 90% shortlists cover 87.7%
+        overall, but only 76.6% in Telangana. For a Random Forest, calibrating on held-out states lifts
+        coverage from 74.2% to 90.8%.</p>
     </div>
   </div>
 
@@ -206,9 +222,9 @@
     <div class="box-title">Limitations</div>
     <ul class="cols">
       <li><b>History does most of the work.</b> Without each district's past yields, every model collapses on unseen
-        states (YieldRank 27.8%, crop prior 20.8%), and repeating last year is almost as
-        good as YieldRank overall (54.5% vs 55.6%).</li>
-      <li><b>The ranking loss is not the secret.</b> A simpler yield regressor scores 56.2% on unseen
+        states (YieldRank 27.4%, crop prior 20.2%), and repeating last year is almost as
+        good as YieldRank overall (54.4% vs 56.3%).</li>
+      <li><b>The ranking loss is not the secret.</b> A simpler yield regressor scores 55.7% on unseen
         states; the gain comes from ranking (crop, place) pairs by realised yield.</li>
       <li><b>Yield is not profit.</b> Percentiles measure comparative advantage, not income, price, water or risk.</li>
       <li><b>Only crops already grown are ranked.</b> The data cannot score a crop a district has never tried.</li>
@@ -216,7 +232,7 @@
         actually happened, not a forecast. Adding soil did not help (v3 hit@1 72.26% without soil, 71.14% with it, on
         737 districts).</li>
       <li><b>Shortlist guarantees are on average.</b> The 90% target holds overall, but coverage falls below 85% in
-        4 of 32 audited states (Fig. 2).</li>
+        5 of 32 audited states (Fig. 2).</li>
       <li><b>One country, past seasons.</b> Results describe Indian districts from 1997 to 2022; no field
         trial has been run.</li>
     </ul>
@@ -234,7 +250,7 @@
     <div><b>Sanyam Jain</b>Roll No. 230104055</div>
     <div><b>Ravi Pratap Singh</b>Roll No. 230104047</div>
   </div>
-  <p style="margin-top:2mm;font-size:8.4pt;text-align:center">Project supervisor: <b>Prof. (Dr.) Imran Khan</b>, Professor, Dept. of CSE, HBTU Kanpur<br>
+  <p style="margin-top:2mm;font-size:8.4pt;text-align:center">Project supervisor: <b>Dr. Imran Khan</b>, Assistant Professor, Dept. of CSE, HBTU Kanpur<br>
     B.Tech, Computer Science and Engineering · Semester VII · Academic session 2026–27<br>Contact: 230104047@hbtu.ac.in (Ravi Pratap Singh)</p>
   <p style="font-size:7.4pt;line-height:1.3;color:var(--muted);text-align:center"><i>Disclaimer:</i> AgroMind is an academic
     project, not an official Government of India service. Recommendations are for education and demonstration only and are not validated agronomic advice.
@@ -246,11 +262,9 @@
   <p class="note" style="margin-bottom:1.5mm">Numbers follow the full literature review
     (<code>docs/research/LITERATURE.md</code>, 51 sources); only works cited in this issue are listed.</p>
   <div class="refs">
-    <p>[6] S. Pudumalar, E. Ramanujam, R. H. Rajashree, C. Kavya, T. Kiruthika, and J. Nisha, &quot;Crop recommendation system for precision agriculture,&quot; in <i>Proc. 8th Int. Conf. Advanced Computing (ICoAC)</i>, 2017, pp. 32–36, doi: 10.1109/ICoAC.2017.7951740.</p>
     <p>[8] N. H. Kulkarni, G. N. Srinivasan, B. M. Sagar, and N. K. Cauvery, &quot;Improving crop productivity through a crop recommendation system using ensembling technique,&quot; in <i>Proc. 3rd Int. Conf. Computational Systems and Information Technology for Sustainable Solutions (CSITSS)</i>, 2018, pp. 114–119, doi: 10.1109/CSITSS.2018.8768790.</p>
     <p>[11] B. Dey, J. Ferdous, and R. Ahmed, &quot;Machine learning based recommendation of agricultural and horticultural crop farming in India under the regime of NPK, soil pH and three climatic variables,&quot; <i>Heliyon</i>, vol. 10, no. 3, p. e25112, 2024, doi: 10.1016/j.heliyon.2024.e25112.</p>
     <p>[12] E. Elbasi et al., &quot;Crop prediction model using machine learning algorithms,&quot; <i>Appl. Sci.</i>, vol. 13, no. 16, p. 9288, 2023, doi: 10.3390/app13169288.</p>
-    <p>[13] C. Musanase, A. Vodacek, D. Hanyurwimfura, A. Uwitonze, and I. Kabandana, &quot;Data-driven analysis and machine learning-based crop and fertilizer recommendation system for revolutionizing farming practices,&quot; <i>Agriculture</i>, vol. 13, no. 11, p. 2141, 2023, doi: 10.3390/agriculture13112141.</p>
     <p>[21] L. Breiman, &quot;Random forests,&quot; <i>Mach. Learn.</i>, vol. 45, no. 1, pp. 5–32, 2001, doi: 10.1023/A:1010933404324.</p>
     <p>[22] T. Chen and C. Guestrin, &quot;XGBoost: A scalable tree boosting system,&quot; in <i>Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining</i>, 2016, pp. 785–794, doi: 10.1145/2939672.2939785.</p>
     <p>[24] A. A. Reddy, &quot;Impact study of Soil Health Card scheme,&quot; National Institute of Agricultural Extension Management (MANAGE), Hyderabad, India, 2020, doi: 10.31220/osf.io/n3d2m.</p>
