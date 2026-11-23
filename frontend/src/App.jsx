@@ -2356,7 +2356,9 @@ function PaperPage() {
       () => setCopied(true),
       () => setCopied(false),
     );
-  const authors = AUTHORS.map((n) => n.replace(/^Dr\.\s*/, '')).join(' and '); // no titles in BibTeX author fields
+  const plainNames = AUTHORS.map((n) => n.replace(/^Dr\.\s*/, '')); // no titles in the byline or BibTeX
+  const authors = plainNames.join(' and ');
+  const byline = `${plainNames.slice(0, -1).join(', ')}, and ${plainNames.at(-1)}`;
   const bibtex = `@misc{agromind2026,
   title        = {${PAPER_TITLE.replace('%', '\\%')}},
   author       = {${authors}},
@@ -2397,10 +2399,13 @@ function PaperPage() {
       <header className="page-head">
         <p className="eyebrow">Paper · preprint · {FINAL}</p>
         <h1>{PAPER_TITLE}</h1>
+        {/* Same byline as paper/main.pdf: names without titles, then department and university; the supervisor is credited in the paper's Acknowledgment. */}
         <p className="authors">
-          {AUTHORS.join(', ')}
+          {byline}
           <br />
-          Department of {SITE.department}, {SITE.college} · Supervisor: {SITE.guide}, {SITE.guideTitle}
+          Department of {SITE.department}
+          <br />
+          Harcourt Butler Technical University, Kanpur, India
         </p>
         {facts.length > 0 && <p className="paper-facts">{facts.join(' · ')}</p>}
       </header>
