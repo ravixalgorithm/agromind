@@ -14,7 +14,7 @@ const SITE = {
     ['Ravi Pratap Singh', '230104047'],
   ],
   guide: 'Dr. Imran Khan',
-  guideTitle: 'Professor, Dept. of CSE, HBTU Kanpur',
+  guideTitle: 'Assistant Professor',
   contact: ['Ravi Pratap Singh', '230104047@hbtu.ac.in'],
   session: '2026–27',
   repo: 'https://github.com/ravixalgorithm/agromind',
@@ -2356,9 +2356,9 @@ function PaperPage() {
       () => setCopied(true),
       () => setCopied(false),
     );
-  const plainNames = AUTHORS.map((n) => n.replace(/^Dr\.\s*/, '')); // no titles in the byline or BibTeX
-  const authors = plainNames.join(' and ');
-  const byline = `${plainNames.slice(0, -1).join(', ')}, and ${plainNames.at(-1)}`;
+  const authors = AUTHORS.map((n) => n.replace(/^Dr\.\s*/, '')).join(' and '); // no titles in BibTeX author fields
+  // Same byline as paper/main.pdf: the students, then the supervisor with title and designation.
+  const byline = `${SITE.team.map(([name]) => name).join(', ')}, and ${SITE.guide} (${SITE.guideTitle})`;
   const bibtex = `@misc{agromind2026,
   title        = {${PAPER_TITLE.replace('%', '\\%')}},
   author       = {${authors}},
@@ -2399,7 +2399,7 @@ function PaperPage() {
       <header className="page-head">
         <p className="eyebrow">Paper · preprint · {FINAL}</p>
         <h1>{PAPER_TITLE}</h1>
-        {/* Same byline as paper/main.pdf: names without titles, then department and university; the supervisor is credited in the paper's Acknowledgment. */}
+        {/* Same byline and affiliation lines as paper/main.pdf. */}
         <p className="authors">
           {byline}
           <br />
@@ -2555,7 +2555,9 @@ function AboutPage() {
             <tr>
               <th scope="row">{SITE.guide}</th>
               <td />
-              <td>Professor &amp; Project Supervisor, {SITE.short}</td>
+              <td>
+                {SITE.guideTitle} &amp; Project Supervisor, {SITE.short}
+              </td>
             </tr>
           </tbody>
         </table>
