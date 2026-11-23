@@ -52,8 +52,8 @@ print(f"v2  67,200 merged rows, 74 crops, random 5-fold -> RF accuracy {100*(v2 
 print(f"v3  400,379 Govt APY rows, grouped splits -> unseen states hit@1 {100*(v3 or 0):.1f}% (ExtraTrees; season-popularity baseline {100*(v3b or 0):.1f}%; "
       "v3 hit@1 counts any of the top-3 yield crops).  Weakness: no uncertainty, classifier framing.")
 print(f"v4  same Govt data, best-yield crop per district-season-year -> unseen states hit@1 {n4.get('OursHitLSO','?')}% vs best literature classifier "
-      f"{n4.get('BaseHitLSO','?')}% and persistence {n4.get('PersHitLSO','?')}%; 90% conformal sets cover {n4.get('CovIIDLSO','?')}% with "
-      f"{n4.get('SizeIIDLSO','?')} crops.  Remaining weakness: per-state coverage, single country (see paper).")"""),
+      f"{n4.get('BaseHitLSO','?')}% and persistence {n4.get('PersHitLSO','?')}%; served 90% sets (state-robust) cover {n4.get('CCSRCovLSO','?')}% with "
+      f"{n4.get('CCSRSizeLSO','?')} crops, worst state {n4.get('SRWorstCov','?')}%.  Remaining weakness: per-state coverage, single country (see paper).")"""),
 md("""## 1. The literature's setting: Kaggle crop table, random 80/20 split
 This reproduces the ~99% figures (2,200 rows, 100 per crop, no location or year)."""),
 code("""from sklearn.ensemble import RandomForestClassifier

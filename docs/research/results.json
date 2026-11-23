@@ -1203,9 +1203,19 @@
       "RFCovGRPMax": "96.2",
       "RFSizeGRPLSO": "5.11",
       "XGBSizeGRPLSO": "4.77",
+      "PointHitR": "59.4",
+      "PointPR": "=7.1\\times10^{-10}",
+      "ListHitR": "59.7",
+      "ListPR": "=1.1\\times10^{-2}",
       "PointHitLSO": "55.7",
-      "PointNDCGLSO": "0.921",
       "PointPLSO": "=2.7\\times10^{-6}",
+      "ListHitLSO": "55.4",
+      "ListPLSO": "=9.2\\times10^{-9}",
+      "PointHitLYO": "58.3",
+      "PointPLYO": "=1.3\\times10^{-5}",
+      "ListHitLYO": "57.9",
+      "ListPLYO": "=2.0\\times10^{-12}",
+      "PointNDCGLSO": "0.921",
       "WorstState": "Telangana",
       "WorstIID": "76.6",
       "WorstGRP": "82.0",
@@ -1229,6 +1239,27 @@
       "PriorHitLYO": "27.4",
       "ClfDropMax": "23.0",
       "OursDrop": "3.8",
+      "NHOursHitR": "53.2",
+      "NHOursNDCGR": "0.909",
+      "NHBaseHitR": "53.2",
+      "NHBaseNDCGR": "0.895",
+      "NHBaseNameR": "XGBoost",
+      "NHCovIIDR": "90.1",
+      "NHOursHitLSO": "27.4",
+      "NHOursNDCGLSO": "0.788",
+      "NHBaseHitLSO": "24.7",
+      "NHBaseNDCGLSO": "0.771",
+      "NHBaseNameLSO": "Random Forest",
+      "NHCovIIDLSO": "69.0",
+      "NHOursHitLYO": "49.4",
+      "NHOursNDCGLYO": "0.895",
+      "NHBaseHitLYO": "47.0",
+      "NHBaseNDCGLYO": "0.877",
+      "NHBaseNameLYO": "Random Forest",
+      "NHCovIIDLYO": "87.7",
+      "NHRFHitR": "53.1",
+      "NHRFHitLSO": "24.7",
+      "NHPriorHitLSO": "20.2",
       "CCLACCovR": "90.2",
       "CCLACSizeR": "2.72",
       "CCAPSCovR": "90.1",
@@ -1286,7 +1317,23 @@
       "SRStatesBelowNinety": "3",
       "SRWorstState": "Telangana",
       "SRTelanganaCov": "84.5",
-      "MNAtCCWorst": "85.0"
+      "MNAtCCWorst": "85.0",
+      "MCBestPaperName": "CatBoost (Mahesh 2026 config)",
+      "MCBestPaperHit": "37.6",
+      "MCBestPaperHitR": "53.5",
+      "MCNPaperMethods": "10",
+      "MCNPapers": "4",
+      "MCAblNoHist": "27.4",
+      "MCAblNoYield": "23.2",
+      "MCAblNoPers": "56.0",
+      "MCOursTrain": "23",
+      "MCOursInfer": "0.228",
+      "MCBestName": "MLP",
+      "MCBestHit": "38.3",
+      "MCNMethods": "21",
+      "MCNoYieldHit": "23.2",
+      "MCTopRival": "LightGBM pointwise",
+      "MCTopRivalHit": "55.7"
     },
     "conformal": {
       "random": {
@@ -2133,6 +2180,608 @@
               "hit@1": 0.028122123859839098,
               "hit@3": 0.018056175343136308,
               "top1_pct": 0.012099855182920019
+            }
+          }
+        }
+      },
+      "nohist": {
+        "random": {
+          "Crop prior": {
+            "mean": {
+              "ndcg@1": 0.7139731343692516,
+              "ndcg@3": 0.7982508810796631,
+              "hit@1": 0.2904724745645889,
+              "hit@3": 0.6981104180747996,
+              "top1_pct": 0.5628598876124468
+            },
+            "std": {
+              "ndcg@1": 0.005563794400056238,
+              "ndcg@3": 0.002019074491118232,
+              "hit@1": 0.00581601702162664,
+              "hit@3": 0.008112259393297162,
+              "top1_pct": 0.004131280563858868
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.1111806814914918,
+              "p": 0.0,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.2412126234376079,
+              "p": 0.0,
+              "n": 43443
+            }
+          },
+          "GaussianNB [6,12]": {
+            "mean": {
+              "ndcg@1": 0.6891010745736569,
+              "ndcg@3": 0.7896839540643914,
+              "hit@1": 0.27415228013150134,
+              "hit@3": 0.6816977399082305,
+              "top1_pct": 0.539864136396975
+            },
+            "std": {
+              "ndcg@1": 0.0037509395635195956,
+              "ndcg@3": 0.0015713138681409877,
+              "hit@1": 0.00307857025293354,
+              "hit@3": 0.004776618700310036,
+              "top1_pct": 0.004207609258314453
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.11974756743083256,
+              "p": 0.0,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.25753285914876967,
+              "p": 0.0,
+              "n": 43443
+            }
+          },
+          "RandomForest [8,21]": {
+            "mean": {
+              "ndcg@1": 0.8731444795546197,
+              "ndcg@3": 0.897662833202688,
+              "hit@1": 0.5309717659147369,
+              "hit@3": 0.8609902324587703,
+              "top1_pct": 0.6847756313310345
+            },
+            "std": {
+              "ndcg@1": 0.0021887679230868213,
+              "ndcg@3": 0.0013134252725575265,
+              "hit@1": 0.003792129176719376,
+              "hit@3": 0.0015291111032432372,
+              "top1_pct": 0.0014513141252175282
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.01176873157310485,
+              "p": 6.898907576601548e-109,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.0007135787123357043,
+              "p": 0.7752710439288932,
+              "n": 43443
+            }
+          },
+          "XGBoost [11,22]": {
+            "mean": {
+              "ndcg@1": 0.8720266223991088,
+              "ndcg@3": 0.8945888982808576,
+              "hit@1": 0.5317543804988718,
+              "hit@3": 0.8544529137303849,
+              "top1_pct": 0.6839566551904495
+            },
+            "std": {
+              "ndcg@1": 0.0018679709271123717,
+              "ndcg@3": 0.0010947927036596787,
+              "hit@1": 0.003635796929214658,
+              "hit@3": 0.0015164389516257185,
+              "top1_pct": 0.0016102572691334583
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.014842628833222508,
+              "p": 7.512325482062849e-165,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": -6.905600441958428e-05,
+              "p": 0.9778079827075187,
+              "n": 43443
+            }
+          },
+          "MLP [13]": {
+            "mean": {
+              "ndcg@1": 0.8238750909605106,
+              "ndcg@3": 0.864516330968307,
+              "hit@1": 0.4473911866933637,
+              "hit@3": 0.7970446588233001,
+              "top1_pct": 0.6473202187033117
+            },
+            "std": {
+              "ndcg@1": 0.005300590844880238,
+              "ndcg@3": 0.002662862492708704,
+              "hit@1": 0.011557104154570817,
+              "hit@3": 0.008576793688773825,
+              "top1_pct": 0.004642602453649805
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.0449152346115906,
+              "p": 0.0,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.08429436272817255,
+              "p": 4.834355844854267e-254,
+              "n": 43443
+            }
+          },
+          "LGBM pointwise": {
+            "mean": {
+              "ndcg@1": 0.8754616290989119,
+              "ndcg@3": 0.9110548579748485,
+              "hit@1": 0.5182192848984354,
+              "hit@3": 0.8628777001975572,
+              "top1_pct": 0.6894408350689266
+            },
+            "std": {
+              "ndcg@1": 0.0023077176643170787,
+              "ndcg@3": 0.0007958584245218457,
+              "hit@1": 0.00504042174872553,
+              "hit@3": 0.0031961709791145892,
+              "top1_pct": 0.0019628663201647304
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": -0.0016233305737601467,
+              "p": 7.595092630411912e-05,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.013465920861818935,
+              "p": 4.0016026374801942e-22,
+              "n": 43443
+            }
+          },
+          "LambdaMART (v4 listwise)": {
+            "mean": {
+              "ndcg@1": 0.8947862031038101,
+              "ndcg@3": 0.9208636850922283,
+              "hit@1": 0.5474070218966128,
+              "hit@3": 0.8710033186898105,
+              "top1_pct": 0.7014903403890463
+            },
+            "std": {
+              "ndcg@1": 0.0026470411986096367,
+              "ndcg@3": 0.0009863768016064645,
+              "hit@1": 0.006162459374548641,
+              "hit@3": 0.0027046863894359544,
+              "top1_pct": 0.0017147767685977387
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": -0.011432145810686538,
+              "p": 3.511528049919622e-268,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": -0.015721750339525355,
+              "p": 1.1402683534936544e-24,
+              "n": 43443
+            }
+          },
+          "YieldRank (ours)": {
+            "mean": {
+              "ndcg@1": 0.8801535421329136,
+              "ndcg@3": 0.909431532120425,
+              "hit@1": 0.5316853064786089,
+              "hit@3": 0.8646731478402341,
+              "top1_pct": 0.6922864151778343
+            },
+            "std": {
+              "ndcg@1": 0.002388885875648175,
+              "ndcg@3": 0.0009127699875569382,
+              "hit@1": 0.004116464393089641,
+              "hit@3": 0.0038521802119241273,
+              "top1_pct": 0.0022543996188249924
+            }
+          }
+        },
+        "leave-states-out": {
+          "Crop prior": {
+            "mean": {
+              "ndcg@1": 0.626860458508969,
+              "ndcg@3": 0.7429582351376638,
+              "hit@1": 0.20242184079719622,
+              "hit@3": 0.6089096231521918,
+              "top1_pct": 0.49023982343511874
+            },
+            "std": {
+              "ndcg@1": 0.03526396206634504,
+              "ndcg@3": 0.04222218001837771,
+              "hit@1": 0.0484028308069688,
+              "hit@3": 0.1042022621819539,
+              "top1_pct": 0.05611293102296314
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.04471793950359988,
+              "p": 0.0,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.07188730060078724,
+              "p": 3.361874255743125e-169,
+              "n": 43443
+            }
+          },
+          "GaussianNB [6,12]": {
+            "mean": {
+              "ndcg@1": 0.6636727337686354,
+              "ndcg@3": 0.769679050310489,
+              "hit@1": 0.23691945670461428,
+              "hit@3": 0.6353931644535661,
+              "top1_pct": 0.5207494792991818
+            },
+            "std": {
+              "ndcg@1": 0.053207666127727746,
+              "ndcg@3": 0.04694163163138366,
+              "hit@1": 0.048836763148529236,
+              "hit@3": 0.07322894624005633,
+              "top1_pct": 0.06424414143328745
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.017967409069810307,
+              "p": 3.180768671944335e-94,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.037290242386575516,
+              "p": 7.11505808902874e-49,
+              "n": 43443
+            }
+          },
+          "RandomForest [8,21]": {
+            "mean": {
+              "ndcg@1": 0.6817006629557635,
+              "ndcg@3": 0.7708088567670055,
+              "hit@1": 0.24658916660557711,
+              "hit@3": 0.6268073396090392,
+              "top1_pct": 0.5357103546448297
+            },
+            "std": {
+              "ndcg@1": 0.026652118613995645,
+              "ndcg@3": 0.03723081063719822,
+              "hit@1": 0.028792800789841762,
+              "hit@3": 0.06478939597774223,
+              "top1_pct": 0.04961501969041787
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.016837603901096593,
+              "p": 2.6105846457880073e-119,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.027668439104113436,
+              "p": 2.7096901465803987e-33,
+              "n": 43443
+            }
+          },
+          "XGBoost [11,22]": {
+            "mean": {
+              "ndcg@1": 0.6741462417046583,
+              "ndcg@3": 0.7676296975807387,
+              "hit@1": 0.23970727927416458,
+              "hit@3": 0.6257046120543913,
+              "top1_pct": 0.5303782288866021
+            },
+            "std": {
+              "ndcg@1": 0.03559569381361423,
+              "ndcg@3": 0.04031430963544612,
+              "hit@1": 0.026584421571377158,
+              "hit@3": 0.06797670284064478,
+              "top1_pct": 0.05760488205721576
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.0200136237522654,
+              "p": 4.0516079593677095e-151,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.034528002209792144,
+              "p": 9.5328367612119e-49,
+              "n": 43443
+            }
+          },
+          "MLP [13]": {
+            "mean": {
+              "ndcg@1": 0.6685096695038061,
+              "ndcg@3": 0.7650434342965287,
+              "hit@1": 0.24164545464109405,
+              "hit@3": 0.6241569721747535,
+              "top1_pct": 0.5258040685250999
+            },
+            "std": {
+              "ndcg@1": 0.03734117251362051,
+              "ndcg@3": 0.03968062548947923,
+              "hit@1": 0.02392673582664318,
+              "hit@3": 0.0648227381864308,
+              "top1_pct": 0.0547187835222392
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.022594415034978735,
+              "p": 1.2521515661484018e-179,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.03257141541790392,
+              "p": 8.300630485615578e-43,
+              "n": 43443
+            }
+          },
+          "LGBM pointwise": {
+            "mean": {
+              "ndcg@1": 0.6978546733656215,
+              "ndcg@3": 0.7859567952632631,
+              "hit@1": 0.27456070198415566,
+              "hit@3": 0.6677111854336213,
+              "top1_pct": 0.549108234600193
+            },
+            "std": {
+              "ndcg@1": 0.037902872134871535,
+              "ndcg@3": 0.04698579002864388,
+              "hit@1": 0.04174034545382097,
+              "hit@3": 0.09568293289733674,
+              "top1_pct": 0.05165678119595531
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.0017169026127447494,
+              "p": 2.697680857242713e-07,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": -0.0002992426858181986,
+              "p": 0.8358645114244562,
+              "n": 43443
+            }
+          },
+          "LambdaMART (v4 listwise)": {
+            "mean": {
+              "ndcg@1": 0.6942483413700095,
+              "ndcg@3": 0.7858451764437083,
+              "hit@1": 0.2740634425010982,
+              "hit@3": 0.67281766967788,
+              "top1_pct": 0.5460377722417115
+            },
+            "std": {
+              "ndcg@1": 0.03471748938546877,
+              "ndcg@3": 0.044642052402554894,
+              "hit@1": 0.035900764601263534,
+              "hit@3": 0.08231676426105433,
+              "top1_pct": 0.05460902340131718
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.001807859034001626,
+              "p": 5.8689958402731954e-06,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.00020716801325875285,
+              "p": 0.8954997238644176,
+              "n": 43443
+            }
+          },
+          "YieldRank (ours)": {
+            "mean": {
+              "ndcg@1": 0.6992499886476142,
+              "ndcg@3": 0.787663072195044,
+              "hit@1": 0.27425872643493227,
+              "hit@3": 0.6728807459224442,
+              "top1_pct": 0.5491124227011742
+            },
+            "std": {
+              "ndcg@1": 0.03503767488833261,
+              "ndcg@3": 0.046342247065827735,
+              "hit@1": 0.040388975738877,
+              "hit@3": 0.09425739399287501,
+              "top1_pct": 0.05048414107501581
+            }
+          }
+        },
+        "leave-years-out": {
+          "Crop prior": {
+            "mean": {
+              "ndcg@1": 0.7019451385718793,
+              "ndcg@3": 0.7931908701577032,
+              "hit@1": 0.2741543154817957,
+              "hit@3": 0.6949171219203119,
+              "top1_pct": 0.5531381162040978
+            },
+            "std": {
+              "ndcg@1": 0.017089395481533393,
+              "ndcg@3": 0.00913134574675844,
+              "hit@1": 0.02182075464981359,
+              "hit@3": 0.019833738718670002,
+              "top1_pct": 0.01272734999384568
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.10210144806992597,
+              "p": 0.0,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.22012752342149483,
+              "p": 0.0,
+              "n": 43443
+            }
+          },
+          "GaussianNB [6,12]": {
+            "mean": {
+              "ndcg@1": 0.6881352182941212,
+              "ndcg@3": 0.7881338689087162,
+              "hit@1": 0.26665560224752266,
+              "hit@3": 0.6743829490923953,
+              "top1_pct": 0.5393462803614183
+            },
+            "std": {
+              "ndcg@1": 0.011312494142221201,
+              "ndcg@3": 0.004667182326249765,
+              "hit@1": 0.02481377760596749,
+              "hit@3": 0.018275762511513548,
+              "top1_pct": 0.011548161996587326
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.10686514828471513,
+              "p": 0.0,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.22684897451833436,
+              "p": 0.0,
+              "n": 43443
+            }
+          },
+          "RandomForest [8,21]": {
+            "mean": {
+              "ndcg@1": 0.8422366661002242,
+              "ndcg@3": 0.8768909265627991,
+              "hit@1": 0.4695210830248847,
+              "hit@3": 0.8140722829368613,
+              "top1_pct": 0.6607351298912748
+            },
+            "std": {
+              "ndcg@1": 0.014044123408738375,
+              "ndcg@3": 0.010988202408217075,
+              "hit@1": 0.01865630215565046,
+              "hit@3": 0.022615173667479446,
+              "top1_pct": 0.013699374546571504
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.018469099896901684,
+              "p": 6.251513524156228e-227,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.02467601224593145,
+              "p": 1.7854947062362836e-23,
+              "n": 43443
+            }
+          },
+          "XGBoost [11,22]": {
+            "mean": {
+              "ndcg@1": 0.8394701505096318,
+              "ndcg@3": 0.8733877343064973,
+              "hit@1": 0.466900510468237,
+              "hit@3": 0.8065824275097041,
+              "top1_pct": 0.6589934491781201
+            },
+            "std": {
+              "ndcg@1": 0.014254049150216145,
+              "ndcg@3": 0.01136120150106948,
+              "hit@1": 0.019534330030482803,
+              "hit@3": 0.02414054964256756,
+              "top1_pct": 0.014151160591686645
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.02201004138956793,
+              "p": 2.0074645288242243e-302,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.02743825242271482,
+              "p": 2.0285214775133143e-28,
+              "n": 43443
+            }
+          },
+          "MLP [13]": {
+            "mean": {
+              "ndcg@1": 0.8024766687764041,
+              "ndcg@3": 0.850490864408432,
+              "hit@1": 0.4075028835850124,
+              "hit@3": 0.7630060300117213,
+              "top1_pct": 0.6308291047160954
+            },
+            "std": {
+              "ndcg@1": 0.013668193032765423,
+              "ndcg@3": 0.00938686430331466,
+              "hit@1": 0.02260408212144136,
+              "hit@3": 0.015974924983157807,
+              "top1_pct": 0.013323861380714995
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": 0.04487368413633845,
+              "p": 0.0,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.0868264162235573,
+              "p": 1.2962229053138383e-266,
+              "n": 43443
+            }
+          },
+          "LGBM pointwise": {
+            "mean": {
+              "ndcg@1": 0.8544590593253453,
+              "ndcg@3": 0.8969512209016581,
+              "hit@1": 0.4822847044804547,
+              "hit@3": 0.8393511067563149,
+              "top1_pct": 0.6730570020077057
+            },
+            "std": {
+              "ndcg@1": 0.012901261180594007,
+              "ndcg@3": 0.008133813528648117,
+              "hit@1": 0.023259973745586107,
+              "hit@3": 0.016760003293613226,
+              "top1_pct": 0.014463374128084901
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": -0.0015628056806432727,
+              "p": 2.8026801315268214e-06,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": 0.012130838109706972,
+              "p": 3.8276538634487845e-18,
+              "n": 43443
+            }
+          },
+          "LambdaMART (v4 listwise)": {
+            "mean": {
+              "ndcg@1": 0.8705822132363903,
+              "ndcg@3": 0.9040380660514705,
+              "hit@1": 0.5071103358614131,
+              "hit@3": 0.8459462402900575,
+              "top1_pct": 0.6829905287940191
+            },
+            "std": {
+              "ndcg@1": 0.015298947940563004,
+              "ndcg@3": 0.009726919329013537,
+              "hit@1": 0.028474123026323683,
+              "hit@3": 0.01966814081463042,
+              "top1_pct": 0.016026786969081167
+            },
+            "wilcoxon_vs_ours_ndcg@3": {
+              "mean_diff": -0.00862318605818414,
+              "p": 1.585602131675683e-136,
+              "n": 43443
+            },
+            "wilcoxon_vs_ours_hit@1": {
+              "mean_diff": -0.012476118131804893,
+              "p": 5.153970905385321e-15,
+              "n": 43443
+            }
+          },
+          "YieldRank (ours)": {
+            "mean": {
+              "ndcg@1": 0.8580908915382824,
+              "ndcg@3": 0.8953821331595933,
+              "hit@1": 0.4944485343012304,
+              "hit@3": 0.841471611361964,
+              "top1_pct": 0.6753852461756809
+            },
+            "std": {
+              "ndcg@1": 0.013352604429481999,
+              "ndcg@3": 0.008239085894331465,
+              "hit@1": 0.024108570022790963,
+              "hit@3": 0.01862169946322533,
+              "top1_pct": 0.01440180786278265
             }
           }
         }
@@ -3217,7 +3866,7 @@
         "split": "leave-states-out"
       },
       {
-        "label": "Cold-start cases, ours vs persistence",
+        "label": "Cold-start cases, unseen states (persistence 42.4%)",
         "value": "47.4",
         "unit": "%",
         "split": "leave-states-out"
@@ -3351,9 +4000,19 @@
       "RFCovGRPMax": "96.2",
       "RFSizeGRPLSO": "5.11",
       "XGBSizeGRPLSO": "4.77",
+      "PointHitR": "59.4",
+      "PointPR": "=7.1\\times10^{-10}",
+      "ListHitR": "59.7",
+      "ListPR": "=1.1\\times10^{-2}",
       "PointHitLSO": "55.7",
-      "PointNDCGLSO": "0.921",
       "PointPLSO": "=2.7\\times10^{-6}",
+      "ListHitLSO": "55.4",
+      "ListPLSO": "=9.2\\times10^{-9}",
+      "PointHitLYO": "58.3",
+      "PointPLYO": "=1.3\\times10^{-5}",
+      "ListHitLYO": "57.9",
+      "ListPLYO": "=2.0\\times10^{-12}",
+      "PointNDCGLSO": "0.921",
       "WorstState": "Telangana",
       "WorstIID": "76.6",
       "WorstGRP": "82.0",
@@ -3377,6 +4036,27 @@
       "PriorHitLYO": "27.4",
       "ClfDropMax": "23.0",
       "OursDrop": "3.8",
+      "NHOursHitR": "53.2",
+      "NHOursNDCGR": "0.909",
+      "NHBaseHitR": "53.2",
+      "NHBaseNDCGR": "0.895",
+      "NHBaseNameR": "XGBoost",
+      "NHCovIIDR": "90.1",
+      "NHOursHitLSO": "27.4",
+      "NHOursNDCGLSO": "0.788",
+      "NHBaseHitLSO": "24.7",
+      "NHBaseNDCGLSO": "0.771",
+      "NHBaseNameLSO": "Random Forest",
+      "NHCovIIDLSO": "69.0",
+      "NHOursHitLYO": "49.4",
+      "NHOursNDCGLYO": "0.895",
+      "NHBaseHitLYO": "47.0",
+      "NHBaseNDCGLYO": "0.877",
+      "NHBaseNameLYO": "Random Forest",
+      "NHCovIIDLYO": "87.7",
+      "NHRFHitR": "53.1",
+      "NHRFHitLSO": "24.7",
+      "NHPriorHitLSO": "20.2",
       "CCLACCovR": "90.2",
       "CCLACSizeR": "2.72",
       "CCAPSCovR": "90.1",
@@ -3434,7 +4114,23 @@
       "SRStatesBelowNinety": "3",
       "SRWorstState": "Telangana",
       "SRTelanganaCov": "84.5",
-      "MNAtCCWorst": "85.0"
+      "MNAtCCWorst": "85.0",
+      "MCBestPaperName": "CatBoost (Mahesh 2026 config)",
+      "MCBestPaperHit": "37.6",
+      "MCBestPaperHitR": "53.5",
+      "MCNPaperMethods": "10",
+      "MCNPapers": "4",
+      "MCAblNoHist": "27.4",
+      "MCAblNoYield": "23.2",
+      "MCAblNoPers": "56.0",
+      "MCOursTrain": "23",
+      "MCOursInfer": "0.228",
+      "MCBestName": "MLP",
+      "MCBestHit": "38.3",
+      "MCNMethods": "21",
+      "MCNoYieldHit": "23.2",
+      "MCTopRival": "LightGBM pointwise",
+      "MCTopRivalHit": "55.7"
     },
     "note": "Numbers are generated by experiments/report.py (same strings as paper/tables/numbers.tex). Data: DES APY 1997-98..2022-23, NASA POWER, SoilGrids (India only)."
   },
@@ -4035,5 +4731,1231 @@
         "reimplement": null
       }
     ]
+  },
+  "method_comparison": {
+    "splits": [
+      "random",
+      "leave-states-out",
+      "leave-years-out"
+    ],
+    "split_labels": {
+      "random": "Random split",
+      "leave-states-out": "Unseen states",
+      "leave-years-out": "Unseen years"
+    },
+    "primary_split": "leave-states-out",
+    "methods": [
+      {
+        "name": "Crop prior",
+        "family": "naive",
+        "source": "baseline",
+        "hit1": {
+          "random": 29.0,
+          "leave-states-out": 20.2,
+          "leave-years-out": 27.4
+        },
+        "hit1_std": {
+          "random": 0.6,
+          "leave-states-out": 4.8,
+          "leave-years-out": 2.2
+        },
+        "hit3": {
+          "random": 69.8,
+          "leave-states-out": 60.9,
+          "leave-years-out": 69.5
+        },
+        "ndcg3": {
+          "random": 0.798,
+          "leave-states-out": 0.743,
+          "leave-years-out": 0.793
+        },
+        "hit1_cold": {
+          "random": 26.6,
+          "leave-states-out": 18.8,
+          "leave-years-out": 25.4
+        },
+        "hit1_warm": {
+          "random": 30.7,
+          "leave-states-out": 21.2,
+          "leave-years-out": 28.7
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 0.15,
+        "infer_ms": 0.0226,
+        "conformal": {
+          "cov": 82.8,
+          "size": 4.25,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "lookup table",
+        "note": ""
+      },
+      {
+        "name": "Persistence",
+        "family": "naive",
+        "source": "baseline",
+        "hit1": {
+          "random": 55.3,
+          "leave-states-out": 54.4,
+          "leave-years-out": 55.1
+        },
+        "hit1_std": {
+          "random": 0.4,
+          "leave-states-out": 4.5,
+          "leave-years-out": 3.5
+        },
+        "hit3": {
+          "random": 87.1,
+          "leave-states-out": 86.5,
+          "leave-years-out": 87.0
+        },
+        "ndcg3": {
+          "random": 0.914,
+          "leave-states-out": 0.91,
+          "leave-years-out": 0.914
+        },
+        "hit1_cold": {
+          "random": 44.5,
+          "leave-states-out": 42.4,
+          "leave-years-out": 44.1
+        },
+        "hit1_warm": {
+          "random": 62.4,
+          "leave-states-out": 62.4,
+          "leave-years-out": 62.4
+        },
+        "p_vs_ours": {
+          "random": 5.626230589159965e-124,
+          "leave-states-out": 8.672114796734797e-20,
+          "leave-years-out": 8.680092186759899e-72
+        },
+        "train_s": 0.12,
+        "infer_ms": 0.0333,
+        "conformal": {
+          "cov": 89.0,
+          "size": 3.05,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "rule (last year's ranking)",
+        "note": "repeats the district's last-year yield ranking; needs history for every crop"
+      },
+      {
+        "name": "Gaussian NB",
+        "family": "classifier",
+        "source": "baseline",
+        "hit1": {
+          "random": 33.1,
+          "leave-states-out": 27.8,
+          "leave-years-out": 31.7
+        },
+        "hit1_std": {
+          "random": 0.5,
+          "leave-states-out": 4.0,
+          "leave-years-out": 0.5
+        },
+        "hit3": {
+          "random": 73.0,
+          "leave-states-out": 66.0,
+          "leave-years-out": 71.7
+        },
+        "ndcg3": {
+          "random": 0.819,
+          "leave-states-out": 0.781,
+          "leave-years-out": 0.813
+        },
+        "hit1_cold": {
+          "random": 29.2,
+          "leave-states-out": 25.0,
+          "leave-years-out": 27.8
+        },
+        "hit1_warm": {
+          "random": 35.7,
+          "leave-states-out": 29.7,
+          "leave-years-out": 34.2
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 0.12,
+        "infer_ms": 0.0225,
+        "conformal": {
+          "cov": 87.6,
+          "size": 4.37,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "class-conditional Gaussians",
+        "note": ""
+      },
+      {
+        "name": "Random Forest",
+        "family": "classifier",
+        "source": "baseline",
+        "hit1": {
+          "random": 57.5,
+          "leave-states-out": 34.5,
+          "leave-years-out": 52.0
+        },
+        "hit1_std": {
+          "random": 0.6,
+          "leave-states-out": 3.6,
+          "leave-years-out": 2.2
+        },
+        "hit3": {
+          "random": 88.6,
+          "leave-states-out": 71.7,
+          "leave-years-out": 84.7
+        },
+        "ndcg3": {
+          "random": 0.915,
+          "leave-states-out": 0.825,
+          "leave-years-out": 0.899
+        },
+        "hit1_cold": {
+          "random": 48.5,
+          "leave-states-out": 30.1,
+          "leave-years-out": 43.6
+        },
+        "hit1_warm": {
+          "random": 63.5,
+          "leave-states-out": 37.4,
+          "leave-years-out": 57.6
+        },
+        "p_vs_ours": {
+          "random": 1.8641078331800873e-30,
+          "leave-states-out": 0.0,
+          "leave-years-out": 2.4074451418445243e-176
+        },
+        "train_s": 7.36,
+        "infer_ms": 0.0593,
+        "conformal": {
+          "cov": 74.2,
+          "size": 3.3,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "XGBoost",
+        "family": "classifier",
+        "source": "baseline",
+        "hit1": {
+          "random": 57.5,
+          "leave-states-out": 36.7,
+          "leave-years-out": 52.0
+        },
+        "hit1_std": {
+          "random": 0.7,
+          "leave-states-out": 4.2,
+          "leave-years-out": 2.7
+        },
+        "hit3": {
+          "random": 87.7,
+          "leave-states-out": 73.5,
+          "leave-years-out": 84.2
+        },
+        "ndcg3": {
+          "random": 0.912,
+          "leave-states-out": 0.838,
+          "leave-years-out": 0.897
+        },
+        "hit1_cold": {
+          "random": 47.8,
+          "leave-states-out": 31.4,
+          "leave-years-out": 42.2
+        },
+        "hit1_warm": {
+          "random": 63.8,
+          "leave-states-out": 40.1,
+          "leave-years-out": 58.5
+        },
+        "p_vs_ours": {
+          "random": 8.879449408873348e-32,
+          "leave-states-out": 0.0,
+          "leave-years-out": 9.098160456944342e-180
+        },
+        "train_s": 63.66,
+        "infer_ms": 0.1626,
+        "conformal": {
+          "cov": 79.1,
+          "size": 3.45,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "MLP",
+        "family": "classifier",
+        "source": "baseline",
+        "hit1": {
+          "random": 53.7,
+          "leave-states-out": 38.3,
+          "leave-years-out": 50.3
+        },
+        "hit1_std": {
+          "random": 0.6,
+          "leave-states-out": 5.6,
+          "leave-years-out": 1.8
+        },
+        "hit3": {
+          "random": 85.4,
+          "leave-states-out": 73.4,
+          "leave-years-out": 83.1
+        },
+        "ndcg3": {
+          "random": 0.898,
+          "leave-states-out": 0.83,
+          "leave-years-out": 0.886
+        },
+        "hit1_cold": {
+          "random": 44.4,
+          "leave-states-out": 31.7,
+          "leave-years-out": 41.2
+        },
+        "hit1_warm": {
+          "random": 59.8,
+          "leave-states-out": 42.7,
+          "leave-years-out": 56.1
+        },
+        "p_vs_ours": {
+          "random": 4.3876466642493514e-173,
+          "leave-states-out": 0.0,
+          "leave-years-out": 2.822523263351069e-280
+        },
+        "train_s": 5.44,
+        "infer_ms": 0.0172,
+        "conformal": {
+          "cov": 75.1,
+          "size": 3.07,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "none",
+        "note": ""
+      },
+      {
+        "name": "XGBoost (Dey 2024)",
+        "family": "paper",
+        "source": "dey2024",
+        "hit1": {
+          "random": 57.6,
+          "leave-states-out": 37.1,
+          "leave-years-out": 52.0
+        },
+        "hit1_std": {
+          "random": 0.6,
+          "leave-states-out": 3.7,
+          "leave-years-out": 2.6
+        },
+        "hit3": {
+          "random": 88.3,
+          "leave-states-out": 75.0,
+          "leave-years-out": 84.6
+        },
+        "ndcg3": {
+          "random": 0.913,
+          "leave-states-out": 0.843,
+          "leave-years-out": 0.897
+        },
+        "hit1_cold": {
+          "random": 48.3,
+          "leave-states-out": 31.3,
+          "leave-years-out": 42.4
+        },
+        "hit1_warm": {
+          "random": 63.8,
+          "leave-states-out": 40.9,
+          "leave-years-out": 58.2
+        },
+        "p_vs_ours": {
+          "random": 8.963547687721716e-27,
+          "leave-states-out": 0.0,
+          "leave-years-out": 1.273325714760311e-178
+        },
+        "train_s": 177.3,
+        "infer_ms": 0.4174,
+        "conformal": {
+          "cov": 82.5,
+          "size": 3.65,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "Random Forest (Dey 2024)",
+        "family": "paper",
+        "source": "dey2024",
+        "hit1": {
+          "random": 42.0,
+          "leave-states-out": 26.1,
+          "leave-years-out": 39.6
+        },
+        "hit1_std": {
+          "random": 0.4,
+          "leave-states-out": 4.2,
+          "leave-years-out": 1.9
+        },
+        "hit3": {
+          "random": 75.8,
+          "leave-states-out": 64.8,
+          "leave-years-out": 73.7
+        },
+        "ndcg3": {
+          "random": 0.848,
+          "leave-states-out": 0.783,
+          "leave-years-out": 0.84
+        },
+        "hit1_cold": {
+          "random": 35.1,
+          "leave-states-out": 23.1,
+          "leave-years-out": 33.3
+        },
+        "hit1_warm": {
+          "random": 46.5,
+          "leave-states-out": 28.0,
+          "leave-years-out": 43.6
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 0.21,
+        "infer_ms": 0.0123,
+        "conformal": {
+          "cov": 77.7,
+          "size": 3.92,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "SVM (Dey 2024)",
+        "family": "paper",
+        "source": "dey2024",
+        "hit1": {
+          "random": 26.2,
+          "leave-states-out": 19.2,
+          "leave-years-out": 25.5
+        },
+        "hit1_std": {
+          "random": 0.3,
+          "leave-states-out": 5.2,
+          "leave-years-out": 1.1
+        },
+        "hit3": {
+          "random": 62.9,
+          "leave-states-out": 60.5,
+          "leave-years-out": 62.4
+        },
+        "ndcg3": {
+          "random": 0.768,
+          "leave-states-out": 0.749,
+          "leave-years-out": 0.766
+        },
+        "hit1_cold": {
+          "random": 23.1,
+          "leave-states-out": 17.3,
+          "leave-years-out": 23.0
+        },
+        "hit1_warm": {
+          "random": 28.2,
+          "leave-states-out": 20.4,
+          "leave-years-out": 27.1
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 16.74,
+        "infer_ms": 2.9767,
+        "conformal": {
+          "cov": 87.3,
+          "size": 4.59,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "none",
+        "note": ""
+      },
+      {
+        "name": "k-NN (Dey 2024)",
+        "family": "paper",
+        "source": "dey2024",
+        "hit1": {
+          "random": 35.5,
+          "leave-states-out": 24.4,
+          "leave-years-out": 32.1
+        },
+        "hit1_std": {
+          "random": 0.3,
+          "leave-states-out": 4.2,
+          "leave-years-out": 1.1
+        },
+        "hit3": {
+          "random": 70.0,
+          "leave-states-out": 62.3,
+          "leave-years-out": 67.7
+        },
+        "ndcg3": {
+          "random": 0.809,
+          "leave-states-out": 0.763,
+          "leave-years-out": 0.798
+        },
+        "hit1_cold": {
+          "random": 31.3,
+          "leave-states-out": 21.6,
+          "leave-years-out": 28.3
+        },
+        "hit1_warm": {
+          "random": 38.3,
+          "leave-states-out": 26.1,
+          "leave-years-out": 34.5
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 0.1,
+        "infer_ms": 0.082,
+        "conformal": {
+          "cov": 87.9,
+          "size": 4.47,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "nearest past cases",
+        "note": ""
+      },
+      {
+        "name": "Decision Tree (Dey 2024)",
+        "family": "paper",
+        "source": "dey2024",
+        "hit1": {
+          "random": 31.2,
+          "leave-states-out": 22.8,
+          "leave-years-out": 27.4
+        },
+        "hit1_std": {
+          "random": 1.7,
+          "leave-states-out": 4.8,
+          "leave-years-out": 2.6
+        },
+        "hit3": {
+          "random": 68.8,
+          "leave-states-out": 61.3,
+          "leave-years-out": 66.6
+        },
+        "ndcg3": {
+          "random": 0.804,
+          "leave-states-out": 0.759,
+          "leave-years-out": 0.789
+        },
+        "hit1_cold": {
+          "random": 27.8,
+          "leave-states-out": 19.6,
+          "leave-years-out": 24.2
+        },
+        "hit1_warm": {
+          "random": 33.4,
+          "leave-states-out": 24.8,
+          "leave-years-out": 29.4
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 0.19,
+        "infer_ms": 0.0091,
+        "conformal": {
+          "cov": 78.4,
+          "size": 4.06,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "tree rules",
+        "note": ""
+      },
+      {
+        "name": "RFXG hard vote (Afzal 2025)",
+        "family": "paper",
+        "source": "afzal2025",
+        "hit1": {
+          "random": 45.3,
+          "leave-states-out": 32.7,
+          "leave-years-out": 43.4
+        },
+        "hit1_std": {
+          "random": 1.0,
+          "leave-states-out": 6.3,
+          "leave-years-out": 1.3
+        },
+        "hit3": {
+          "random": 76.3,
+          "leave-states-out": 70.0,
+          "leave-years-out": 75.1
+        },
+        "ndcg3": {
+          "random": 0.841,
+          "leave-states-out": 0.809,
+          "leave-years-out": 0.838
+        },
+        "hit1_cold": {
+          "random": 37.1,
+          "leave-states-out": 27.9,
+          "leave-years-out": 35.4
+        },
+        "hit1_warm": {
+          "random": 50.7,
+          "leave-states-out": 35.8,
+          "leave-years-out": 48.7
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 1.26,
+        "infer_ms": 0.0179,
+        "conformal": {
+          "cov": 87.0,
+          "size": 4.15,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "partial (member importances)",
+        "note": ""
+      },
+      {
+        "name": "Stacking KNN+RF+NB->LR (Ahmed 2025)",
+        "family": "paper",
+        "source": "ahmed2025",
+        "hit1": {
+          "random": 48.3,
+          "leave-states-out": 27.4,
+          "leave-years-out": 44.0
+        },
+        "hit1_std": {
+          "random": 0.8,
+          "leave-states-out": 3.0,
+          "leave-years-out": 1.9
+        },
+        "hit3": {
+          "random": 82.4,
+          "leave-states-out": 66.3,
+          "leave-years-out": 78.6
+        },
+        "ndcg3": {
+          "random": 0.875,
+          "leave-states-out": 0.786,
+          "leave-years-out": 0.862
+        },
+        "hit1_cold": {
+          "random": 41.3,
+          "leave-states-out": 24.7,
+          "leave-years-out": 37.3
+        },
+        "hit1_warm": {
+          "random": 52.9,
+          "leave-states-out": 29.2,
+          "leave-years-out": 48.3
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 28.52,
+        "infer_ms": 0.1303,
+        "conformal": {
+          "cov": 75.9,
+          "size": 3.72,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "partial (base-model importances)",
+        "note": ""
+      },
+      {
+        "name": "Stacking KNN+Bagging+NB->LR (Ahmed 2025)",
+        "family": "paper",
+        "source": "ahmed2025",
+        "hit1": {
+          "random": 48.0,
+          "leave-states-out": 28.8,
+          "leave-years-out": 43.5
+        },
+        "hit1_std": {
+          "random": 0.7,
+          "leave-states-out": 3.2,
+          "leave-years-out": 1.8
+        },
+        "hit3": {
+          "random": 81.2,
+          "leave-states-out": 66.8,
+          "leave-years-out": 77.6
+        },
+        "ndcg3": {
+          "random": 0.87,
+          "leave-states-out": 0.789,
+          "leave-years-out": 0.856
+        },
+        "hit1_cold": {
+          "random": 40.7,
+          "leave-states-out": 25.4,
+          "leave-years-out": 36.5
+        },
+        "hit1_warm": {
+          "random": 52.9,
+          "leave-states-out": 31.0,
+          "leave-years-out": 48.0
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 23.32,
+        "infer_ms": 0.1082,
+        "conformal": {
+          "cov": 75.6,
+          "size": 3.68,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "partial (base-model importances)",
+        "note": ""
+      },
+      {
+        "name": "Hard vote LR+XGB+RF+DT+NB (Ahmed 2025)",
+        "family": "paper",
+        "source": "ahmed2025",
+        "hit1": {
+          "random": 55.6,
+          "leave-states-out": 33.9,
+          "leave-years-out": 50.4
+        },
+        "hit1_std": {
+          "random": 0.6,
+          "leave-states-out": 3.7,
+          "leave-years-out": 2.1
+        },
+        "hit3": {
+          "random": 82.5,
+          "leave-states-out": 71.1,
+          "leave-years-out": 79.7
+        },
+        "ndcg3": {
+          "random": 0.876,
+          "leave-states-out": 0.813,
+          "leave-years-out": 0.866
+        },
+        "hit1_cold": {
+          "random": 46.9,
+          "leave-states-out": 29.5,
+          "leave-years-out": 41.7
+        },
+        "hit1_warm": {
+          "random": 61.3,
+          "leave-states-out": 36.8,
+          "leave-years-out": 56.1
+        },
+        "p_vs_ours": {
+          "random": 3.1146511123677013e-84,
+          "leave-states-out": 0.0,
+          "leave-years-out": 5.4244957157920664e-253
+        },
+        "train_s": 67.69,
+        "infer_ms": 0.0971,
+        "conformal": {
+          "cov": 82.8,
+          "size": 3.71,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "partial (member importances)",
+        "note": ""
+      },
+      {
+        "name": "CatBoost (Mahesh 2026 config)",
+        "family": "paper",
+        "source": "mahesh2026",
+        "hit1": {
+          "random": 53.5,
+          "leave-states-out": 37.6,
+          "leave-years-out": 50.6
+        },
+        "hit1_std": {
+          "random": 0.6,
+          "leave-states-out": 3.7,
+          "leave-years-out": 2.9
+        },
+        "hit3": {
+          "random": 85.3,
+          "leave-states-out": 74.1,
+          "leave-years-out": 83.1
+        },
+        "ndcg3": {
+          "random": 0.902,
+          "leave-states-out": 0.847,
+          "leave-years-out": 0.895
+        },
+        "hit1_cold": {
+          "random": 43.1,
+          "leave-states-out": 32.0,
+          "leave-years-out": 40.6
+        },
+        "hit1_warm": {
+          "random": 60.3,
+          "leave-states-out": 41.3,
+          "leave-years-out": 57.1
+        },
+        "p_vs_ours": {
+          "random": 4.472770796961631e-182,
+          "leave-states-out": 0.0,
+          "leave-years-out": 1.9494801653172147e-258
+        },
+        "train_s": 293.11,
+        "infer_ms": 0.0468,
+        "conformal": {
+          "cov": 79.6,
+          "size": 3.5,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "LightGBM pointwise",
+        "family": "pair model",
+        "source": "ours",
+        "hit1": {
+          "random": 59.4,
+          "leave-states-out": 55.7,
+          "leave-years-out": 58.3
+        },
+        "hit1_std": {
+          "random": 0.3,
+          "leave-states-out": 4.6,
+          "leave-years-out": 2.7
+        },
+        "hit3": {
+          "random": 90.0,
+          "leave-states-out": 87.9,
+          "leave-years-out": 89.1
+        },
+        "ndcg3": {
+          "random": 0.936,
+          "leave-states-out": 0.921,
+          "leave-years-out": 0.93
+        },
+        "hit1_cold": {
+          "random": 52.4,
+          "leave-states-out": 46.9,
+          "leave-years-out": 50.3
+        },
+        "hit1_warm": {
+          "random": 64.0,
+          "leave-states-out": 61.5,
+          "leave-years-out": 63.5
+        },
+        "p_vs_ours": {
+          "random": 7.142393004969577e-10,
+          "leave-states-out": 2.686104251283133e-06,
+          "leave-years-out": 1.2604812652543269e-05
+        },
+        "train_s": 9.4,
+        "infer_ms": 0.1277,
+        "conformal": {
+          "cov": 88.4,
+          "size": 2.69,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": "same pairs and features as YieldRank, squared-error loss on yield percentile"
+      },
+      {
+        "name": "LightGBM XE-NDCG ranker",
+        "family": "pair ranker",
+        "source": "ours",
+        "hit1": {
+          "random": 60.1,
+          "leave-states-out": 55.0,
+          "leave-years-out": 58.2
+        },
+        "hit1_std": {
+          "random": 0.4,
+          "leave-states-out": 5.0,
+          "leave-years-out": 3.1
+        },
+        "hit3": {
+          "random": 90.5,
+          "leave-states-out": 88.0,
+          "leave-years-out": 89.5
+        },
+        "ndcg3": {
+          "random": 0.934,
+          "leave-states-out": 0.917,
+          "leave-years-out": 0.928
+        },
+        "hit1_cold": {
+          "random": 53.5,
+          "leave-states-out": 46.4,
+          "leave-years-out": 50.4
+        },
+        "hit1_warm": {
+          "random": 64.4,
+          "leave-states-out": 60.7,
+          "leave-years-out": 63.2
+        },
+        "p_vs_ours": {
+          "random": 0.7175109813522578,
+          "leave-states-out": 3.3883479554407355e-17,
+          "leave-years-out": 1.697558083590616e-06
+        },
+        "train_s": 10.79,
+        "infer_ms": 0.1171,
+        "conformal": {
+          "cov": 88.4,
+          "size": 2.7,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "XGBoost LambdaMART",
+        "family": "pair ranker",
+        "source": "ours",
+        "hit1": {
+          "random": 60.0,
+          "leave-states-out": 55.6,
+          "leave-years-out": 58.3
+        },
+        "hit1_std": {
+          "random": 0.3,
+          "leave-states-out": 4.8,
+          "leave-years-out": 2.9
+        },
+        "hit3": {
+          "random": 90.2,
+          "leave-states-out": 88.1,
+          "leave-years-out": 89.5
+        },
+        "ndcg3": {
+          "random": 0.933,
+          "leave-states-out": 0.919,
+          "leave-years-out": 0.928
+        },
+        "hit1_cold": {
+          "random": 52.8,
+          "leave-states-out": 47.1,
+          "leave-years-out": 50.1
+        },
+        "hit1_warm": {
+          "random": 64.7,
+          "leave-states-out": 61.1,
+          "leave-years-out": 63.7
+        },
+        "p_vs_ours": {
+          "random": 0.5304265576900027,
+          "leave-states-out": 1.0681732614985446e-08,
+          "leave-years-out": 1.609362820987204e-05
+        },
+        "train_s": 14.04,
+        "infer_ms": 0.0832,
+        "conformal": {
+          "cov": 89.9,
+          "size": 2.83,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "LambdaMART (v4 listwise)",
+        "family": "pair ranker",
+        "source": "ours",
+        "hit1": {
+          "random": 59.7,
+          "leave-states-out": 55.4,
+          "leave-years-out": 57.9
+        },
+        "hit1_std": {
+          "random": 0.3,
+          "leave-states-out": 4.6,
+          "leave-years-out": 2.6
+        },
+        "hit3": {
+          "random": 89.9,
+          "leave-states-out": 87.5,
+          "leave-years-out": 89.0
+        },
+        "ndcg3": {
+          "random": 0.936,
+          "leave-states-out": 0.92,
+          "leave-years-out": 0.929
+        },
+        "hit1_cold": {
+          "random": 53.1,
+          "leave-states-out": 47.1,
+          "leave-years-out": 49.8
+        },
+        "hit1_warm": {
+          "random": 64.0,
+          "leave-states-out": 60.9,
+          "leave-years-out": 63.1
+        },
+        "p_vs_ours": {
+          "random": 0.011052234173145279,
+          "leave-states-out": 9.174611278088874e-09,
+          "leave-years-out": 2.0351286718190475e-12
+        },
+        "train_s": 9.48,
+        "infer_ms": 0.174,
+        "conformal": {
+          "cov": 89.8,
+          "size": 2.87,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": ""
+      },
+      {
+        "name": "YieldRank (ours)",
+        "family": "pair ranker",
+        "source": "ours",
+        "hit1": {
+          "random": 60.0,
+          "leave-states-out": 56.3,
+          "leave-years-out": 58.8
+        },
+        "hit1_std": {
+          "random": 0.4,
+          "leave-states-out": 4.6,
+          "leave-years-out": 2.8
+        },
+        "hit3": {
+          "random": 90.2,
+          "leave-states-out": 88.4,
+          "leave-years-out": 89.5
+        },
+        "ndcg3": {
+          "random": 0.935,
+          "leave-states-out": 0.922,
+          "leave-years-out": 0.93
+        },
+        "hit1_cold": {
+          "random": 53.1,
+          "leave-states-out": 47.4,
+          "leave-years-out": 50.6
+        },
+        "hit1_warm": {
+          "random": 64.6,
+          "leave-states-out": 62.1,
+          "leave-years-out": 64.1
+        },
+        "p_vs_ours": null,
+        "train_s": 22.79,
+        "infer_ms": 0.2281,
+        "conformal": {
+          "cov": 87.7,
+          "size": 2.69,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "feature importance + SHAP",
+        "note": "LightGBM LambdaMART on (district-season, crop) pairs, relevance = yield percentile"
+      }
+    ],
+    "ablation": [
+      {
+        "name": "YieldRank (full)",
+        "removed": "nothing",
+        "hit1": {
+          "random": 60.0,
+          "leave-states-out": 56.3,
+          "leave-years-out": 58.8
+        },
+        "ndcg3": {
+          "random": 0.935,
+          "leave-states-out": 0.922,
+          "leave-years-out": 0.93
+        },
+        "conformal": {
+          "cov": 87.7,
+          "size": 2.69,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "note": "history + yield target + LambdaMART + conformal sets"
+      },
+      {
+        "name": "YieldRank - history",
+        "removed": "district history features",
+        "hit1": {
+          "random": 53.2,
+          "leave-states-out": 27.4,
+          "leave-years-out": 49.4
+        },
+        "ndcg3": {
+          "random": 0.909,
+          "leave-states-out": 0.788,
+          "leave-years-out": 0.895
+        },
+        "conformal": {
+          "cov": 69.0,
+          "size": 3.13,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "note": "climate + soil + season only"
+      },
+      {
+        "name": "YieldRank - yield target (area share)",
+        "removed": "yield target",
+        "hit1": {
+          "random": 23.4,
+          "leave-states-out": 23.2,
+          "leave-years-out": 23.2
+        },
+        "ndcg3": {
+          "random": 0.774,
+          "leave-states-out": 0.772,
+          "leave-years-out": 0.774
+        },
+        "conformal": {
+          "cov": 89.4,
+          "size": 4.6,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "note": "relevance = current area share (what is grown most) instead of yield percentile"
+      },
+      {
+        "name": "YieldRank - persistence term",
+        "removed": "persistence term",
+        "hit1": {
+          "random": 60.0,
+          "leave-states-out": 56.0,
+          "leave-years-out": 58.7
+        },
+        "ndcg3": {
+          "random": 0.936,
+          "leave-states-out": 0.922,
+          "leave-years-out": 0.93
+        },
+        "conformal": {
+          "cov": 87.5,
+          "size": 2.68,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "note": "listwise + pointwise blend only"
+      },
+      {
+        "name": "LightGBM pointwise",
+        "removed": "listwise ranker + persistence",
+        "hit1": {
+          "random": 59.4,
+          "leave-states-out": 55.7,
+          "leave-years-out": 58.3
+        },
+        "ndcg3": {
+          "random": 0.936,
+          "leave-states-out": 0.921,
+          "leave-years-out": 0.93
+        },
+        "conformal": {
+          "cov": 88.4,
+          "size": 2.69,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "note": "pointwise regression on yield percentile alone"
+      },
+      {
+        "name": "YieldRank top-1 only",
+        "removed": "conformal step",
+        "hit1": {
+          "random": 60.0,
+          "leave-states-out": 56.3,
+          "leave-years-out": 58.8
+        },
+        "ndcg3": {
+          "random": 0.935,
+          "leave-states-out": 0.922,
+          "leave-years-out": 0.93
+        },
+        "conformal": {
+          "cov": 56.3,
+          "size": 1.0,
+          "split": "leave-states-out",
+          "calibration": "none (fixed top-1)"
+        },
+        "note": "a single recommendation is right only Hit@1 of the time and carries no coverage guarantee"
+      },
+      {
+        "name": "YieldRank fixed top-3",
+        "removed": "conformal step",
+        "hit1": {
+          "random": 60.0,
+          "leave-states-out": 56.3,
+          "leave-years-out": 58.8
+        },
+        "ndcg3": {
+          "random": 0.935,
+          "leave-states-out": 0.922,
+          "leave-years-out": 0.93
+        },
+        "conformal": {
+          "cov": 88.4,
+          "size": 3.0,
+          "split": "leave-states-out",
+          "calibration": "none (fixed top-3)"
+        },
+        "note": "fixed-size list: coverage is whatever Hit@3 happens to be; sets do not adapt to hard cases"
+      }
+    ],
+    "chosen": "YieldRank",
+    "why": [
+      "On unseen states YieldRank picks the best-yielding crop 56.3% of the time vs 38.3% for the best classifier from the literature (MLP), +18.0 points (p<10^-300).",
+      "Random splits hide this: that classifier scores 53.7% on a random split, 15.4 points more than on unseen states; YieldRank loses 3.7.",
+      "Yield grounding is the key ingredient: the same ranker trained to reproduce what farmers grow (area share) gets only 23.2% on unseen states.",
+      "District history matters: without it YieldRank falls to 27.4%.",
+      "Persistence (repeat last year's ranking) is close overall (54.4% vs 56.3%, p=8.7e-20) but cannot rank crops without last-year history: on those cold-start cases YieldRank gets 47.4% vs 42.4%.",
+      "Every single objective on the same pairs (LightGBM pointwise, LightGBM XE-NDCG ranker, XGBoost LambdaMART, LambdaMART (v4 listwise)) is below the final blend on unseen states, by at most 1.3 points: the pair formulation does most of the work, and the blend (chosen on validation, not test) adds the rest.",
+      "With the same i.i.d. calibration its 90% sets cover 87.7% on unseen states with 2.69 crops, vs 75.1% with 3.07 crops for MLP; the served state-robust sets cover 94.2% with 3.66 crops (worst state 84.5%).",
+      "It is cheap: 23 s to train and 0.228 ms per query, with tree feature importances/SHAP for explanations."
+    ],
+    "_doc": "Written by experiments/report.py from experiments/compare.py. Same queries, folds and calibration sets as v4. hit1/hit3/hit1_cold in percent; ndcg3 0-1; conformal cov in percent, size in crops; p_vs_ours = paired Wilcoxon on per-query Hit@1 vs YieldRank, pooled over 5 folds."
+  },
+  "related_work_ours": {
+    "gaps": [],
+    "note": "Real Government APY data (not Kaggle); leave-states-out and leave-years-out splits; best-yielding crop as target; 90% conformal sets; paired Wilcoxon tests; no leakage (history uses strictly earlier years, state_group grouping); code in experiments/. Caveat: one country (India), no field trial."
   }
 }

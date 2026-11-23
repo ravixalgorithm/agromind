@@ -8,7 +8,7 @@ Target for top-1 / conformal = the candidate with the highest yield_pct.
     .venv/bin/python run.py [--quick] [--no-hist]
 Writes results/metrics.json, results/per_query.parquet.
 """
-import argparse, json, time, warnings
+import argparse, json, os, time, warnings
 from pathlib import Path
 import numpy as np, pandas as pd
 import lightgbm as lgb
@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parent
 DATA = ROOT.parent / "backend/data/large/agromind_india_large.parquet"
 OUT = ROOT / "results"
 SEED = 0
+NJ = int(os.environ.get("AGRO_THREADS", "-1"))  # threads per model; cap it when running several jobs at once
 ENV = ["temperature", "humidity", "rainfall", "soil_ph", "soil_n_gkg", "soil_soc_gkg",
        "soil_clay_pct", "soil_sand_pct", "soil_cec_cmolkg"]
 SEASONS = ["kharif", "rabi", "zaid", "whole_year"]
@@ -89,7 +90,7 @@ def fit_rank(df, tr, crops, hist, objective, target="yield", **override):
     rel = np.clip(np.floor(y * 10), 0, 9).astype(int)  # graded 0..9
     group = d.groupby("qid", sort=False).size().values
     params = dict(n_estimators=400, learning_rate=0.05, num_leaves=63, min_child_samples=40,
-                  subsample=0.8, subsample_freq=1, colsample_bytree=0.8, random_state=SEED, verbose=-1)
+                  subsample=0.8, subsample_freq=1, colsample_bytree=0.8, random_state=SEED, verbose=-1, n_jobs=NJ)
     gain = override.pop("label_gain", list(range(10)))
     trunc = override.pop("lambdarank_truncation_level", 10)
     params |= override
@@ -102,7 +103,7 @@ def fit_rank(df, tr, crops, hist, objective, target="yield", **override):
     elif objective == "xgb_rank":
         from xgboost import XGBRanker
         m = XGBRanker(objective="rank:ndcg", n_estimators=400, learning_rate=0.05, max_depth=6, subsample=0.8,
-                      colsample_bytree=0.8, enable_categorical=True, tree_method="hist", random_state=SEED, n_jobs=-1)
+                      colsample_bytree=0.8, enable_categorical=True, tree_method="hist", random_state=SEED, n_jobs=NJ)
         m.fit(X, rel, group=group)
     else:
         m = lgb.LGBMRegressor(objective="regression", **params)
@@ -154,10 +155,10 @@ def make_clf(name):
     if name == "NB":
         return GaussianNB()
     if name == "RF":
-        return RandomForestClassifier(300, min_samples_leaf=2, n_jobs=-1, random_state=SEED)
+        return RandomForestClassifier(300, min_samples_leaf=2, n_jobs=NJ, random_state=SEED)
     if name == "XGB":
         return XGBClassifier(n_estimators=200, max_depth=6, learning_rate=0.1, subsample=0.8,
-                             colsample_bytree=0.8, n_jobs=-1, random_state=SEED, verbosity=0)
+                             colsample_bytree=0.8, n_jobs=NJ, random_state=SEED, verbosity=0)
     return make_pipeline(StandardScaler(), MLPClassifier((128, 64), early_stopping=True, max_iter=200, random_state=SEED))
 
 

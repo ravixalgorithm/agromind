@@ -323,7 +323,7 @@ def export_v4(mac, S, mc=None):
                   H("Best crop ranked first, unseen years", "OursHitLYO", "%", "leave-years-out"),
                   H("Best crop ranked first, random split", "OursHitR", "%", "random"),
                   H("NDCG@3, unseen states", "OursNDCGLSO", "", "leave-states-out"),
-                  H("Cold-start cases, ours vs persistence", "OursHitColdLSO", "%", "leave-states-out"),
+                  H(f"Cold-start cases, unseen states (persistence {n.get('PersHitColdLSO', '--')}%)", "OursHitColdLSO", "%", "leave-states-out"),
                   H("90% set coverage, unseen states (state-robust)", "CCSRCovLSO", "%", "leave-states-out"),
                   H("90% set size, unseen states (state-robust)", "CCSRSizeLSO", "crops", "leave-states-out"),
                   H("Worst state coverage (state-robust)", "SRWorstCov", "%", "leave-states-out")],
@@ -379,6 +379,15 @@ def method_comparison(mac):
             x = P[(P.split == p) & (P.method == m)].set_index(["fold", "qid"])["hit@1"].reindex(o.index)
             d = (o - x).dropna()
             pv[(m, p)] = float(wilcoxon(d).pvalue) if (d != 0).any() else 1.0
+    # cold-start Hit@1 pooled over test queries (same definition as the paper's OursHitCold* macros)
+    pooled_cold = P[P.cold].groupby(["method", "split"])["hit@1"].mean() * 100
+    pooled_warm = P[~P.cold].groupby(["method", "split"])["hit@1"].mean() * 100
+    for (m_, p_), v in pooled_cold.items():
+        if (m_, p_) in agg.index:
+            agg.loc[(m_, p_), "hit1_cold"] = v
+    for (m_, p_), v in pooled_warm.items():
+        if (m_, p_) in agg.index:
+            agg.loc[(m_, p_), "hit1_warm"] = v
     meta = F.drop_duplicates("method").set_index("method")
     order = list(dict.fromkeys(F.method))
     methods, ablation = [], []
@@ -404,7 +413,8 @@ def method_comparison(mac):
     abl = [full]
     for r, rem, note in ((by.get("YieldRank - history"), "district history features", "climate + soil + season only"),
                          (by.get("YieldRank - yield target (area share)"), "yield target", "relevance = current area share (what is grown most) instead of yield percentile"),
-                         (by.get("LightGBM pointwise"), "ranking loss", "pointwise regression on yield percentile")):
+                         (by.get("YieldRank - persistence term"), "persistence term", "listwise + pointwise blend only"),
+                         (by.get("LightGBM pointwise"), "listwise ranker + persistence", "pointwise regression on yield percentile alone")):
         if r:
             abl.append(dict(name=r["name"], removed=rem, hit1=r["hit1"], ndcg3=r["ndcg3"], conformal=r["conformal"], note=note))
     abl.append(dict(name="YieldRank top-1 only", removed="conformal step", hit1=o["hit1"], ndcg3=o["ndcg3"],
@@ -438,10 +448,12 @@ def method_comparison(mac):
                        + ("the difference is not significant, so we keep LambdaMART, whose NDCG-optimising loss matches the ranking task." if pr >= 0.05 else
                           "it is a variant of the same yield-grounded pair formulation, which is where the gain over the literature comes from."))
         else:
-            why.append(f"Other objectives on the same pairs ({', '.join(r['name'] for r in rivals)}) are within "
-                       f"{max(abs(r['hit1'][lso]-o['hit1'][lso]) for r in rivals):.1f} points, so the pair formulation, not the loss, is what matters.")
-    why.append(f"Its 90% conformal sets cover the best crop {o['conformal']['cov']}% of the time on unseen states with {o['conformal']['size']} crops, "
-               f"vs {best['conformal']['cov']}% with {best['conformal']['size']} crops for {best['name']}.")
+            why.append(f"Every single objective on the same pairs ({', '.join(r['name'] for r in rivals)}) is below the final blend on unseen states, "
+                       f"by at most {max(abs(r['hit1'][lso]-o['hit1'][lso]) for r in rivals):.1f} points: the pair formulation does most of the work, "
+                       f"and the blend (chosen on validation, not test) adds the rest.")
+    why.append(f"With the same i.i.d. calibration its 90% sets cover {o['conformal']['cov']}% on unseen states with {o['conformal']['size']} crops, "
+               f"vs {best['conformal']['cov']}% with {best['conformal']['size']} crops for {best['name']}; the served state-robust sets cover "
+               f"{mac.get('CCSRCovLSO', '--')}% with {mac.get('CCSRSizeLSO', '--')} crops (worst state {mac.get('SRWorstCov', '--')}%).")
     why.append(f"It is cheap: {o['train_s']:.0f} s to train and {o['infer_ms']:.3f} ms per query, with tree feature importances/SHAP for explanations.")
     mc = dict(splits=list(PROTO), split_labels=SPLIT_LABEL, primary_split=lso, methods=methods, ablation=abl, chosen="YieldRank",
               why=[w for w in why if w], _doc="Written by experiments/report.py from experiments/compare.py. Same queries, folds and "
@@ -467,6 +479,15 @@ def method_comparison(mac):
     arows = [("-- " + r if not r.startswith("Full") else r) for r in arows]
     (PAPER / "tables/ablation.tex").write_text("\n".join([r"\begin{tabular}{lcccc}", r"\toprule",
         r"Component removed & Hit@1 & NDCG@3 & Cover.\% & Size \\", r"\midrule", *arows, r"\bottomrule", r"\end{tabular}"]) + "\n")
+    paper_rows = [r for r in methods if r["source"] not in ("ours", "baseline")]
+    bp = max(paper_rows, key=lambda r: r["hit1"][lso]) if paper_rows else best
+    abl_hit = {a["removed"]: a["hit1"][lso] for a in abl}
+    mac |= {"MCBestPaperName": bp["name"], "MCBestPaperHit": f"{bp['hit1'][lso]:.1f}", "MCBestPaperHitR": f"{bp['hit1']['random']:.1f}",
+            "MCNPaperMethods": len(paper_rows), "MCNPapers": len({r["source"] for r in paper_rows}),
+            "MCAblNoHist": f"{abl_hit.get('district history features', float('nan')):.1f}",
+            "MCAblNoYield": f"{abl_hit.get('yield target', float('nan')):.1f}",
+            "MCAblNoPers": f"{by['YieldRank - persistence term']['hit1'][lso]:.1f}" if "YieldRank - persistence term" in by else "--",
+            "MCOursTrain": f"{o['train_s']:.0f}", "MCOursInfer": f"{o['infer_ms']:.3f}"}
     mac |= {"MCBestName": best["name"], "MCBestHit": f"{best['hit1'][lso]:.1f}", "MCNMethods": len(methods),
             "MCNoYieldHit": f"{by['YieldRank - yield target (area share)']['hit1'][lso]:.1f}" if "YieldRank - yield target (area share)" in by else "--",
             "MCTopRival": top_rival["name"] if top_rival else "--",

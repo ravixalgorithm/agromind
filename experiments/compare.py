@@ -5,7 +5,7 @@ splits as run.py, so YieldRank's numbers here equal the paper's).
 Writes results/compare_<protocol>.json (per-fold metrics) and results/compare_q_<protocol>.parquet
 (per-query Hit@1 / NDCG@3 for the Wilcoxon tests).
 """
-import argparse, json, time
+import argparse, json, re, time
 import numpy as np, pandas as pd
 from sklearn.ensemble import RandomForestClassifier, StackingClassifier
 from sklearn.linear_model import LogisticRegression
@@ -44,7 +44,7 @@ class XGBSafe(ClassifierMixin, BaseEstimator):
     def fit(self, X, y):
         from xgboost import XGBClassifier
         self.classes_ = np.unique(y)
-        self.m_ = XGBClassifier(n_jobs=-1, verbosity=0, **(self.params or {})).fit(X, np.searchsorted(self.classes_, y))
+        self.m_ = XGBClassifier(n_jobs=run.NJ, verbosity=0, **(self.params or {})).fit(X, np.searchsorted(self.classes_, y))
         return self
 
     def predict_proba(self, X):
@@ -117,17 +117,17 @@ def _paper_methods():
     from sklearn.tree import DecisionTreeClassifier
     from sklearn.preprocessing import MinMaxScaler
     from xgboost import XGBClassifier
-    xgb = lambda **k: XGBClassifier(n_jobs=-1, verbosity=0, **k)
+    xgb = lambda **k: XGBClassifier(n_jobs=run.NJ, verbosity=0, **k)
     return {
         # Dey et al. 2024 (Heliyon), Sec 2.2 / Table 1, exact hyper-parameters; no scaling mentioned.
         "XGBoost (Dey 2024)": ("paper", "dey2024", TREE, "exact Table 1 config", clf("XGB", xgb(
             learning_rate=0.1, max_depth=17, n_estimators=200, subsample=0.5, gamma=0, random_state=50))),
         "Random Forest (Dey 2024)": ("paper", "dey2024", TREE, "exact Table 1 config", clf("RF", RandomForestClassifier(
-            max_depth=6, max_features=5, min_samples_split=4, n_estimators=15, random_state=0, n_jobs=-1))),
+            max_depth=6, max_features=5, min_samples_split=4, n_estimators=15, random_state=0, n_jobs=run.NJ))),
         "SVM (Dey 2024)": ("paper", "dey2024", "none", "exact config; trained on a random 8,000-query subsample (kernel SVM is O(n^2))",
                            clf("SVM", SVC(C=5, gamma=0.1, kernel="rbf", decision_function_shape="ovr"), max_q=8000)),
         "k-NN (Dey 2024)": ("paper", "dey2024", "nearest past cases", "exact config (k=3, Minkowski)",
-                            clf("KNN", KNeighborsClassifier(n_neighbors=3, metric="minkowski", n_jobs=-1))),
+                            clf("KNN", KNeighborsClassifier(n_neighbors=3, metric="minkowski", n_jobs=run.NJ))),
         "Decision Tree (Dey 2024)": ("paper", "dey2024", "tree rules", "exact config; max_features='auto' = 'sqrt' in current sklearn",
                                      clf("DT", DecisionTreeClassifier(max_features="sqrt", ccp_alpha=0.001, criterion="entropy", max_depth=5, random_state=2))),
         # Afzal et al. 2025 (Sci. Rep.), Table 4, hard voting RF + XGB ("RFXG").
@@ -136,29 +136,29 @@ def _paper_methods():
                                   ("xgb", xgb(random_state=0, n_estimators=6, max_depth=2, learning_rate=0.1))]))),
         # Gunasekaran et al. 2025 (Sensors), Table 3 Optuna values, seed 42, MinMax scaling; PINN branch omitted.
         "Stacking RF+ET+XGB (Gunasekaran 2025)": ("paper", "gunasekaran2025", "partial (base-model importances)",
-            "Table 3 config, seed 42, MinMax; PINN branch omitted (unspecified); internal stacking cv=3 (unstated; compute)",
+            "Table 3 config, seed 42, MinMax; PINN branch omitted (unspecified); internal stacking cv=3 (unstated); trained on a random 8,000-query subsample (compute)",
             clf("STACK", make_pipeline(MinMaxScaler(), StackingClassifier(
-                [("rf", RandomForestClassifier(max_depth=16, min_samples_split=10, n_estimators=116, random_state=42, n_jobs=-1)),
-                 ("et", ExtraTreesClassifier(max_depth=16, min_samples_split=5, n_estimators=441, random_state=42, n_jobs=-1)),
+                [("rf", RandomForestClassifier(max_depth=16, min_samples_split=10, n_estimators=116, random_state=42, n_jobs=run.NJ)),
+                 ("et", ExtraTreesClassifier(max_depth=16, min_samples_split=5, n_estimators=441, random_state=42, n_jobs=run.NJ)),
                  ("xgb", XGBSafe(dict(learning_rate=0.0640, max_depth=7, n_estimators=465, random_state=42)))],
-                final_estimator=LogisticRegression(C=829.97, penalty="l2", max_iter=1000), cv=3)))),
+                final_estimator=LogisticRegression(C=829.97, penalty="l2", max_iter=1000), cv=3)), max_q=8000)),
         # Ahmed et al. 2025 (Sci. Rep.): no hyper-parameters stated -> library defaults.
         "Stacking KNN+RF+NB->LR (Ahmed 2025)": ("paper", "ahmed2025", "partial (base-model importances)", "architecture from the paper; library defaults (none stated)",
-            clf("STACK", StackingClassifier([("knn", KNeighborsClassifier()), ("rf", RandomForestClassifier(random_state=SEED, n_jobs=-1)),
+            clf("STACK", StackingClassifier([("knn", KNeighborsClassifier()), ("rf", RandomForestClassifier(random_state=SEED, n_jobs=run.NJ)),
                                              ("nb", GaussianNB())], final_estimator=LogisticRegression(max_iter=1000)))),
         "Stacking KNN+Bagging+NB->LR (Ahmed 2025)": ("paper", "ahmed2025", "partial (base-model importances)", "architecture from the paper; library defaults (none stated)",
-            clf("STACK", StackingClassifier([("knn", KNeighborsClassifier()), ("bag", BaggingClassifier(random_state=SEED, n_jobs=-1)),
+            clf("STACK", StackingClassifier([("knn", KNeighborsClassifier()), ("bag", BaggingClassifier(random_state=SEED, n_jobs=run.NJ)),
                                              ("nb", GaussianNB())], final_estimator=LogisticRegression(max_iter=1000)))),
         "Hard vote LR+XGB+RF+DT+NB (Ahmed 2025)": ("paper", "ahmed2025", "partial (member importances)", "architecture from the paper; library defaults; hard vote exposed as vote shares",
             clf("VOTE", HardVote([("lr", LogisticRegression(max_iter=1000)), ("xgb", xgb(random_state=SEED)),
-                                  ("rf", RandomForestClassifier(random_state=SEED, n_jobs=-1)), ("dt", DecisionTreeClassifier(random_state=SEED)),
+                                  ("rf", RandomForestClassifier(random_state=SEED, n_jobs=run.NJ)), ("dt", DecisionTreeClassifier(random_state=SEED)),
                                   ("nb", GaussianNB())]))),
         # Mahesh & Soundrapandiyan 2026 (Front. Plant Sci.), Table 3 CatBoost config (they regress a suitability score).
         "CatBoost (Mahesh 2026 config)": ("paper", "mahesh2026", TREE, "Table 3 config; used as a classifier here (paper regresses expert scores)",
-            clf("CAT", CatBoostClassifier(iterations=300, depth=6, learning_rate=0.05, loss_function="MultiClass", random_seed=SEED, verbose=0, thread_count=-1))),
+            clf("CAT", CatBoostClassifier(iterations=300, depth=6, learning_rate=0.05, loss_function="MultiClass", random_seed=SEED, verbose=0, thread_count=run.NJ))),
         # Abu Bakr et al. 2025 (Information): CNN-LSTM, batch 8, 50 epochs, Adam; layers unstated.
-        "CNN-LSTM (Bakr 2025)": ("paper", "bakr2025", "none", "batch 8, 50 epochs, Adam as stated; layer sizes ours (unstated)",
-            clf("CNN", CNNLSTM())),
+        "CNN-LSTM (Bakr 2025)": ("paper", "bakr2025", "none", "batch 8 and Adam as stated; 10 epochs instead of 50 and a random 8,000-query training subsample (compute); layer sizes ours (unstated)",
+            clf("CNN", CNNLSTM(epochs=10), max_q=8000)),
     }
 
 
@@ -219,6 +219,14 @@ def main():
             fit_i, te_i, ic_i = idx(np.setdiff1d(trq[a], iid_cal)), idx(teq), idx(iid_cal)
             for name in names:
                 family, source, interp, note, maker = METHODS[name]
+                cdir = run.OUT / "compare_cache" / f"{protocol}{'_quick' if args.quick else ''}" / f"f{f}"
+                cfile = cdir / (re.sub(r"[^A-Za-z0-9]+", "_", name) + ".json")
+                if cfile.exists():  # finished earlier: reuse (results are deterministic given seed and data)
+                    rec = json.load(open(cfile))
+                    folds.append(rec)
+                    perq.append(pd.read_parquet(cfile.with_suffix(".parquet")))
+                    print(f"{protocol} f{f} {name:38s} cached Hit@1 {rec['hit1']:5.1f}%", flush=True)
+                    continue
                 t0 = time.time()
                 score = maker(df, fit_i, crops, QX, Qy)
                 train_s = time.time() - t0
@@ -238,6 +246,9 @@ def main():
                            conf_cov=100 * conf["LAC@0.9"]["coverage"], conf_size=conf["LAC@0.9"]["size"])
                 folds.append(rec)
                 perq.append(pq[["hit@1", "ndcg@3", "cold"]].assign(method=name, fold=f).reset_index())
+                cdir.mkdir(parents=True, exist_ok=True)
+                perq[-1].to_parquet(cfile.with_suffix(".parquet"))
+                json.dump(rec, open(cfile, "w"))
                 print(f"{args.protocol} f{f} {name:38s} Hit@1 {rec['hit1']:5.1f}%  Hit@3 {rec['hit3']:5.1f}%  NDCG@3 {rec['ndcg3']:.3f}  "
                       f"cold {rec['hit1_cold']:5.1f}%  cov90 {rec['conf_cov']:5.1f}% size {rec['conf_size']:.2f}  "
                       f"train {train_s:6.1f}s  infer {infer_ms:.3f} ms/q", flush=True)
