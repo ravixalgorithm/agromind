@@ -1,9 +1,9 @@
 """AgroMind API: district-level crop recommendations on Government of India APY data.
 
-POST /predict serves the final model, AgroMind v4 (YieldRank + 90 % conformal crop sets). The v3
-district classifier still backs /options, /district and /dataset, and answers /predict only for a
-district-season with no recent crop records (labelled "fallback": "v3"). /v3/* are aliases of the
-root paths, kept for clients written against the earlier API.
+POST /predict serves the final model, AgroMind v4 (experiments/final_model.py: YieldRank blend + 90 %
+state-robust conformal crop sets). The v3 district classifier still backs /options, /district and /dataset,
+and answers /predict (labelled "fallback": "v3") for a district-season with no recent crop records, or while
+v4 trains on a first start without its artifact. /v3/* are aliases of the root paths.
 """
 
 from contextlib import asynccontextmanager
@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import V3Request
-from .v3_service import CLIMATE, SOIL, UnknownDistrict, V3Service
+from .v3_service import UnknownDistrict, V3Service
 from .v4_service import NoCandidates, V4Service
 
 v3 = V3Service()
@@ -72,17 +72,17 @@ def predict(payload: V3Request) -> dict:
     body = payload.model_dump()
     state, dist, season = body.pop("state"), body.pop("district"), body.pop("season")
     try:
-        row = v3.district_row(state, dist, season)
+        v3.district_row(state, dist, season)  # 404 for an unknown state / district / season
     except UnknownDistrict as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from None
-    env = {k: (body[k] if body.get(k) is not None else row[k]) for k in CLIMATE + SOIL}
-    try:
-        return v4.predict(state, dist, season, env)
-    except NoCandidates:
-        out = v3.predict(state, dist, season, overrides=body)
-        return {"model": "AgroMind v3", "fallback": "v3",
-                "fallback_reason": "no crop with a recorded yield in this district-season, so YieldRank has no candidates",
-                **out}
+    reason = "AgroMind v4 is still training (first start without backend/models/v4_final.joblib)"
+    if v4.ready():
+        try:
+            return v4.predict(state, dist, season, body)  # only the values the user edited override the model's defaults
+        except NoCandidates:
+            reason = "no crop with a recorded yield in this district-season, so YieldRank has no candidates"
+    return {"model": "AgroMind v3", "fallback": "v3", "fallback_reason": reason,
+            **v3.predict(state, dist, season, overrides=body)}
 
 
 @app.get("/dataset")
@@ -96,7 +96,11 @@ def dataset(state: str | None = None, district: str | None = None, crop: str | N
 @app.get("/model-info")
 def model_info() -> dict:
     """The final model (v4) at the top level; v3 and v1/v2 as history."""
-    v3_info, v4_info = v3.info(), v4.info()
+    v3_info = v3.info()
+    if not v4.ready():
+        return {"model": "AgroMind v4", "status": "training (first start without backend/models/v4_final.joblib); "
+                "/predict answers with the labelled v3 fallback until it finishes", "history": {"v3": v3_info}}
+    v4_info = v4.info()
     # all APY rows /dataset serves, next to the v4 training subset (rows with a crop slug and yield percentile)
     train = v4_info["data"]
     v4_info["data"] = {"records": v3_info["rows"], "districts": v3_info["districts"], "locations": v3_info["locations"],

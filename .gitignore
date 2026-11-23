@@ -10,6 +10,7 @@ venv/
 
 # Model artifacts
 backend/models/*.joblib
+!backend/models/v4_final.joblib
 
 # Node
 node_modules/

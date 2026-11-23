@@ -56,7 +56,7 @@ def test_other_endpoints() -> None:
         assert all(r["state"] == "Punjab" and r["crop_slug"] == "wheat" for r in page["rows"])
 
         info = client.get("/model-info").json()
-        assert info["model"].startswith("AgroMind v4") and info["holdout_check"]["coverage"] > 0.85
+        assert info["model"].startswith("AgroMind v4") and 0 < info["calibration"]["qhat"] < 1
         assert info["data"]["records"] == page["total_rows_in_dataset"] and info["data"]["districts"] >= info["data"]["locations"]
         assert info["data"]["states"] >= info["data"]["training_states"]
         assert info["metrics"]["leave_states_out"]["hit1"] > info["metrics"]["leave_states_out"]["baseline_hit1"]

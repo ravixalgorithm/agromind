@@ -1,0 +1,7 @@
+{
+ "parquet_sha256": "e93d3b1a51a047fb34c2a698ce4ddad26a71daca55ea316bd95f8ec77f94276b",
+ "model": "YieldRank v4 (final)",
+ "T": 1.8162052047660295,
+ "qhat": 0.9405031911859876,
+ "trained": "2026-11-23 13:11"
+}

@@ -24,10 +24,12 @@ Economics & Statistics (APY reports, data.desagri.gov.in, crop years 1997-98 to 
 748 districts). Each record is joined with NASA POWER season climate and ISRIC SoilGrids soil at the
 district centroid.
 
-The served model, **AgroMind v4**, has two parts:
-- **YieldRank** (LightGBM LambdaMART) ranks the crops a district actually grows by their expected relative
-  yield next season. It uses climate, soil and the district's own crop history.
-- **A 90 % conformal set** is a short list that contains the best-yielding crop about 90 % of the time.
+The served model, **AgroMind v4 (final)**, has two parts:
+- **YieldRank** ranks the crops a district actually grows by their expected relative yield next season. It blends an
+  XGBoost listwise ranker, a LightGBM yield regressor and last-year persistence, using climate, soil and the district's
+  own crop history.
+- **A 90 % conformal set** is a short list, calibrated state by state, that contains the best-yielding crop about 90 %
+  of the time.
 
 Every crop comes with its expected and historical yield in that district.
 
@@ -35,9 +37,9 @@ Paper results (`docs/research/results.json` → `v4`). hit@1 = the top-ranked cr
 
 | Protocol | YieldRank hit@1 | Best classifier baseline | 90 % set coverage / mean size |
 |----------|-----------------|--------------------------|-------------------------------|
-| Unseen states | **55.6 %** | 38.5 % (MLP) | 89.6 % / 2.82 crops |
-| Future years | **57.8 %** | 52.1 % (XGBoost) | 89.7 % / 2.71 crops |
-| Random 5-fold | **59.7 %** | 57.5 % (Random Forest) | 90.1 % / 2.64 crops |
+| Unseen states | **56.3 %** | 38.3 % (MLP) | 94.2 % / 3.66 crops |
+| Future years | **58.8 %** | 52.0 % (XGBoost) | 93.8 % / 3.40 crops |
+| Random 5-fold | **60.0 %** | 57.5 % (Random Forest) | 93.3 % / 3.21 crops |
 
 **Docs:** [Project documentation](docs/PROJECT.md) · [Dataset](docs/research/DATASET.md) · [Data provenance](docs/research/DATA_PROVENANCE.md) · [UI design system](frontend/DESIGN.md)
 
@@ -45,7 +47,7 @@ Paper results (`docs/research/results.json` → `v4`). hit@1 = the top-ranked cr
 |-------|--------|
 | Frontend | React 18, Vite |
 | Backend | FastAPI, LightGBM, scikit-learn, pandas, pyarrow |
-| Model | AgroMind v4: YieldRank + split-conformal sets (`backend/app/v4_service.py`, artifact in `backend/models/`) |
+| Model | AgroMind v4 final: `experiments/final_model.py`, served by `backend/app/v4_service.py` (artifact `backend/models/v4_final.joblib`) |
 | Data | `backend/data/large/agromind_india_large.parquet` (DES APY × NASA POWER × SoilGrids) |
 
 > **Note:** the ranking is by *relative yield* (a crop's yield percentile among the districts growing it),
@@ -81,7 +83,7 @@ start_all.bat
 ```
 
 This opens the backend and frontend in separate terminals. The first run creates `backend/.venv` and
-installs dependencies. The API loads the trained v4 model from `backend/models/` at startup (about a second).
+installs dependencies. The API loads the trained v4 model (`backend/models/v4_final.joblib`, committed) at startup in about a second.
 
 Then open **http://127.0.0.1:5173**
 
@@ -113,7 +115,7 @@ Checks:
 ```bash
 cd backend
 python -m pytest tests -q     # every endpoint
-python train_model.py         # rebuilds the v4 artifact, prints held-out hit@1 / coverage / set size
+OMP_NUM_THREADS=4 python train_model.py   # rebuilds the v4 artifact (a few minutes), prints its calibration
 ```
 
 ---
@@ -128,7 +130,7 @@ season averages (`GET /district` returns the defaults).
 ```
 
 The response lists the crops Ludhiana grows in rabi, ranked by YieldRank: wheat first (probability
-0.59), then sunflower, barley, mustard and others. The 90 % set is {wheat, sunflower}. Each crop has its
+0.53), then sunflower, barley, mustard, green gram and peas. The 90 % set is {wheat, sunflower, barley, mustard}. Each crop has its
 expected and historical median yield (t/ha), years grown and a cold-start flag. Full shapes:
 [docs/PROJECT.md §5](docs/PROJECT.md#5-api).
 
@@ -141,7 +143,7 @@ agromind/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py           # FastAPI routes
-│   │   ├── v4_service.py     # AgroMind v4: YieldRank + conformal sets (/predict)
+│   │   ├── v4_service.py     # serves AgroMind v4 (experiments/final_model.py) on /predict
 │   │   ├── v3_service.py     # data lookups (/options, /district, /dataset) + v3 fallback model
 │   │   ├── schemas.py        # /predict request model
 │   │   ├── india_ref.py      # crop names, types, curated calendars
@@ -149,7 +151,7 @@ agromind/
 │   ├── data/large/           # DES APY × NASA POWER × SoilGrids table (+ build stats)
 │   ├── data/*.csv            # v1/v2 research CSVs
 │   ├── scripts/build_large_dataset.py
-│   ├── models/               # v4_yieldrank.{txt,json}: trained v4 artifact
+│   ├── models/               # v4_final.{joblib,json}: trained v4 artifact + data stamp
 │   ├── tests/test_api.py
 │   └── train_model.py
 ├── frontend/                 # React UI (see DESIGN.md)

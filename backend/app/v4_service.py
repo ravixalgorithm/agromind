@@ -1,264 +1,152 @@
-"""v4 (final): YieldRank + 90 % split-conformal crop sets, served by POST /predict.
+"""v4 (final): served by POST /predict, delegating to experiments/final_model.py (the paper's frozen model).
 
-Method (paper / notebooks/AgroMind_v4_Novel_Method.ipynb, experiments/run.py): a query is one
-district x season x year; its candidates are the crops grown there; LightGBM LambdaMART ranks them by
-yield percentile from season climate, SoilGrids soil, season and the district's own crop history.
-A softmax with a fitted temperature turns scores into probabilities of being the best-yielding crop,
-and a split-conformal (LAC) threshold gives a set that contains that crop with ~90 % probability.
-
-Serving: the query is the district's next season (last recorded year + 1). Candidates are the crops
-grown in that district-season in its last 5 recorded years; history features come from those records.
-Fitting / scoring live in `fit()` / `_score()`; swap them for experiments/final_model.py when frozen.
+final_model.train() builds the artifact: a per-district-season z-score blend of an XGBoost listwise ranker,
+a LightGBM yield-percentile regressor and last-year persistence, a softmax temperature, and a state-robust
+90 % conformal threshold calibrated on out-of-state scores. It is saved to backend/models/v4_final.joblib
+(committed, ~19 MB); the API loads it at startup and trains it in the background only when it is missing
+or was trained on a different build of the parquet (sha256 recorded in v4_final.json). This module only adapts final_model.predict() to the API's response shape and adds the
+recent expected yield, the model inputs and the district-season's history length.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
+import sys
 import threading
 import time
 from pathlib import Path
 
-import lightgbm as lgb
-import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupShuffleSplit
 
 from .india_ref import crop_name
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-PARQUET = BASE_DIR / "data" / "large" / "agromind_india_large.parquet"
-MODEL_DIR = BASE_DIR / "models"
-ARTIFACT = MODEL_DIR / "v4_yieldrank.txt"
-META = MODEL_DIR / "v4_yieldrank.json"
-RESULTS = BASE_DIR.parent / "docs" / "research" / "results.json"
+EXPERIMENTS = BASE_DIR.parent / "experiments"
+sys.path.insert(0, str(EXPERIMENTS))
+import final_model  # noqa: E402  (experiments/final_model.py: train / save / load / predict)
+import run  # noqa: E402
 
-CLIMATE = ["temperature", "humidity", "rainfall"]
-SOIL = ["soil_ph", "soil_n_gkg", "soil_soc_gkg", "soil_clay_pct", "soil_sand_pct", "soil_cec_cmolkg"]
-ENV = CLIMATE + SOIL
-SEASONS = ["kharif", "rabi", "zaid", "whole_year"]
-HIST = ["lag1_pct", "mean3_pct", "lag1_share"]
-ALPHA = 0.1  # 90 % sets
+PARQUET = BASE_DIR / "data" / "large" / "agromind_india_large.parquet"
+ARTIFACT = Path(final_model.ART_PATH)
+STAMP = ARTIFACT.with_suffix(".json")  # which data build the artifact was trained on
+RESULTS = BASE_DIR.parent / "docs" / "research" / "results.json"
 RECENT_YEARS = 5
-SEED = 0
-PARAMS = dict(n_estimators=400, learning_rate=0.05, num_leaves=63, min_child_samples=40, subsample=0.8,
-              subsample_freq=1, colsample_bytree=0.8, random_state=SEED, verbose=-1)
 
 
 class NoCandidates(LookupError):
     pass
 
 
-# ── data ──────────────────────────────────────────────────────────────────
-
-
-def base_table(raw: pd.DataFrame) -> pd.DataFrame:
-    """Rows with a crop slug and yield percentile, one per (district, season, year, crop), with area share."""
-    df = raw[raw.crop_slug.notna() & raw.yield_pct.notna()].copy()
-    for c in ("state", "district", "season", "season_app", "crop_slug", "production_unit"):
-        df[c] = df[c].astype(str)
-    key = ["state", "district", "season", "year", "crop_slug"]
-    df = df.sort_values("area_ha").groupby(key, as_index=False).last()
-    df["share"] = df.area_ha / df.groupby(["state", "district", "season", "year"]).area_ha.transform("sum")
-    return df
-
-
-def training_table(base: pd.DataFrame) -> pd.DataFrame:
-    """experiments/run.load(): strictly-earlier district history, queries with >= 2 candidates, best crop."""
-    df = base.sort_values("year").copy()
-    g = df.groupby(["state", "district", "season", "crop_slug"])
-    prev_year = g.year.shift(1)
-    df["lag1_pct"] = g.yield_pct.shift(1).where(prev_year == df.year - 1)
-    df["lag1_share"] = g.share.shift(1).where(prev_year == df.year - 1)
-    df["mean3_pct"] = g.yield_pct.transform(lambda s: s.shift(1).rolling(3, min_periods=1).mean())
-    df["qid"] = df.groupby(["state", "district", "season", "year"]).ngroup()
-    df = df[df.groupby("qid").crop_slug.transform("size") >= 2]
-    df = df.sort_values(["qid", "crop_slug"]).reset_index(drop=True)
-    best = df.groupby("qid").yield_pct.transform("max") == df.yield_pct
-    df["best"] = 0
-    df.loc[df[best].groupby("qid").head(1).index, "best"] = 1
-    return df
-
-
-def features(d: pd.DataFrame, crops: list[str]) -> pd.DataFrame:
-    X = d[ENV].astype(float).copy()
-    for s in SEASONS:
-        X[f"s_{s}"] = (d.season_app == s).astype(float).values
-    X[HIST] = d[HIST].astype(float).values
-    X["crop"] = pd.Categorical(d.crop_slug, categories=crops)
-    return X
-
-
-def softmax(qid: np.ndarray, s: np.ndarray, T: float) -> np.ndarray:
-    z = pd.Series(s / T)
-    e = np.exp(z.values - z.groupby(qid).transform("max").values)
-    return e / pd.Series(e).groupby(qid).transform("sum").values
-
-
-# ── model ─────────────────────────────────────────────────────────────────
-
-
-def fit(train: pd.DataFrame) -> dict:
-    """Split queries 70 / 15 / 15: fit the ranker, fit the softmax temperature, set the conformal threshold."""
-    crops = sorted(train.crop_slug.unique())
-    q = train.qid.values
-    a, cal = next(GroupShuffleSplit(1, test_size=0.15, random_state=SEED).split(train, groups=q))
-    fit_i, tmp = next(GroupShuffleSplit(1, test_size=0.15 / 0.85, random_state=SEED + 1).split(a, groups=q[a]))
-    fit_i, t_i = a[fit_i], a[tmp]
-    d = train.iloc[fit_i]
-    rel = np.clip(np.floor(d.yield_pct * 10), 0, 9).astype(int)
-    ranker = lgb.LGBMRanker(objective="lambdarank", label_gain=list(range(10)), lambdarank_truncation_level=10, **PARAMS)
-    ranker.fit(features(d, crops), rel, group=d.groupby("qid", sort=False).size().values)
-    booster = ranker.booster_
-
-    def scores(idx):
-        return booster.predict(features(train.iloc[idx], crops))
-
-    s_t, best_t = scores(t_i), train.best.values[t_i] == 1
-    grid = np.exp(np.linspace(np.log(0.02), np.log(50), 60))
-    T = float(grid[int(np.argmin([-np.log(softmax(q[t_i], s_t, T)[best_t] + 1e-12).mean() for T in grid]))])
-    p_cal = softmax(q[cal], scores(cal), T)
-    nonconf = 1 - p_cal[train.best.values[cal] == 1]
-    n = len(nonconf)
-    qhat = float(np.quantile(nonconf, min(1.0, np.ceil((n + 1) * (1 - ALPHA)) / n), method="higher"))
-    # held-out check on the calibration queries (not used to fit the ranker or T)
-    c = train.iloc[cal].assign(p=p_cal)
-    top = c.loc[c.groupby("qid").p.idxmax()]
-    inset = c[(1 - c.p) <= qhat]
-    check = {"hit1": float(top.best.mean()),
-             "coverage": float(c[c.best == 1].pipe(lambda b: ((1 - b.p) <= qhat).mean())),
-             "set_size": float(inset.groupby("qid").size().reindex(c.qid.unique(), fill_value=0).mean()),
-             "queries": int(c.qid.nunique())}
-    return {"booster": booster, "crops": crops, "T": T, "qhat": qhat, "check": check,
-            "rows": int(len(train)), "queries": int(train.qid.nunique())}
-
-
 class V4Service:
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._model: dict | None = None
-        self._base: pd.DataFrame | None = None
+        self._loaded = threading.Event()
+        self._art: dict | None = None
         self.source: str | None = None  # "artifact" or "trained"
+        self.train_seconds: float | None = None
 
     @property
-    def base(self) -> pd.DataFrame:
-        if self._base is None:
-            self._base = base_table(pd.read_parquet(PARQUET))
-        return self._base
-
-    @property
-    def model(self) -> dict:
+    def art(self) -> dict:
         with self._lock:
-            if self._model is None:
-                self._model = self._load() or self.train(save=True)
-            return self._model
+            if self._art is None:
+                if self._fresh():
+                    self._art, self.source = final_model.load(ARTIFACT), "artifact"
+                else:
+                    self._art = self.train()
+                self._loaded.set()
+            return self._art
 
-    def _load(self) -> dict | None:
-        if not (ARTIFACT.exists() and META.exists()):
-            return None
-        meta = json.loads(META.read_text())
-        if meta.get("base_rows") != len(self.base):  # artifact belongs to another build of the data
-            return None
-        self.source = "artifact"
-        return {**meta, "booster": lgb.Booster(model_file=str(ARTIFACT))}
+    def ready(self) -> bool:
+        """True once the model is in memory. Waits a few seconds while an existing artifact loads,
+        but not while a missing one trains (that takes minutes; /predict falls back to v3 meanwhile)."""
+        return self._loaded.wait(timeout=30 if self._fresh() else 0)
 
-    def train(self, save: bool = True) -> dict:
+    @staticmethod
+    def _parquet_sha() -> str:
+        return hashlib.sha256(PARQUET.read_bytes()).hexdigest()
+
+    def _fresh(self) -> bool:
+        if not (ARTIFACT.exists() and STAMP.exists()):
+            return False
+        return json.loads(STAMP.read_text()).get("parquet_sha256") == self._parquet_sha()
+
+    def train(self) -> dict:
         t = time.time()
-        m = fit(training_table(self.base))
-        m["train_seconds"] = round(time.time() - t, 1)
-        m["base_rows"] = int(len(self.base))
-        if save:
-            MODEL_DIR.mkdir(parents=True, exist_ok=True)
-            m["booster"].save_model(str(ARTIFACT))
-            META.write_text(json.dumps({k: v for k, v in m.items() if k != "booster"}, indent=1))
-        self.source = "trained"
-        return m
+        art = final_model.train()
+        final_model.save(art, ARTIFACT)
+        STAMP.write_text(json.dumps({"parquet_sha256": self._parquet_sha(), "model": art["final"]["name"],
+                                     "T": art["T"], "qhat": art["qhat"], "trained": time.strftime("%Y-%m-%d %H:%M")}, indent=1))
+        self.train_seconds, self.source = round(time.time() - t, 1), "trained"
+        return art
 
     def warm_up(self) -> None:
-        threading.Thread(target=lambda: self.model, daemon=True).start()
+        threading.Thread(target=lambda: self.art, daemon=True).start()
 
-    # ── prediction ────────────────────────────────────────────────────────
-
-    def _query(self, state: str, district: str, season: str) -> tuple[pd.DataFrame, str, int, int]:
-        b = self.base
-        rows = b[(b.state == state) & (b.district == district) & (b.season_app == season)]
-        if rows.empty:
-            raise NoCandidates(f"No crop records for {district}, {state} in season '{season}'.")
-        raw_season = rows.season.value_counts().idxmax()  # e.g. Kharif over Autumn for "kharif"
-        rows = rows[rows.season == raw_season].sort_values("year")
-        target = int(rows.year.max()) + 1
-        recent = rows[rows.year >= target - RECENT_YEARS]
-        cands = []
-        for crop, g in rows[rows.crop_slug.isin(recent.crop_slug.unique())].groupby("crop_slug"):
-            last = g[g.year == target - 1]
-            cands.append({
-                "crop_slug": crop,
-                "lag1_pct": float(last.yield_pct.iloc[0]) if len(last) else np.nan,
-                "lag1_share": float(last.share.iloc[0]) if len(last) else np.nan,
-                "mean3_pct": float(g.yield_pct.tail(3).mean()),
-                "expected_yield": float(g[g.year >= target - RECENT_YEARS]["yield"].median()),
-                "historical_median_yield": float(g["yield"].median()),
-                "yield_unit": f"{unit}/ha" if (unit := g.production_unit.iloc[-1]) not in ("nan", "None") else None,
-                "years_grown": int(g.year.nunique()),
-                "last_year": int(g.year.max()),
-            })
-        return pd.DataFrame(cands), raw_season, target, int(rows.year.nunique())
-
-    def predict(self, state: str, district: str, season: str, env: dict) -> dict:
-        """env: climate + soil values for the query (district defaults, possibly overridden)."""
-        m = self.model
-        cands, raw_season, target, history_years = self._query(state, district, season)
-        d = cands.assign(season_app=season, **{k: env.get(k, np.nan) for k in ENV})
-        s = m["booster"].predict(features(d, m["crops"]))
-        p = softmax(np.zeros(len(d), dtype=int), s, m["T"])
-        d = d.assign(score=s, p=p, in_set=(1 - p) <= m["qhat"]).sort_values("score", ascending=False)
-        empty_set = not d.in_set.any()
-        if empty_set:  # LAC can return an empty set; keep the top crop so the answer is never empty
-            d.loc[d.index[0], "in_set"] = True
-        d["rank"] = np.arange(1, len(d) + 1)
+    def predict(self, state: str, district: str, season: str, overrides: dict) -> dict:
+        """overrides: climate / soil values the user edited (None = keep the district's latest-season values)."""
+        art = self.art
+        env = {k: float(v) for k, v in overrides.items() if k in run.ENV and v is not None}
+        try:
+            r = final_model.predict(art, state, district, season, env=env)
+            rows, _, _ = final_model._query_rows(art, state, district, season, env)
+        except ValueError as exc:
+            raise NoCandidates(str(exc)) from None
+        d = art["data"]
+        here = d[(d.state == r["state"]) & (d.district == r["district"]) & (d.season == r["season"])]
+        recent = here[here.year > here.year.max() - RECENT_YEARS].groupby("crop_slug")["yield"].median()
+        crops = r["crops"]
+        set_was_empty = not any(c["in_set"] for c in crops)
+        if set_was_empty:  # LAC can return an empty set; keep the top crop so the answer is never empty
+            crops[0]["in_set"] = True
         num = lambda v, nd=3: None if v is None or pd.isna(v) else round(float(v), nd)
         recs = [{
-            "rank": int(r["rank"]), "crop": r.crop_slug, "name": crop_name(r.crop_slug),
-            "rank_score": num(r.score, 4), "probability_best": num(r.p, 4), "in_set": bool(r.in_set),
-            "expected_yield": num(r.expected_yield), "historical_median_yield": num(r.historical_median_yield),
-            "yield_unit": r.yield_unit, "years_grown": int(r.years_grown), "last_year": int(r.last_year),
-            "cold_start": bool(pd.isna(r.lag1_pct)),
-        } for _, r in d.iterrows()]
+            "rank": c["rank"], "crop": c["crop"], "name": crop_name(c["crop"]),
+            "rank_score": num(c["score"], 4), "probability_best": num(c["probability"], 4), "in_set": c["in_set"],
+            "expected_yield": num(recent.get(c["crop"])), "historical_median_yield": num(c["median_yield"]),
+            "yield_unit": c["yield_unit"], "years_grown": c["years_grown"], "last_year": c["last_year"],
+            "cold_start": c["no_history_last_year"],
+        } for c in crops]
         return {
-            "model": "AgroMind v4", "method": "YieldRank (LightGBM LambdaMART) + 90% split-conformal set",
-            "fallback": None, "state": state, "district": district, "season": season,
-            "apy_season": raw_season, "target_year": target,
-            "inputs": {k: num(env.get(k), 2) for k in ENV},
-            "coverage_target": 1 - ALPHA, "set_size": int(d.in_set.sum()), "set_was_empty": bool(empty_set),
-            "candidates": len(recs),
-            "history_years": history_years,
-            "best_crop": recs[0]["crop"],
-            "recommendations": recs,
+            "model": "AgroMind v4", "method": art["final"]["description"], "fallback": None,
+            "state": state, "district": district, "season": season, "apy_season": r["season"],
+            "based_on_year": r["based_on_year"], "target_year": r["based_on_year"] + 1,
+            "inputs": {k: num(rows[k].iloc[0], 2) for k in run.ENV},
+            "coverage_target": round(r["coverage_target"], 2), "set_size": sum(c["in_set"] for c in recs),
+            "set_was_empty": set_was_empty, "candidates": len(recs), "history_years": int(here.year.nunique()),
+            "best_crop": recs[0]["crop"], "recommendations": recs,
         }
 
     def info(self) -> dict:
-        m = self.model
+        art = self.art
         v4 = json.loads(RESULTS.read_text()).get("v4", {}) if RESULTS.exists() else {}
         n = v4.get("numbers", {})
-        pct = lambda k: float(n[k]) / 100 if k in n else None
+        pct = lambda k: round(float(n[k]) / 100, 4) if k in n else None
         flt = lambda k: float(n[k]) if k in n else None
         proto = lambda tag: {
             "hit1": pct(f"OursHit{tag}"), "hit3": pct(f"OursHitThree{tag}"), "ndcg3": flt(f"OursNDCG{tag}"),
             "best_baseline": n.get(f"BaseName{tag}"), "baseline_hit1": pct(f"BaseHit{tag}"),
             "baseline_ndcg3": flt(f"BaseNDCG{tag}"), "persistence_hit1": pct(f"PersHit{tag}"),
-            "conformal90_coverage": pct(f"CovGRP{tag}"), "conformal90_set_size": flt(f"SizeGRP{tag}")}
+            "served_set_coverage": pct(f"CCSRCov{tag}"), "served_set_size": flt(f"CCSRSize{tag}"),  # state-robust (served)
+            "lac_set_coverage": pct(f"CovGRP{tag}"), "lac_set_size": flt(f"SizeGRP{tag}")}
+        d = art["data"]
         return {
-            "model": "AgroMind v4: YieldRank (LightGBM LambdaMART) + 90% split-conformal crop sets",
-            "features": ENV + ["season (one-hot)"] + HIST + ["crop"],
+            "model": f"AgroMind v4: {art['final']['name']}",
+            "description": art["final"]["description"],
+            "features": run.ENV + [f"s_{s}" for s in run.SEASONS] + run.HIST + ["crop"],
             "candidates": f"crops grown in the district-season in its last {RECENT_YEARS} recorded years",
             "label": "relevance = the crop's yield percentile among all districts that grew it that year; "
                      "the set targets the best-yielding candidate",
-            "artifact": self.source, "train_seconds": m.get("train_seconds"),
-            "training_rows": m["rows"], "training_queries": m["queries"], "crops": len(m["crops"]),
-            "temperature": round(m["T"], 4), "conformal_qhat": round(m["qhat"], 4),
-            "holdout_check": m["check"],
+            "calibration": {"method": "state-robust split conformal on out-of-state (GroupKFold by state_group) scores",
+                            "alpha": art["alpha"], "beta": art["beta"], "calibration_states": art["n_cal_states"],
+                            "temperature": round(art["T"], 4), "qhat": round(art["qhat"], 4)},
+            "artifact": self.source, "train_seconds": self.train_seconds,
+            "training_rows": int(len(d)), "training_queries": int(d.qid.nunique()), "crops": len(art["crops"]),
             "metrics": {"leave_states_out": proto("LSO"), "leave_years_out": proto("LYO"), "random": proto("R"),
-                        "source": "docs/research/results.json v4.numbers (experiments/run.py, paper)",
+                        "source": "docs/research/results.json v4.numbers (experiments/, paper)",
+                        "worst_state_coverage": {"state": n.get("SRWorstState"), "coverage": pct("SRWorstCov"),
+                                                 "states_below_85": n.get("SRStatesBelow"), "of": n.get("StatesN")},
                         "note": "hit1 = top-ranked candidate is the best-yielding crop of that district-season-year; "
-                                "conformal = held-out-group calibration, 90% target."},
+                                "served_set = the app's 90% sets (state-robust threshold); lac_set = plain LAC for comparison."},
             "data": {k: v4.get("meta", {}).get(k) for k in ("rows", "queries", "crops", "states", "years")},
         }
