@@ -1574,7 +1574,7 @@ function V4Section({ v, fin, served, failed }) {
   const listwise = entries.find(([name]) => /lambdamart/i.test(name));
   const n = v.numbers ?? {};
   const f = fin ?? {}; // results.json final.numbers: the served (state-robust) and plain LAC sets, same pipeline
-  const hasSets = f.CCSRCovLSO && f.CCLACCovLSO;
+  const hasSets = Boolean(f.CCSRCovLSO && f.CCLACCovLSO);
   const srKey = Object.values(v.coverage_by_state_leave_states_out ?? {}).some((s) => typeof s.cov_SR === 'number') ? 'SR' : 'LAC';
   const states = Object.entries(v.coverage_by_state_leave_states_out ?? {}).sort((a, b) => a[1][`cov_${srKey}`] - b[1][`cov_${srKey}`]);
   const SPLIT_SUFFIX = [
@@ -1582,9 +1582,38 @@ function V4Section({ v, fin, served, failed }) {
     ['LSO', 'Unseen states'],
     ['LYO', 'Future years'],
   ];
+  // The three configurations of paper Table III, with their final.numbers keys. Rows 2 and 3 share one pipeline (like-for-like).
   const setRows = [
-    ['LAC (marginal 90%)', 'CCLAC'],
-    ['State-robust (served)', 'CCSR'],
+    {
+      title: 'LAC, i.i.d. calibration',
+      note: 'calibrated on random held-out queries from the training states',
+      cov: 'CovIID',
+      size: 'SizeIID',
+      worst: 'WorstIID',
+      state: 'WorstState',
+      b85: 'StatesBelowIID',
+    },
+    {
+      title: 'LAC, cross-group calibration',
+      note: 'calibrated on models that never saw the state',
+      cov: 'CCLACCov',
+      size: 'CCLACSize',
+      worst: 'CCWorstCov',
+      state: 'CCWorstState',
+      b85: 'CCStatesBelow',
+      b90: 'CCStatesBelowNinety',
+    },
+    {
+      title: 'State-robust (served)',
+      note: 'same pipeline, threshold set per state',
+      cov: 'CCSRCov',
+      size: 'CCSRSize',
+      worst: 'SRWorstCov',
+      state: 'SRWorstState',
+      b85: 'SRStatesBelow',
+      b90: 'SRStatesBelowNinety',
+      served: true,
+    },
   ];
 
   return (
@@ -1619,8 +1648,8 @@ function V4Section({ v, fin, served, failed }) {
             <>
               {' '}
               The served 90% prediction sets use a state-robust threshold: on unseen states they contain the best crop <strong>{f.CCSRCovLSO}%</strong> of the time with{' '}
-              {f.CCSRSizeLSO} crops on average, and the worst state ({f.SRWorstState}) still reaches {f.SRWorstCov}%. Plain LAC sets are smaller ({f.CCLACSizeLSO} crops) but reach
-              only {f.CCWorstCov}% in {f.CCWorstState}.
+              {f.CCSRSizeLSO} crops on average, and the worst state ({f.SRWorstState}) still reaches {f.SRWorstCov}%.{' '}
+              {`LAC sets from the same cross-group pipeline are smaller (${f.CCLACSizeLSO} crops) but reach only ${f.CCWorstCov}% in ${f.CCWorstState}.`}
             </>
           )}
         </p>
@@ -1698,26 +1727,30 @@ function V4Section({ v, fin, served, failed }) {
                     Worst state (unseen states)
                   </th>
                   <th scope="col" className="num wrap hide-sm">
+                    States below 85%{f.StatesN ? ` (of ${f.StatesN})` : ''}
+                  </th>
+                  <th scope="col" className="num wrap hide-sm">
                     States below 90%
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {setRows.map(([title, pre]) => {
-                  const worst = pre === 'CCSR' ? ['SRWorstCov', 'SRWorstState', 'SRStatesBelowNinety'] : ['CCWorstCov', 'CCWorstState', 'CCStatesBelowNinety'];
-                  return (
-                    <tr key={pre} className={pre === 'CCSR' ? 'is-highlight' : undefined}>
-                      <th scope="row">{title}</th>
-                      {SPLIT_SUFFIX.map(([k]) => (
-                        <td key={k} className="num">
-                          {f[`${pre}Cov${k}`] ? `${f[`${pre}Cov${k}`]}% · ${f[`${pre}Size${k}`]} crops` : '—'}
-                        </td>
-                      ))}
-                      <td className="num">{f[worst[0]] ? `${f[worst[0]]}% (${f[worst[1]]})` : '—'}</td>
-                      <td className="num hide-sm">{f[worst[2]] ?? '—'}</td>
-                    </tr>
-                  );
-                })}
+                {setRows.map((r) => (
+                  <tr key={r.title} className={r.served ? 'is-highlight' : undefined}>
+                    <th scope="row">
+                      {r.title}
+                      <span className="paper-meta">{r.note}</span>
+                    </th>
+                    {SPLIT_SUFFIX.map(([k]) => (
+                      <td key={k} className="num">
+                        {f[`${r.cov}${k}`] ? `${f[`${r.cov}${k}`]}% · ${f[`${r.size}${k}`]} crops` : '—'}
+                      </td>
+                    ))}
+                    <td className="num">{f[r.worst] ? `${f[r.worst]}% (${f[r.state]})` : '—'}</td>
+                    <td className="num hide-sm">{f[r.b85] ?? '—'}</td>
+                    <td className="num hide-sm">{(r.b90 && f[r.b90]) ?? '—'}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1742,7 +1775,7 @@ function V4Section({ v, fin, served, failed }) {
                 </th>
                 {srKey === 'SR' && (
                   <th scope="col" className="num wrap hide-sm">
-                    Coverage, LAC
+                    Coverage, LAC (cross-group)
                   </th>
                 )}
               </tr>
