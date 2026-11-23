@@ -1,0 +1,1 @@
+leave-years-out f0 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  51.0%  Hit@3  82.6%  NDCG@3 0.879  cold  40.6%  cov90  89.1% size 3.61  train  571.1s  infer 1.148 ms/q

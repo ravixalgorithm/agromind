@@ -36,12 +36,13 @@ a district by realised yield}. Four classifier families from the literature, whi
 a random split. On held-out states this falls to \BaseHitLSO\%, below a one-line rule that repeats
 last year's yield ranking (\PersHitLSO\%). A yield-grounded ranker (YieldRank) reaches
 \OursHitLSO\% on held-out states (+\GainHitLSO{} points over \BaseNameLSO, NDCG@3
-\BaseNDCGLSO$\to$\OursNDCGLSO). Its margin over persistence is small overall but
+\BaseNDCGLSO$\to$\OursNDCGLSO). Its margin over persistence is modest overall but reaches
 \OursHitColdLSO\% vs \PersHitColdLSO\% on the \ColdShareLSO\% of cases where some crop lacks
-last-year history. Split-conformal sets at a 90\% target cover the best crop in \CovIIDLSO\% of
-unseen-state cases with \SizeIIDLSO{} crops on average, but coverage drops to \WorstIID\% in the
-worst state. Calibrating the classifiers on held-out states rather than i.i.d.\ queries raises
-Random-Forest coverage from \RFCovIIDMean\% to \RFCovGRPMean\%.
+last-year history. With i.i.d.\ calibration, 90\% split-conformal sets cover the best crop in
+\CovIIDLSO\% of unseen-state cases (\SizeIIDLSO{} crops), and only \WorstIID\% in the worst
+state. A state-robust threshold raises this to \CCSRCovLSO\% (worst state \SRWorstCov\%) at
+\CCSRSizeLSO{} crops per set. Recent methods reimplemented from six papers stay at or below
+\MCBestPaperHit\% on unseen states.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -96,13 +97,25 @@ advantage is large, small, or absent.
 
 \textbf{Crop recommendation.} Early Indian systems combined classifiers by voting over soil and
 weather \cite{pudumalar2017,kulkarni2018}, and later ones added season and location
-\cite{doshi2018,priyadharshini2021}. Recent work explores stacking \cite{akkem2023,ahmed2025},
-RF+XGBoost hybrids \cite{afzal2025}, neural and transformer models
-\cite{musanase2023,latha2026,pandey2026}, explainability \cite{shams2024,turgut2024,shastri2025},
-and metaheuristics \cite{mahesh2026,reddy2026}. Table~\ref{tab:lit} summarises how these papers
-evaluate. Economic signals appear as classifier inputs (MSP and cost of cultivation
+\cite{doshi2018,priyadharshini2021}. Table~\ref{tab:lit} summarises how such papers evaluate. Economic signals appear as classifier inputs (MSP and cost of cultivation
 \cite{sam2025}) or as a price-forecast re-rank of a classifier's top-3 \cite{sindhur2025}. Hasan
 et al.\ \cite{hasan2023} threshold per-crop production forecasts.
+
+\textbf{Recent crop recommenders (2024--2026).} We read the full text of 15 recent papers
+\cite{dey2024,senapaty2024,sam2025,ahmed2025,afzal2025,shastri2025,singh2025,gunasekaran2025,bakr2025,piyar2026,mahesh2026,latha2026,reddy2026,sharma2026,pandey2026}. Their models span voting and stacking ensembles \cite{ahmed2025,afzal2025,gunasekaran2025},
+gradient boosting explained with SHAP or LIME \cite{shastri2025,sharma2026}, a CatBoost surrogate of an expert
+suitability score \cite{mahesh2026}, transformer, CNN--LSTM and LLM classifiers \cite{bakr2025,piyar2026,latha2026,pandey2026},
+and deep Q-learning \cite{reddy2026}. Nine of the 15 report their headline on the Kaggle crop table
+\cite{ingle2020kaggle} or a variant of it \cite{dey2024,ahmed2025,afzal2025,shastri2025,gunasekaran2025,bakr2025,piyar2026,latha2026,pandey2026}, where accuracies cluster at 98--99.6\% whatever the model;
+a Random Forest with two trees already reaches 96\% F1 \cite{afzal2025}. Thirteen use only random
+splits. The exceptions are a chronological split, under which Random Forest falls from 99.96\% to 78.55\% \cite{sam2025},
+and 250\,m spatial blocks \cite{reddy2026}; none holds out states or regions. Thirteen never check whether
+the recommended crop yields well, all fifteen give no per-prediction uncertainty or prediction set,
+eleven report no significance test, and four describe preprocessing, feature
+selection or tuning that used the test data \cite{singh2025,piyar2026,latha2026,reddy2026}. Only one links its code
+\cite{reddy2026}. Because these papers score accuracy over crop labels rather than whether the best-yielding crop
+is ranked first, their numbers are not directly comparable with ours. Instead, we retrain the classifier families they use
+on our data and splits (Section~\ref{sec:compare}).
 
 \textbf{Honest evaluation.} Blocked and spatial cross-validation are standard in ecology
 \cite{roberts2017,meyer2019}. In yield prediction, moving from random CV to leave-site-out or
@@ -286,9 +299,9 @@ coverage, and worst state coverage).}
 \resizebox{\columnwidth}{!}{\input{tables/conformal_lso}}
 \end{table}
 
-\textbf{Conformal sets.} With i.i.d.\ calibration, YieldRank's 90\% LAC sets keep near-nominal
-\emph{marginal} coverage on unseen states (\CovIIDLSO\%, \SizeIIDLSO{} crops of \MeanCand{} on average;
-Table~\ref{tab:conf}). The classifiers' sets do not: Random Forest covers only \RFCovIIDMean\%
+\textbf{Conformal sets.} With i.i.d.\ calibration, YieldRank's 90\% LAC sets fall short of the
+target on unseen states (\CovIIDLSO\% \emph{marginal} coverage, \SizeIIDLSO{} crops of
+\MeanCand{} on average; Table~\ref{tab:conf}). The classifiers' sets do not: Random Forest covers only \RFCovIIDMean\%
 (\RFCovIIDMin--\RFCovIIDMax\% across folds). Calibrating on held-out training states restores
 it to \RFCovGRPMean\% (\RFCovGRPMin--\RFCovGRPMax\%). Its confidence learned on seen states is
 over-confident on new ones, and only a state-disjoint calibration set reveals this. Even
@@ -335,6 +348,37 @@ No scheme reaches 90\% in every state, and a per-state guarantee for unseen stat
 \label{fig:cov}
 \end{figure}
 
+\subsection{Comparison with recent methods}\label{sec:compare}
+
+Table~\ref{tab:methods} runs \MCNMethods{} methods on the same queries, folds and calibration
+sets. They are the classic baselines, \MCNPaperMethods{} reimplementations of \MCNPapers{} recent
+papers \cite{dey2024,afzal2025,gunasekaran2025,ahmed2025,mahesh2026,bakr2025} with their published
+hyper-parameters (unstated settings, subsampling and other deviations are listed per method in
+the repository), and ranking variants of our own. The best reimplemented method,
+\MCBestPaperName, reaches \MCBestPaperHitR\% on a random split but \MCBestPaperHit\% on unseen
+states, against \OursHitLSO\% for YieldRank. Table~\ref{tab:ablation} shows what each component
+buys on unseen states. Without the yield target (ranking by area share, i.e.\ by what farmers
+already grow) Hit@1 falls to \MCAblNoYield\%. Without district history it falls to
+\MCAblNoHist\%, and without the persistence term to \MCAblNoPers\%. Without the conformal step, a
+single recommendation is right only \OursHitLSO\% of the time and carries no guarantee. YieldRank
+trains in about \MCOursTrain\,s per fold and answers in \MCOursInfer\,ms per query.
+
+\begin{table*}[t]
+\caption{All methods on the same queries and folds (mean over 5 folds). Hit@1 for the three
+splits; NDCG@3, cold-start Hit@1 and 90\% i.i.d.-LAC set coverage/size on unseen states; training
+time per fold. $^{*}$/$^{**}$: differs from YieldRank, Wilcoxon $p<0.05$/$p<0.001$.}
+\label{tab:methods}
+\centering\scriptsize
+\resizebox{\textwidth}{!}{\input{tables/methods}}
+\end{table*}
+
+\begin{table}[t]
+\caption{Ablation of YieldRank on unseen states (Hit@1 \%, NDCG@3, 90\% set coverage and size).}
+\label{tab:ablation}
+\centering\scriptsize
+\resizebox{\columnwidth}{!}{\input{tables/ablation}}
+\end{table}
+
 %=====================================================================
 \section{Discussion and Limitations}
 
@@ -373,8 +417,10 @@ random splits, reports about 99\%. On \NQueries{} real Indian district-season-ye
 states, the same classifiers pick the best-yielding crop \BaseHitLSO\% of the time, below a
 last-year persistence rule. Recasting the task as yield-grounded ranking raises this to
 \OursHitLSO\% and NDCG@3 to \OursNDCGLSO. The gain is largest where history is missing.
-Conformal sets of about three crops give near-nominal marginal coverage on unseen states, but
-per-state coverage must be audited and the calibration set must respect the shift. Benchmark,
+Conformal sets calibrated on i.i.d.\ queries fall short of 90\% on unseen states. A
+state-robust threshold delivers \CCSRCovLSO\% with \CCSRSizeLSO{} crops and lifts the worst state
+to \SRWorstCov\%. Per-state coverage must still be audited, and the calibration set must respect
+the shift. Benchmark,
 code and a Colab notebook accompany the paper.
 
 
