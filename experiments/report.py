@@ -412,7 +412,7 @@ def method_comparison(mac):
     o = by[ours]
     # ablation table: what each component buys (unseen-state numbers are the headline)
     full = dict(name="YieldRank (full)", removed="nothing", hit1=o["hit1"], ndcg3=o["ndcg3"], conformal=o["conformal"],
-                note="history + yield target + LambdaMART + conformal sets")
+                note="history + yield target + listwise/pointwise blend + persistence term + conformal sets")
     abl = [full]
     for r, rem, note in ((by.get("YieldRank - history"), "district history features", "climate + soil + season only"),
                          (by.get("YieldRank - yield target (area share)"), "yield target", "relevance = current area share (what is grown most) instead of yield percentile"),

@@ -1,3 +1,6 @@
 leave-states-out f0 Stacking RF+ET+XGB (Gunasekaran 2025)  cached Hit@1  30.3%
 leave-states-out f1 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  40.1%  Hit@3  80.1%  NDCG@3 0.879  cold  31.2%  cov90  83.2% size 3.10  train  738.3s  infer 0.571 ms/q
 leave-states-out f2 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  35.1%  Hit@3  70.9%  NDCG@3 0.802  cold  30.6%  cov90  78.8% size 3.71  train  446.6s  infer 0.398 ms/q
+leave-states-out f3 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  30.4%  Hit@3  65.0%  NDCG@3 0.782  cold  27.2%  cov90  65.2% size 3.13  train  389.3s  infer 0.259 ms/q
+leave-states-out f4 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  32.5%  Hit@3  66.2%  NDCG@3 0.789  cold  28.8%  cov90  71.0% size 3.59  train  317.0s  infer 0.378 ms/q
+wrote /Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/results/compare_leave-states-out_heavyA.json

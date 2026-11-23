@@ -1330,8 +1330,8 @@
       "MCBestPaperName": "CatBoost (Mahesh 2026 config)",
       "MCBestPaperHit": "37.6",
       "MCBestPaperHitR": "53.5",
-      "MCNPaperMethods": "11",
-      "MCNPapers": "5",
+      "MCNPaperMethods": "12",
+      "MCNPapers": "6",
       "MCAblNoHist": "27.4",
       "MCAblNoYield": "23.2",
       "MCAblNoPers": "56.0",
@@ -1339,7 +1339,7 @@
       "MCOursInfer": "0.228",
       "MCBestName": "MLP",
       "MCBestHit": "38.3",
-      "MCNMethods": "22",
+      "MCNMethods": "23",
       "MCNoYieldHit": "23.2",
       "MCTopRival": "LightGBM pointwise",
       "MCTopRivalHit": "55.7"
@@ -4816,8 +4816,8 @@
       "MCBestPaperName": "CatBoost (Mahesh 2026 config)",
       "MCBestPaperHit": "37.6",
       "MCBestPaperHitR": "53.5",
-      "MCNPaperMethods": "11",
-      "MCNPapers": "5",
+      "MCNPaperMethods": "12",
+      "MCNPapers": "6",
       "MCAblNoHist": "27.4",
       "MCAblNoYield": "23.2",
       "MCAblNoPers": "56.0",
@@ -4825,7 +4825,7 @@
       "MCOursInfer": "0.228",
       "MCBestName": "MLP",
       "MCBestHit": "38.3",
-      "MCNMethods": "22",
+      "MCNMethods": "23",
       "MCNoYieldHit": "23.2",
       "MCTopRival": "LightGBM pointwise",
       "MCTopRivalHit": "55.7"
@@ -5444,56 +5444,6 @@
     "primary_split": "leave-states-out",
     "methods": [
       {
-        "name": "CNN-LSTM (Bakr 2025)",
-        "family": "paper",
-        "source": "bakr2025",
-        "hit1": {
-          "random": 25.7,
-          "leave-states-out": 20.8,
-          "leave-years-out": 24.6
-        },
-        "hit1_std": {
-          "random": 1.2,
-          "leave-states-out": 3.7,
-          "leave-years-out": 1.5
-        },
-        "hit3": {
-          "random": 65.2,
-          "leave-states-out": 61.2,
-          "leave-years-out": 64.1
-        },
-        "ndcg3": {
-          "random": 0.777,
-          "leave-states-out": 0.755,
-          "leave-years-out": 0.773
-        },
-        "hit1_cold": {
-          "random": 22.5,
-          "leave-states-out": 18.7,
-          "leave-years-out": 21.8
-        },
-        "hit1_warm": {
-          "random": 27.8,
-          "leave-states-out": 22.1,
-          "leave-years-out": 26.4
-        },
-        "p_vs_ours": {
-          "random": 0.0,
-          "leave-states-out": 0.0,
-          "leave-years-out": 0.0
-        },
-        "train_s": 20.48,
-        "infer_ms": 0.2382,
-        "conformal": {
-          "cov": 86.8,
-          "size": 4.49,
-          "split": "leave-states-out",
-          "calibration": "i.i.d. LAC 90%"
-        },
-        "interpretable": "none",
-        "note": ""
-      },
-      {
         "name": "Crop prior",
         "family": "naive",
         "source": "baseline",
@@ -5787,6 +5737,106 @@
         "conformal": {
           "cov": 75.1,
           "size": 3.07,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "none",
+        "note": ""
+      },
+      {
+        "name": "Stacking RF+ET+XGB (Gunasekaran 2025)",
+        "family": "paper",
+        "source": "gunasekaran2025",
+        "hit1": {
+          "random": 53.3,
+          "leave-states-out": 33.7,
+          "leave-years-out": 48.9
+        },
+        "hit1_std": {
+          "random": 0.7,
+          "leave-states-out": 4.1,
+          "leave-years-out": 2.4
+        },
+        "hit3": {
+          "random": 83.8,
+          "leave-states-out": 68.9,
+          "leave-years-out": 81.0
+        },
+        "ndcg3": {
+          "random": 0.889,
+          "leave-states-out": 0.807,
+          "leave-years-out": 0.876
+        },
+        "hit1_cold": {
+          "random": 44.4,
+          "leave-states-out": 29.2,
+          "leave-years-out": 40.0
+        },
+        "hit1_warm": {
+          "random": 59.2,
+          "leave-states-out": 36.6,
+          "leave-years-out": 54.7
+        },
+        "p_vs_ours": {
+          "random": 7.222152695367196e-174,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 493.79,
+        "infer_ms": 0.6081,
+        "conformal": {
+          "cov": 73.8,
+          "size": 3.46,
+          "split": "leave-states-out",
+          "calibration": "i.i.d. LAC 90%"
+        },
+        "interpretable": "partial (base-model importances)",
+        "note": ""
+      },
+      {
+        "name": "CNN-LSTM (Bakr 2025)",
+        "family": "paper",
+        "source": "bakr2025",
+        "hit1": {
+          "random": 25.7,
+          "leave-states-out": 20.8,
+          "leave-years-out": 24.6
+        },
+        "hit1_std": {
+          "random": 1.2,
+          "leave-states-out": 3.7,
+          "leave-years-out": 1.5
+        },
+        "hit3": {
+          "random": 65.2,
+          "leave-states-out": 61.2,
+          "leave-years-out": 64.1
+        },
+        "ndcg3": {
+          "random": 0.777,
+          "leave-states-out": 0.755,
+          "leave-years-out": 0.773
+        },
+        "hit1_cold": {
+          "random": 22.5,
+          "leave-states-out": 18.7,
+          "leave-years-out": 21.8
+        },
+        "hit1_warm": {
+          "random": 27.8,
+          "leave-states-out": 22.1,
+          "leave-years-out": 26.4
+        },
+        "p_vs_ours": {
+          "random": 0.0,
+          "leave-states-out": 0.0,
+          "leave-years-out": 0.0
+        },
+        "train_s": 20.48,
+        "infer_ms": 0.2382,
+        "conformal": {
+          "cov": 86.8,
+          "size": 4.49,
           "split": "leave-states-out",
           "calibration": "i.i.d. LAC 90%"
         },
@@ -6560,7 +6610,7 @@
           "split": "leave-states-out",
           "calibration": "i.i.d. LAC 90%"
         },
-        "note": "history + yield target + LambdaMART + conformal sets"
+        "note": "history + yield target + listwise/pointwise blend + persistence term + conformal sets"
       },
       {
         "name": "YieldRank - history",
@@ -6648,7 +6698,7 @@
       },
       {
         "name": "YieldRank top-1 only",
-        "removed": "conformal step",
+        "removed": "conformal step (top-1 only)",
         "hit1": {
           "random": 60.0,
           "leave-states-out": 56.3,
@@ -6669,7 +6719,7 @@
       },
       {
         "name": "YieldRank fixed top-3",
-        "removed": "conformal step",
+        "removed": "conformal step (fixed top-3)",
         "hit1": {
           "random": 60.0,
           "leave-states-out": 56.3,

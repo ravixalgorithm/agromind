@@ -1,3 +1,6 @@
 leave-years-out f0 Stacking RF+ET+XGB (Gunasekaran 2025)  cached Hit@1  51.0%
 leave-years-out f1 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  47.2%  Hit@3  79.4%  NDCG@3 0.873  cold  38.5%  cov90  84.5% size 3.37  train  734.0s  infer 0.580 ms/q
 leave-years-out f2 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  46.8%  Hit@3  79.1%  NDCG@3 0.862  cold  37.9%  cov90  84.8% size 3.36  train  449.2s  infer 0.366 ms/q
+leave-years-out f3 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  52.0%  Hit@3  83.0%  NDCG@3 0.887  cold  44.1%  cov90  90.0% size 3.53  train  410.1s  infer 0.323 ms/q
+leave-years-out f4 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  47.6%  Hit@3  81.1%  NDCG@3 0.877  cold  40.5%  cov90  86.8% size 3.51  train  322.1s  infer 0.268 ms/q
+wrote /Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/results/compare_leave-years-out_heavyA.json
