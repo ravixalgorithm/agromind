@@ -1,0 +1,6 @@
+random f0 CNN-LSTM (Bakr 2025)                   Hit@1  27.4%  Hit@3  65.8%  NDCG@3 0.780  cold  25.1%  cov90  90.3% size 4.69  train   25.1s  infer 0.135 ms/q
+random f1 CNN-LSTM (Bakr 2025)                   Hit@1  24.1%  Hit@3  64.2%  NDCG@3 0.774  cold  21.2%  cov90  89.4% size 4.60  train   13.5s  infer 0.200 ms/q
+random f2 CNN-LSTM (Bakr 2025)                   Hit@1  25.3%  Hit@3  67.0%  NDCG@3 0.781  cold  22.4%  cov90  89.8% size 4.62  train   18.8s  infer 0.233 ms/q
+random f3 CNN-LSTM (Bakr 2025)                   Hit@1  26.0%  Hit@3  65.0%  NDCG@3 0.780  cold  22.0%  cov90  90.0% size 4.64  train   21.2s  infer 0.172 ms/q
+random f4 CNN-LSTM (Bakr 2025)                   Hit@1  25.5%  Hit@3  63.8%  NDCG@3 0.771  cold  21.6%  cov90  89.5% size 4.62  train   23.6s  infer 0.515 ms/q
+wrote /Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/results/compare_random_heavyB.json

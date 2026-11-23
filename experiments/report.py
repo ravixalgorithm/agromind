@@ -389,7 +389,10 @@ def method_comparison(mac):
         if (m_, p_) in agg.index:
             agg.loc[(m_, p_), "hit1_warm"] = v
     meta = F.drop_duplicates("method").set_index("method")
-    order = list(dict.fromkeys(F.method))
+    fam_rank = {"naive": 0, "classifier": 1, "paper": 2, "ensemble": 2, "pair model": 3, "pair ranker": 3, "ablation": 4}
+    first = list(dict.fromkeys(F.method))
+    fam = F.drop_duplicates("method").set_index("method").family
+    order = sorted(first, key=lambda m: (fam_rank.get(fam[m], 9), m == ours, first.index(m)))
     methods, ablation = [], []
     for m in order:
         if (m, "leave-states-out") not in agg.index:
@@ -417,10 +420,10 @@ def method_comparison(mac):
                          (by.get("LightGBM pointwise"), "listwise ranker + persistence", "pointwise regression on yield percentile alone")):
         if r:
             abl.append(dict(name=r["name"], removed=rem, hit1=r["hit1"], ndcg3=r["ndcg3"], conformal=r["conformal"], note=note))
-    abl.append(dict(name="YieldRank top-1 only", removed="conformal step", hit1=o["hit1"], ndcg3=o["ndcg3"],
+    abl.append(dict(name="YieldRank top-1 only", removed="conformal step (top-1 only)", hit1=o["hit1"], ndcg3=o["ndcg3"],
                     conformal={"cov": o["hit1"]["leave-states-out"], "size": 1.0, "split": "leave-states-out", "calibration": "none (fixed top-1)"},
                     note="a single recommendation is right only Hit@1 of the time and carries no coverage guarantee"))
-    abl.append(dict(name="YieldRank fixed top-3", removed="conformal step", hit1=o["hit1"], ndcg3=o["ndcg3"],
+    abl.append(dict(name="YieldRank fixed top-3", removed="conformal step (fixed top-3)", hit1=o["hit1"], ndcg3=o["ndcg3"],
                     conformal={"cov": o["hit3"]["leave-states-out"], "size": 3.0, "split": "leave-states-out", "calibration": "none (fixed top-3)"},
                     note="fixed-size list: coverage is whatever Hit@3 happens to be; sets do not adapt to hard cases"))
     lso = "leave-states-out"

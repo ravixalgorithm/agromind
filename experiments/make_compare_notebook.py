@@ -28,7 +28,7 @@ if root is None:  # Colab
     subprocess.run([sys.executable, "-m", "pip", "-q", "install", "lightgbm", "xgboost", "catboost", "pyarrow"], check=True)
     root = Path("agromind")
     files = ["experiments/run.py", "experiments/compare.py", "experiments/crossconf.py", "backend/data/large/agromind_india_large.parquet",
-             "docs/research/results.json"] + [f"experiments/results/compare_{{p}}_{{t}}.json" for p in ("random", "leave-states-out", "leave-years-out") for t in ("light", "heavy")]
+             "docs/research/results.json"] + [f"experiments/results/compare_{{p}}_{{t}}.json" for p in ("random", "leave-states-out", "leave-years-out") for t in ("light", "heavyA", "heavyB")]
     for f in files:
         (root / f).parent.mkdir(parents=True, exist_ok=True)
         if not (root / f).exists():
@@ -37,7 +37,7 @@ sys.path.insert(0, str(root / "experiments"))
 import numpy as np, pandas as pd
 pd.set_option("display.width", 220); pd.set_option("display.max_rows", 80); pd.set_option("display.max_colwidth", 60)
 SPLITS = ["random", "leave-states-out", "leave-years-out"]
-F = pd.DataFrame([r | {{"split": p}} for p in SPLITS for t in ("light", "heavy")
+F = pd.DataFrame([r | {{"split": p}} for p in SPLITS for t in ("light", "heavyA", "heavyB")
                   for r in json.load(open(root / f"experiments/results/compare_{{p}}_{{t}}.json"))
                   if (root / f"experiments/results/compare_{{p}}_{{t}}.json").exists()])
 print(f"{{F.method.nunique()}} methods x {{F.split.nunique()}} splits x {{F.fold.nunique()}} folds = {{len(F)}} trained models")"""),

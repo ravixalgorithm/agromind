@@ -5,6 +5,11 @@ splits as run.py, so YieldRank's numbers here equal the paper's).
 Writes results/compare_<protocol>.json (per-fold metrics) and results/compare_q_<protocol>.parquet
 (per-query Hit@1 / NDCG@3 for the Wilcoxon tests).
 """
+try:  # import torch before xgboost/lightgbm and use one thread: avoids an OpenMP deadlock seen on macOS
+    import torch
+    torch.set_num_threads(1)
+except ImportError:
+    pass
 import argparse, json, re, time
 import numpy as np, pandas as pd
 from sklearn.ensemble import RandomForestClassifier, StackingClassifier
@@ -157,8 +162,8 @@ def _paper_methods():
         "CatBoost (Mahesh 2026 config)": ("paper", "mahesh2026", TREE, "Table 3 config; used as a classifier here (paper regresses expert scores)",
             clf("CAT", CatBoostClassifier(iterations=300, depth=6, learning_rate=0.05, loss_function="MultiClass", random_seed=SEED, verbose=0, thread_count=run.NJ))),
         # Abu Bakr et al. 2025 (Information): CNN-LSTM, batch 8, 50 epochs, Adam; layers unstated.
-        "CNN-LSTM (Bakr 2025)": ("paper", "bakr2025", "none", "batch 8 and Adam as stated; 10 epochs instead of 50 and a random 8,000-query training subsample (compute); layer sizes ours (unstated)",
-            clf("CNN", CNNLSTM(epochs=10), max_q=8000)),
+        "CNN-LSTM (Bakr 2025)": ("paper", "bakr2025", "none", "batch 8 and Adam as stated; 5 epochs instead of 50 and a random 4,000-query training subsample (compute: batch 8 on CPU); layer sizes ours (unstated)",
+            clf("CNN", CNNLSTM(epochs=5), max_q=4000)),
     }
 
 

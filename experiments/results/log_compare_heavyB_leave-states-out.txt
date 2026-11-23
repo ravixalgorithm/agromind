@@ -1,0 +1,6 @@
+leave-states-out f0 CNN-LSTM (Bakr 2025)                   Hit@1  15.1%  Hit@3  50.4%  NDCG@3 0.735  cold  14.9%  cov90  85.0% size 5.05  train   24.4s  infer 0.134 ms/q
+leave-states-out f1 CNN-LSTM (Bakr 2025)                   Hit@1  24.6%  Hit@3  75.6%  NDCG@3 0.825  cold  22.2%  cov90  98.3% size 4.17  train   13.0s  infer 0.160 ms/q
+leave-states-out f2 CNN-LSTM (Bakr 2025)                   Hit@1  20.5%  Hit@3  60.0%  NDCG@3 0.722  cold  17.0%  cov90  92.5% size 4.94  train   19.0s  infer 0.188 ms/q
+leave-states-out f3 CNN-LSTM (Bakr 2025)                   Hit@1  23.4%  Hit@3  59.0%  NDCG@3 0.755  cold  21.8%  cov90  71.4% size 3.67  train   21.5s  infer 0.109 ms/q
+leave-states-out f4 CNN-LSTM (Bakr 2025)                   Hit@1  20.3%  Hit@3  60.8%  NDCG@3 0.740  cold  18.3%  cov90  86.5% size 4.64  train   24.0s  infer 0.464 ms/q
+wrote /Users/originkit/.config/baton/worktrees/agromind-334992/claude-5/experiments/results/compare_leave-states-out_heavyB.json

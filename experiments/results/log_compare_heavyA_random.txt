@@ -1,0 +1,3 @@
+random f0 Stacking RF+ET+XGB (Gunasekaran 2025)  cached Hit@1  53.0%
+random f1 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  52.9%  Hit@3  83.7%  NDCG@3 0.889  cold  43.8%  cov90  89.8% size 3.44  train  740.1s  infer 0.608 ms/q
+random f2 Stacking RF+ET+XGB (Gunasekaran 2025)  Hit@1  52.7%  Hit@3  83.7%  NDCG@3 0.888  cold  44.8%  cov90  90.0% size 3.42  train  449.5s  infer 0.350 ms/q

@@ -148,7 +148,7 @@ Ref. & Data & Split & Metric & Reported \\
 \cite{sindhur2025} & Kaggle-style + prices & 20\% hold-out & accuracy & 98.5\% \\
 \cite{sam2025} & Indian env.+econ. & \textbf{time split} & accuracy & 99.96\%$\to$78.55\% \\
 \midrule
-\textbf{Ours} & DES+POWER+SoilGrids & \textbf{states / years} & NDCG, hit@k, coverage & Tab.~\ref{tab:rank},\ref{tab:conf} \\
+\textbf{Ours} & DES+POWER+SoilGrids & \textbf{states / years} & NDCG, hit@k, coverage & Tab.~\ref{tab:rank},\ref{tab:methods} \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -254,7 +254,7 @@ percentile (crop prior) gets only \PriorHitR\%.
 
 \textbf{Spatial shift hurts classifiers most.} Moving from random to leave-states-out, Random
 Forest drops from \RFHitR\% to \RFHitLSO\%, XGBoost from \XGBHitR\% to \XGBHitLSO\% and the MLP
-from \MLPHitR\% to \MLPHitLSO\% Hit@1 (Fig.~\ref{fig:hit}). YieldRank drops from \OursHitR\% to
+from \MLPHitR\% to \MLPHitLSO\% Hit@1. YieldRank drops from \OursHitR\% to
 \OursHitLSO\%. On held-out states it improves Hit@1 over the best classifier by \GainHitLSO{}
 points and NDCG@3 from \BaseNDCGLSO{} to \OursNDCGLSO{} (paired Wilcoxon over
 \NPairedLSO{} test queries, $p\PHitLSO$). Hit@3 rises from \BaseHitThreeLSO\% to
@@ -301,7 +301,7 @@ coverage, and worst state coverage).}
 
 \textbf{Conformal sets.} With i.i.d.\ calibration, YieldRank's 90\% LAC sets fall short of the
 target on unseen states (\CovIIDLSO\% \emph{marginal} coverage, \SizeIIDLSO{} crops of
-\MeanCand{} on average; Table~\ref{tab:conf}). The classifiers' sets do not: Random Forest covers only \RFCovIIDMean\%
+\MeanCand{} on average). The classifiers' sets do not: Random Forest covers only \RFCovIIDMean\%
 (\RFCovIIDMin--\RFCovIIDMax\% across folds). Calibrating on held-out training states restores
 it to \RFCovGRPMean\% (\RFCovGRPMin--\RFCovGRPMax\%). Its confidence learned on seen states is
 over-confident on new ones, and only a state-disjoint calibration set reveals this. Even
@@ -325,21 +325,6 @@ cover \CCSRCovLSO\% marginally (median state \SRMedianCov\%, worst \SRWorstState
 \CCSRSizeLSO{} instead of \CCLACSizeLSO{} crops per set. The deployed model uses this threshold.
 No scheme reaches 90\% in every state, and a per-state guarantee for unseen states remains open.
 
-
-\begin{table}[t]
-\caption{Conformal sets for the best crop at a 90\% target: empirical coverage (\%) and mean set size, averaged over folds.}
-\label{tab:conf}
-\centering\scriptsize
-\setlength{\tabcolsep}{2.2pt}
-\resizebox{\columnwidth}{!}{\input{tables/conformal}}
-\end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/hit1_protocols.pdf}
-\caption{Hit@1 by protocol (error bars: std over folds).}
-\label{fig:hit}
-\end{figure}
 
 \begin{figure}[t]
 \centering
