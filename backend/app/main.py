@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import V3Request
-from .v3_service import UnknownDistrict, V3Service
+from .v3_service import CLIMATE, SOIL, UnknownDistrict, V3Service
 from .v4_service import NoCandidates, V4Service
 
 v3 = V3Service()
@@ -72,11 +72,12 @@ def predict(payload: V3Request) -> dict:
     body = payload.model_dump()
     state, dist, season = body.pop("state"), body.pop("district"), body.pop("season")
     try:
-        v3.district_row(state, dist, season)  # 404 for an unknown state / district / season
+        row = v3.district_row(state, dist, season)
     except UnknownDistrict as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from None
+    env = {k: (body[k] if body.get(k) is not None else row[k]) for k in CLIMATE + SOIL}
     try:
-        return v4.predict(state, dist, season, body)  # only the values the user edited override the model's defaults
+        return v4.predict(state, dist, season, env)
     except NoCandidates:
         out = v3.predict(state, dist, season, overrides=body)
         return {"model": "AgroMind v3", "fallback": "v3",
