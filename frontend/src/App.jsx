@@ -273,6 +273,9 @@ const EXAMPLES = [
   ['Uttar Pradesh', 'Lucknow', 'rabi'],
 ];
 const V3_PAGE = 100;
+// Climate fields the user changed from the district averages; only these go to /predict as overrides.
+const overrides = (climate, base) =>
+  Object.fromEntries(V3_CLIMATE.filter((f) => climate[f.key] !== '' && base[f.key] !== null && Number(climate[f.key]) !== base[f.key]).map((f) => [f.key, Number(climate[f.key])]));
 const FEW_YEARS = 5; // fewer recorded years than this for a district-season counts as little history
 const UNITS = { 'Tonnes/ha': 't/ha' };
 const yieldText = (v, unit) => (typeof v === 'number' ? `${num(v, v >= 100 ? 0 : 2)} ${UNITS[unit] ?? unit ?? ''}`.trim() : '—');
@@ -409,7 +412,7 @@ function Advisory({ t }) {
         const res = await fetch(`${API_BASE_URL}/predict`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ state: info.state, district: info.district, season: info.season, ...Object.fromEntries(V3_CLIMATE.map((f) => [f.key, Number(climate[f.key])])) }),
+          body: JSON.stringify({ state: info.state, district: info.district, season: info.season, ...overrides(climate, base) }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(await readError(res, V3_CLIMATE));
@@ -426,7 +429,7 @@ function Advisory({ t }) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [info, climate, climateReady]);
+  }, [info, climate, climateReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autosave: one entry per district and season, updated with the latest climate and pick.
   useEffect(() => {
@@ -437,7 +440,7 @@ function Advisory({ t }) {
       state: result.state,
       district: result.district,
       season: result.season,
-      climate: Object.fromEntries(V3_CLIMATE.map((f) => [f.key, result.inputs?.[f.key]])),
+      climate: Object.fromEntries(V3_CLIMATE.map((f) => [f.key, Number(climate[f.key])])), // the form's values, so reopening restores the form
       edited,
       pick: { crop: top.crop, name: top.name, probability: result.fallback ? null : top.probability_best }, // v3 fallback has no P(best)
       savedAt: new Date().toISOString(),
@@ -556,8 +559,8 @@ function Advisory({ t }) {
               <ClimateField key={f.key} field={f} value={climate[f.key] ?? ''} base={base[f.key]} onChange={(v) => setClimate((c) => ({ ...c, [f.key]: v }))} />
             ))}
             <p className="note">
-              {info ? `Pre-filled with this district's ${info.season === 'whole_year' ? 'yearly' : 'season'} average over ${info.climate_years} years. ` : ''}Changing a value
-              changes the prediction.
+              {info ? `Pre-filled with this district's ${info.season === 'whole_year' ? 'yearly' : 'season'} average over ${info.climate_years} years. ` : ''}Values you leave alone
+              are taken from the latest recorded season (shown as &quot;Climate used&quot;); a value you change is used instead.
             </p>
             {edited && (
               <button
@@ -1425,12 +1428,15 @@ function ServedModel({ served, failed }) {
               <th scope="row">Coverage</th>
               <td>{[`${served.crops} crops`, `${served.states} states`, districtCount(served), yearSpan(served.years)].filter(Boolean).join(' · ')}</td>
             </tr>
-            {served.holdout_check && (
+            {served.metrics?.leave_states_out?.served_set_coverage != null && (
               <tr>
-                <th scope="row">Hold-out check</th>
+                <th scope="row">Served 90% sets</th>
                 <td>
-                  Hit@1 {pct1(served.holdout_check.hit1)} · 90% set coverage {pct1(served.holdout_check.coverage)} with {num(served.holdout_check.set_size, 2)} crops on average
-                  {served.holdout_check.queries ? ` (${served.holdout_check.queries.toLocaleString('en-IN')} queries)` : ''}
+                  Unseen states: {pct1(served.metrics.leave_states_out.served_set_coverage)} coverage with {num(served.metrics.leave_states_out.served_set_size, 2)} crops on
+                  average
+                  {served.metrics.worst_state_coverage?.state
+                    ? `; worst state ${served.metrics.worst_state_coverage.state} ${pct1(served.metrics.worst_state_coverage.coverage)}`
+                    : ''}
                 </td>
               </tr>
             )}
@@ -1913,16 +1919,19 @@ function RelatedWork({ papers, ours }) {
 // Split keys come as strings or {key, label}; colours follow the split, never its rank (validated: blue, orange, aqua on white, all pairs).
 const SPLIT_COLORS = ['#2a78d6', '#eb6834', '#1baf7a'];
 const pctP = (v) => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—'); // method_comparison rates are already percentages
-const isChosen = (m, chosen) => m.source === 'ours' || m.name === chosen;
+const isChosen = (m, chosen) => (chosen ? m.name.replace(/\s*\(ours\)$/, '') === chosen : m.source === 'ours');
 const SPLIT_NAMES = { random: 'Random split', 'leave-states-out': 'Unseen states', 'leave-years-out': 'Future years' };
 const splitList = (splits, labels = {}) =>
   (splits ?? []).map((s, i) => ({ key: s.key ?? s, label: labels[s.key ?? s] ?? s.label ?? SPLIT_NAMES[s.key ?? s] ?? s.key ?? s, color: SPLIT_COLORS[i] })).slice(0, 3);
 
-function sourceLabel(src, papers) {
+// Citation for a reimplemented method, unless its name already carries it, e.g. "XGBoost (Dey 2024)".
+function sourceLabel(src, papers, name = '') {
   if (!src || src === 'ours' || src === 'baseline') return null;
   const p = papers.find((x) => x.key === src);
-  return p ? paperShort(p) : String(src);
+  const label = p ? paperShort(p) : String(src);
+  return name.toLowerCase().includes(label.split(' ')[0].toLowerCase()) ? null : label;
 }
+const bySplit = (v, split) => (v && typeof v === 'object' ? v[split] : v); // fields come per split or as one number
 
 function HitDotPlot({ methods, splits, chosen, papers }) {
   const [active, setActive] = useState(null); // index of the row whose readout is open
@@ -1952,7 +1961,7 @@ function HitDotPlot({ methods, splits, chosen, papers }) {
       <div className="dp-body">
         {rows.map((m, r) => {
           const ours = isChosen(m, chosen);
-          const cite = sourceLabel(m.source, papers);
+          const cite = sourceLabel(m.source, papers, m.name);
           const shown = splits.map((s) => m.hit1?.[s.key]).filter((v) => typeof v === 'number');
           // One hit target per row: close dots would otherwise overlap each other's hover area on narrow screens.
           return (
@@ -2023,7 +2032,7 @@ const ms = (v) => (typeof v !== 'number' ? '—' : v < 1 ? v.toFixed(2) : v.toLo
 function MethodComparison({ mc, papers }) {
   const splits = splitList(mc.splits, mc.split_labels);
   const methods = mc.methods ?? [];
-  const sortKey = (splits.find((s) => /state/.test(s.key)) ?? splits[0])?.key;
+  const sortKey = mc.primary_split ?? (splits.find((s) => /state/.test(s.key)) ?? splits[0])?.key;
   const rows = [...methods].sort((a, b) => (b.hit1?.[sortKey] ?? -1) - (a.hit1?.[sortKey] ?? -1));
   const ablation = Array.isArray(mc.ablation) ? mc.ablation.filter((a) => a && typeof a === 'object') : [];
   const pSplit = sortKey;
@@ -2038,8 +2047,10 @@ function MethodComparison({ mc, papers }) {
           <p className="tcap">
             Selection table
             <span className="tcap-note">
-              Hit@1 per split. Cold start = unseen-states queries where some candidate crop has no yield history. p = paired Wilcoxon test against the chosen method on
-              {` ${splits.find((s) => s.key === pSplit)?.label.toLowerCase() ?? 'the main split'}`}. Conformal = 90% set coverage · average set size.
+              Hit@1 per split. Cold start = queries where some candidate crop has no yield record for the previous year. p = paired Wilcoxon test against the chosen method on
+              {` ${splits.find((s) => s.key === pSplit)?.label.toLowerCase() ?? 'the main split'}`}. Conformal ={' '}
+              {methods.find((m) => m.conformal?.calibration)?.conformal.calibration ?? '90%'} set on unseen states: coverage · average set size, the same for every method (the
+              served state-robust sets are in Section 2).
             </span>
           </p>
           <div className="table-wrap">
@@ -2056,7 +2067,7 @@ function MethodComparison({ mc, papers }) {
                     </th>
                   ))}
                   <th scope="col" className="num wrap">
-                    Cold start
+                    Cold start ({splits.find((s) => s.key === pSplit)?.label.toLowerCase()})
                   </th>
                   <th scope="col" className="num">
                     p
@@ -2080,7 +2091,7 @@ function MethodComparison({ mc, papers }) {
                   <tr key={m.name} className={isChosen(m, mc.chosen) ? 'is-highlight' : undefined}>
                     <th scope="row">
                       {m.name}
-                      {sourceLabel(m.source, papers) && <span className="paper-meta">after {sourceLabel(m.source, papers)}</span>}
+                      {sourceLabel(m.source, papers, m.name) && <span className="paper-meta">after {sourceLabel(m.source, papers, m.name)}</span>}
                     </th>
                     <td className="hide-sm">{m.family ?? '—'}</td>
                     {splits.map((s) => (
@@ -2088,7 +2099,7 @@ function MethodComparison({ mc, papers }) {
                         {pctP(m.hit1?.[s.key])}
                       </td>
                     ))}
-                    <td className="num">{pctP(m.hit1_cold)}</td>
+                    <td className="num">{pctP(bySplit(m.hit1_cold, pSplit))}</td>
                     <td className="num">{isChosen(m, mc.chosen) ? '—' : pval(typeof m.p_vs_ours === 'object' ? m.p_vs_ours?.[pSplit] : m.p_vs_ours)}</td>
                     <td className="num">{ms(m.train_s)}</td>
                     <td className="num">{ms(m.infer_ms)}</td>
@@ -2292,7 +2303,14 @@ function texToText(tex, numbers) {
 
 // Final model first, then the steps that led to it.
 const NOTEBOOKS = [
-  ['AgroMind_v4_Novel_Method.ipynb', `${FINAL}: YieldRank (LambdaMART yield ranking) against literature classifiers and persistence, with split-conformal prediction sets.`],
+  [
+    'AgroMind_v4_Novel_Method.ipynb',
+    `${FINAL}: YieldRank (a listwise ranker and a pointwise yield model blended with last-year persistence) with state-robust conformal sets; the v1 → v4 progression at the top.`,
+  ],
+  [
+    'AgroMind_Method_Comparison.ipynb',
+    'Every method (6 recent papers reimplemented, classic baselines and ranker variants) on the same v4 queries and splits, with the ablation and why YieldRank.',
+  ],
   ['AgroMind_v3_LargeScale.ipynb', 'v3: Government district crop statistics with NASA POWER climate and SoilGrids soil; unseen districts, states and years.'],
   ['AgroMind_v2_Research.ipynb', 'v1 reproduction and corrected decode; v2 merged data, 10-model comparison, ablation, leave-one-source-out, McNemar, calibration.'],
 ];
